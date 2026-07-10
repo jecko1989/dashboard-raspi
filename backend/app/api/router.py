@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user
-from app.api.routes import auth, commands, health, monitoring, read, ssh_keys
+from app.api.routes import auth, commands, health, monitoring, read, shell, ssh_keys
 
 api_router = APIRouter(prefix="/api")
 
@@ -18,3 +18,7 @@ api_router.include_router(read.router, dependencies=_protected)
 api_router.include_router(monitoring.router, dependencies=_protected)
 api_router.include_router(commands.router, dependencies=_protected)
 api_router.include_router(ssh_keys.router, dependencies=_protected)
+
+# Shell web (WebSocket): l'autenticazione JWT admin e' gestita internamente
+# alla route, poiche' i WebSocket browser non inviano l'header Bearer.
+api_router.include_router(shell.router)

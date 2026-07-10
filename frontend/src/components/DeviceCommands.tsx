@@ -14,6 +14,8 @@ import {
 } from '../services/api';
 import { CommandModal } from './CommandModal';
 import { ServiceStatusTable } from './ServiceStatusTable';
+import { ShellModal } from './ShellModal';
+import { useAuth } from '../context/AuthContext';
 
 type Pending =
   | { kind: 'reboot' }
@@ -27,6 +29,7 @@ type Pending =
 
 interface DeviceCommandsProps {
   deviceId: string;
+  deviceName?: string;
   onChanged?: () => void;
 }
 
@@ -52,7 +55,8 @@ function Spinner() {
 }
 
 // Pannello comandi remoti + gestione servizi, con conferma modale e audit.
-export function DeviceCommands({ deviceId, onChanged }: DeviceCommandsProps) {
+export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceCommandsProps) {
+  const { isAdmin } = useAuth();
   const [services, setServices] = useState<ServiceStatus[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [pending, setPending] = useState<Pending>(null);
@@ -64,6 +68,7 @@ export function DeviceCommands({ deviceId, onChanged }: DeviceCommandsProps) {
   const [logs, setLogs] = useState<{ service: string; content: string } | null>(null);
   const [backupRunning, setBackupRunning] = useState(false);
   const [mystError, setMystError] = useState<string | null>(null);
+  const [shellOpen, setShellOpen] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
   const loadServices = useCallback(async () => {
@@ -310,6 +315,16 @@ export function DeviceCommands({ deviceId, onChanged }: DeviceCommandsProps) {
         >
           Spegni
         </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShellOpen(true)}
+            disabled={running}
+            className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+            title="Apre una shell interattiva sul device (solo admin)"
+          >
+            <span aria-hidden="true">🖥️</span> Apri shell
+          </button>
+        )}
       </div>
 
       <div>
@@ -454,6 +469,15 @@ export function DeviceCommands({ deviceId, onChanged }: DeviceCommandsProps) {
         onConfirm={execute}
         onCancel={() => setPending(null)}
       />
+
+      {isAdmin && (
+        <ShellModal
+          open={shellOpen}
+          deviceId={deviceId}
+          deviceName={deviceName ?? deviceId}
+          onClose={() => setShellOpen(false)}
+        />
+      )}
 
       {logs && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

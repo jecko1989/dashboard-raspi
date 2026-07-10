@@ -452,6 +452,68 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 ---
 
+## Shell web interattiva (solo admin)
+
+Dal dettaglio device, un utente **admin** può aprire una **shell interattiva** sul
+Raspberry direttamente dal browser (terminale xterm.js collegato via **WebSocket**
+a una sessione **SSH con PTY**). Il pulsante **"Apri shell"** compare solo agli
+admin.
+
+- **Endpoint**: `WS /api/ws/devices/{id}/shell?token=<JWT>&cols=<n>&rows=<n>`
+- **Autenticazione**: i WebSocket browser non inviano l'header `Authorization`,
+  quindi il **JWT** viene passato in **query string** (`token`) e validato lato
+  server; l'accesso è consentito **solo agli utenti con `is_admin`**.
+- **Protocollo**: il client invia messaggi JSON `{"type":"input","data":"…"}` e
+  `{"type":"resize","cols":n,"rows":n}`; il server invia l'output del terminale come
+  frame binari.
+
+### ⚠️ Nota di sicurezza (eccezione all'allowlist)
+
+La shell web è l'**unica** funzione che consente **comandi arbitrari** sul device:
+è quindi un'eccezione controllata all'invariante "nessun comando arbitrario". È
+mitigata da più livelli:
+
+- riservata agli **admin** (verifica JWT lato WebSocket);
+- **disattivabile globalmente** con `SHELL_ENABLED=false`;
+- **rate limit** per utente e **numero massimo di sessioni** concorrenti;
+- **timeout** di sessione e di **inattività** con chiusura automatica;
+- ogni **apertura/chiusura** è tracciata in `command_audit_logs` (comando `shell`)
+  e nella timeline `events`.
+
+I comandi digitati girano con i **privilegi dell'utente SSH** del device: **non**
+richiede regole sudoers aggiuntive. Per limitarne la portata, usa un utente SSH
+con shell ristretta o permessi minimi. Consigliato tenere `SHELL_ENABLED=false`
+quando la funzione non serve.
+
+### Variabili d'ambiente
+
+| Variabile | Default | Descrizione |
+|---|---|---|
+| `SHELL_ENABLED` | `true` | Abilita/disabilita globalmente la shell web |
+| `SHELL_SESSION_TIMEOUT_SECONDS` | `1800` | Durata massima di una sessione, poi viene chiusa |
+| `SHELL_IDLE_TIMEOUT_SECONDS` | `300` | Chiusura automatica dopo inattività (nessun I/O) |
+| `SHELL_MAX_SESSIONS` | `3` | Sessioni shell concorrenti massime (per processo) |
+| `SHELL_RATE_LIMIT_PER_MINUTE` | `5` | Aperture di sessione al minuto, per utente |
+| `VITE_API_WS_URL` | *(derivato)* | Override URL WebSocket lato frontend; se assente, derivato da `VITE_API_BASE_URL` (`http`→`ws`, `https`→`wss`) |
+
+### Proxy WebSocket (Docker / nginx)
+
+Dietro nginx (immagine frontend) l'upgrade WebSocket va abilitato per il path
+`/api/ws/`, ad esempio:
+
+```nginx
+location /api/ws/ {
+    proxy_pass http://backend:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_read_timeout 3600s;
+}
+```
+
+---
+
 ## Sicurezza (predisposizioni già presenti)
 
 - **Nessuna password SSH**: solo autenticazione a chiave; le chiavi stanno in
@@ -463,6 +525,10 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 - **Conferma obbligatoria**: i comandi distruttivi richiedono `confirm: true` e una
   modale di conferma lato UI.
 - **Audit log**: ogni tentativo di comando viene registrato in `command_audit_logs`.
+- **Shell web admin-only**: la shell interattiva (WebSocket + SSH PTY) consente
+  comandi arbitrari, quindi è riservata agli admin, disattivabile
+  (`SHELL_ENABLED`), con rate limit, limite sessioni, timeout e audit dedicato
+  (vedi [Shell web interattiva](#shell-web-interattiva-solo-admin)).
 - **Segreti via env**: JWT secret, password admin e path chiavi provengono da `.env`.
 
 ### Regole sudoers consigliate sui Raspberry (per le fasi successive)
@@ -505,8 +571,10 @@ pytest
 - **Fase 4** — Comandi remoti sicuri (reboot/shutdown/update/restart) con audit. ✅
 - **Fase 5** — Rifinitura UI, dark mode, timeline eventi, test, hardening finale. ✅
 
-> Evoluzioni future opzionali: terminale SSH web, gestione utenti multipli,
-> integrazione Prometheus/Grafana oopure code-splitting per ridurre la dimensione del bundle..
+> Evoluzioni future opzionali: gestione utenti multipli,
+> integrazione Prometheus/Grafana oppure code-splitting per ridurre la dimensione
+> del bundle. (Il **terminale SSH web** admin-only è ora disponibile, vedi
+> [Shell web interattiva](#shell-web-interattiva-solo-admin).)
 
 > **Nota aggiornamento schema (Fase 1 → 2)**: sono state aggiunte le colonne
 > `last_latency_ms` e `consecutive_failures` alla tabella `devices`. Con SQLite in

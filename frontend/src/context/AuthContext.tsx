@@ -12,6 +12,7 @@ import { login as apiLogin, getMe, TOKEN_KEY } from '../services/api';
 interface AuthContextValue {
   token: string | null;
   username: string | null;
+  isAdmin: boolean;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
@@ -24,11 +25,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.getItem(TOKEN_KEY),
   );
   const [username, setUsername] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUsername(null);
+    setIsAdmin(false);
   }, []);
 
   const login = useCallback(async (user: string, password: string) => {
@@ -38,16 +41,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const me = await getMe();
       setUsername(me.username);
+      setIsAdmin(Boolean(me.is_admin));
     } catch {
       setUsername(user);
+      setIsAdmin(false);
     }
   }, []);
 
-  // Recupera lo username se c'è già un token al caricamento.
+  // Recupera username e ruolo se c'è già un token al caricamento.
   useEffect(() => {
     if (token && !username) {
       getMe()
-        .then((me) => setUsername(me.username))
+        .then((me) => {
+          setUsername(me.username);
+          setIsAdmin(Boolean(me.is_admin));
+        })
         .catch(() => logout());
     }
   }, [token, username, logout]);
@@ -63,11 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       token,
       username,
+      isAdmin,
       isAuthenticated: Boolean(token),
       login,
       logout,
     }),
-    [token, username, login, logout],
+    [token, username, isAdmin, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

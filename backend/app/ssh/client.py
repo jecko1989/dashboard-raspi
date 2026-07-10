@@ -178,3 +178,38 @@ class SSHClient:
             return SSHResult(exit_code=exit_code, stdout=out, stderr=err)
         finally:
             client.close()
+
+    def open_shell(
+        self, term: str = "xterm-256color", cols: int = 80, rows: int = 24
+    ) -> tuple[paramiko.SSHClient, paramiko.Channel]:
+        """Apre una shell interattiva con PTY e ritorna (client, channel).
+
+        A differenza degli altri metodi, la connessione NON viene chiusa qui:
+        il chiamante (shell_service) e' responsabile del ciclo di vita del
+        canale e della chiusura del client tramite `close_shell`.
+
+        SICUREZZA: questo canale consente comandi arbitrari sul device, quindi
+        l'endpoint che lo usa deve essere riservato agli admin e sottoposto ad
+        audit (vedi shell_service).
+        """
+        client = self._build_client()
+        try:
+            channel = client.invoke_shell(term=term, width=cols, height=rows)
+            return client, channel
+        except Exception as exc:  # paramiko/socket errors
+            client.close()
+            raise SSHError(
+                f"Apertura shell SSH fallita verso {self.target.host}: {exc}"
+            ) from exc
+
+    @staticmethod
+    def close_shell(client: paramiko.SSHClient, channel: paramiko.Channel) -> None:
+        """Chiude in sicurezza canale e connessione di una shell interattiva."""
+        try:
+            channel.close()
+        except Exception:  # noqa: BLE001 - best effort
+            pass
+        try:
+            client.close()
+        except Exception:  # noqa: BLE001 - best effort
+            pass

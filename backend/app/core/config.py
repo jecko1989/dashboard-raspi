@@ -56,6 +56,19 @@ class Settings(BaseSettings):
     # Rate limiting endpoint di comando (richieste al minuto per client IP).
     command_rate_limit_per_minute: int = Field(default=10)
 
+    # Shell web interattiva (WebSocket + SSH PTY).
+    # ATTENZIONE: consente comandi arbitrari sul device. Riservata agli admin,
+    # sottoposta ad audit e disattivabile globalmente.
+    shell_enabled: bool = Field(default=True)
+    # Durata massima di una sessione shell (secondi), poi viene chiusa.
+    shell_session_timeout_seconds: float = Field(default=1800.0)
+    # Chiusura automatica dopo inattivita' (nessun I/O) in secondi.
+    shell_idle_timeout_seconds: float = Field(default=300.0)
+    # Numero massimo di sessioni shell concorrenti (intero processo).
+    shell_max_sessions: int = Field(default=3)
+    # Aperture di sessione shell consentite al minuto, per utente.
+    shell_rate_limit_per_minute: int = Field(default=5)
+
     @property
     def cors_origins_list(self) -> list[str]:
         """Ritorna le origini CORS come lista."""

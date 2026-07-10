@@ -11,11 +11,12 @@ Dashboard per monitorare e gestire piu Raspberry Pi (4 appartamenti) via VPN. St
 
 ## Modello di sicurezza (invariante centrale)
 - **Nessun comando arbitrario**: ogni comando remoto deve esistere in `ssh/allowlist.py`.
+- **Eccezione controllata (shell web)**: la shell interattiva admin-only (`services/shell_service.py`, WebSocket in `api/routes/shell.py`) consente comandi liberi via SSH PTY. È l'unica eccezione all'invariante e va mantenuta blindata: solo admin, `SHELL_ENABLED` per disattivarla, rate limit per utente, limite sessioni, timeout sessione/inattività, audit in `command_audit_logs` (comando `shell`) ed `events`.
 - **Placeholder dinamici**: ammessi solo dove previsto e validati in modo stretto (`is_valid_service_name` per `service`, `is_valid_cidr` per `subnet`).
 - **SSH solo a chiave**: niente password SSH. Le chiavi risiedono in `secrets/ssh` (gitignored, mount read-only in Docker).
-- **Separazione endpoint**: `health` e `auth` pubblici; `read`, `monitoring`, `commands` e `ssh-keys` protetti da JWT (`get_current_user`).
+- **Separazione endpoint**: `health` e `auth` pubblici; `read`, `monitoring`, `commands` e `ssh-keys` protetti da JWT (`get_current_user`). La shell WebSocket non usa l'header Bearer: il JWT arriva in query string (`token`) ed è validato in `shell_service.authenticate_token` (richiede admin).
 - **Endpoint comandi**: richiedono `confirm=true`, applicano rate limit per IP e passano da `command_service.run_command` con audit in `command_audit_logs` (`pending`, `success`, `error`, `denied`).
-- **Azioni sensibili**: backup/restore Mysterium e generazione chiavi SSH sono consentiti solo ad admin.
+- **Azioni sensibili**: backup/restore Mysterium, generazione chiavi SSH e shell web sono consentiti solo ad admin.
 
 ## Convenzioni del progetto
 - **Lingua**: commenti, docstring, errori e stringhe UI in italiano.
@@ -24,7 +25,8 @@ Dashboard per monitorare e gestire piu Raspberry Pi (4 appartamenti) via VPN. St
 - **Pydantic v2**: conversione ORM verso schema con `model_validate`.
 - **Import lazy nelle route**: usarli quando opportuno per ridurre accoppiamento e side effect.
 - **Frontend API**: tutte le chiamate HTTP passano da `frontend/src/services/api.ts`.
-- **Frontend auth**: interceptor aggiunge Bearer token da localStorage; su 401 emette evento `auth:logout`.
+- **Frontend auth**: interceptor aggiunge Bearer token da localStorage; su 401 emette evento `auth:logout`. Il ruolo admin è esposto da `AuthContext` come `isAdmin` (da `getMe()`), usato per mostrare le azioni riservate (es. shell web).
+- **Frontend WebSocket**: la shell usa WebSocket nativo con token in query string; l'URL si costruisce con `frontend/src/services/shell.ts` (deriva `ws`/`wss` da `VITE_API_BASE_URL`, override con `VITE_API_WS_URL`).
 - **No fetch diretto**: aggiungere funzioni tipizzate in `services/api.ts` e tipi in `src/types`.
 
 ## Workflow sviluppo
@@ -55,6 +57,7 @@ Dashboard per monitorare e gestire piu Raspberry Pi (4 appartamenti) via VPN. St
 - Il servizio comandi gestisce lock per-device per evitare update apt concorrenti.
 - Backup/restore Mysterium usa stream binario via SSH e richiede privilegi admin.
 - Generazione chiavi SSH device e centralizzata in endpoint dedicato (`ssh-key/generate`).
+- Shell web: chiamate Paramiko bloccanti eseguite fuori dall'event loop (`asyncio.to_thread`/executor); dietro nginx serve l'upgrade WebSocket per `/api/ws/`. Variabili: `SHELL_ENABLED`, `SHELL_SESSION_TIMEOUT_SECONDS`, `SHELL_IDLE_TIMEOUT_SECONDS`, `SHELL_MAX_SESSIONS`, `SHELL_RATE_LIMIT_PER_MINUTE`.
 
 ## Checklist rapida prima di merge
 1. Route sottili e logica nei services.

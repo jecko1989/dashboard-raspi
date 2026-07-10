@@ -148,7 +148,7 @@ export function DeviceDetailPage() {
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
           <h3 className="mb-3 text-lg font-semibold">Comandi remoti</h3>
-          <DeviceCommands deviceId={device.id} onChanged={load} />
+          <DeviceCommands deviceId={device.id} deviceName={device.name} onChanged={load} />
         </div>
         <div>
           <h3 className="mb-3 text-lg font-semibold">Ultimi eventi</h3>
