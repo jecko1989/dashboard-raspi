@@ -1,0 +1,122 @@
+# =============================================================================
+# Raspberry Dashboard - Configurazione appartamenti e dispositivi (TEMPLATE)
+# =============================================================================
+# Questo è il TEMPLATE versionato. Per usarlo:
+#
+#   cp config/devices.example.yaml config/devices.yaml     # Linux/macOS
+#   copy config\devices.example.yaml config\devices.yaml   # Windows
+#
+# Poi personalizza config/devices.yaml (che è IGNORATO da git perché contiene
+# IP/hostname reali). Cerca i marcatori "MODIFICA QUI".
+#
+# >>> COSA DEVI MODIFICARE (cerca i marcatori "MODIFICA QUI"):
+#   - ip_vpn        : indirizzo con cui la dashboard raggiunge il Raspberry.
+#                     Puoi usare (in ordine di preferenza):
+#                       * il NOME Tailscale / MagicDNS (CONSIGLIATO), es. "rpi-casa-mia"
+#                       * l'IP Tailscale 100.x, es. "100.101.102.103"
+#                       * (legacy) l'IP OpenVPN, es. "10.8.0.10"
+#   - hostname      : hostname reale del Raspberry
+#   - ssh.username  : utente SSH sul Raspberry
+#   - ssh.port      : porta SSH (default 22)
+#   - ssh.key_path  : path della chiave privata SSH DENTRO il container backend
+#                     (vedi volume in docker-compose.yml e SSH_KEYS_DIR in .env)
+#   - services      : servizi systemd da monitorare per quel device
+#
+# ORDINE DI VISUALIZZAZIONE (opzionale):
+#   - order (appartamento) : ordina gli appartamenti nella dashboard (crescente).
+#   - order (device)       : ordina i device dentro l'appartamento (crescente).
+#   A parita' di 'order' vale l'ordine ALFABETICO per nome. Default: 0.
+#
+# NOTA SICUREZZA: qui NON vanno password. Si usano solo chiavi SSH.
+#
+# >>> TAILSCALE (consigliato): dopo aver eseguito sul Raspberry
+#       sudo tailscale up --hostname rpi-casa-mia
+#     imposta "ip_vpn" con il NOME Tailscale/MagicDNS (es. "rpi-casa-mia")
+#     oppure con l'IP 100.x. NON serve connettersi a OpenVPN: la dashboard
+#     raggiunge tutti i Pi contemporaneamente tramite la mesh Tailscale.
+#     Procedura completa: vedi SETUP_CONSIGLIATO.md nella root del progetto.
+# =============================================================================
+
+# Soglie globali per la generazione degli alert (Fase 3).
+# Possono essere sovrascritte per singolo device tramite la sezione "thresholds".
+thresholds:
+  temperature_celsius: 70      # alert se temperatura CPU supera questo valore
+  disk_percent: 85             # alert se uso disco supera questa percentuale
+  ram_percent: 85              # alert se uso RAM supera questa percentuale
+  cpu_percent: 90              # alert se uso CPU supera questa percentuale
+  offline_after_failures: 3    # device considerato offline dopo N check falliti
+
+apartments:
+  - id: casa_mia
+    name: "Casa Mia"
+    order: 1                                 # ordine di visualizzazione dell'appartamento
+    devices:
+      - id: rpi-casa-mia-01
+        name: "Raspberry Casa Mia 01"
+        order: 1                             # ordine del device dentro l'appartamento
+        hostname: "rpi-casamia-01"          # MODIFICA QUI
+        ip_vpn: "10.8.0.10"                 # MODIFICA QUI — con Tailscale usa il nome MagicDNS (es. "rpi-casa-mia") o l'IP 100.x
+        description: "Raspberry principale casa mia"
+        tags: ["primario"]
+        ssh:
+          username: "pi"                     # MODIFICA QUI
+          port: 22                           # MODIFICA QUI (se diversa)
+          key_path: "${SSH_KEYS_DIR}/id_rpi_casa_mia"  # MODIFICA QUI
+        services:                            # MODIFICA QUI (servizi systemd da monitorare)
+          - "ssh"
+          - "cron"
+        # Override soglie opzionale per questo device (altrimenti usa quelle globali):
+        # thresholds:
+        #   temperature_celsius: 65
+        #   disk_percent: 90
+
+  - id: casa_suocero
+    name: "Casa Suocero"
+    order: 2
+    devices:
+      - id: rpi-casa-suocero-01
+        name: "Raspberry Casa Suocero 01"
+        hostname: "rpi-suocero-01"           # MODIFICA QUI
+        ip_vpn: "10.8.0.11"                  # MODIFICA QUI — con Tailscale: nome MagicDNS (es. "rpi-casa-suocero") o IP 100.x
+        description: "Raspberry casa suocero"
+        tags: []
+        ssh:
+          username: "pi"                      # MODIFICA QUI
+          port: 22
+          key_path: "${SSH_KEYS_DIR}/id_rpi_casa_suocero"  # MODIFICA QUI
+        services:
+          - "ssh"
+
+  - id: casa_sorella
+    name: "Casa Sorella"
+    order: 3
+    devices:
+      - id: rpi-casa-sorella-01
+        name: "Raspberry Casa Sorella 01"
+        hostname: "rpi-sorella-01"           # MODIFICA QUI
+        ip_vpn: "10.8.0.12"                  # MODIFICA QUI — con Tailscale: nome MagicDNS (es. "rpi-casa-sorella") o IP 100.x
+        description: "Raspberry casa sorella"
+        tags: []
+        ssh:
+          username: "pi"                      # MODIFICA QUI
+          port: 22
+          key_path: "${SSH_KEYS_DIR}/id_rpi_casa_sorella"  # MODIFICA QUI
+        services:
+          - "ssh"
+
+  - id: casa_madre
+    name: "Casa Madre"
+    order: 4
+    devices:
+      - id: rpi-casa-madre-01
+        name: "Raspberry Casa Madre 01"
+        hostname: "rpi-madre-01"             # MODIFICA QUI
+        ip_vpn: "10.8.0.13"                  # MODIFICA QUI — con Tailscale: nome MagicDNS (es. "rpi-casa-madre") o IP 100.x
+        description: "Raspberry casa madre"
+        tags: []
+        ssh:
+          username: "pi"                      # MODIFICA QUI
+          port: 22
+          key_path: "${SSH_KEYS_DIR}/id_rpi_casa_madre"  # MODIFICA QUI
+        services:
+          - "ssh"
