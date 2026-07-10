@@ -1,0 +1,52 @@
+# =============================================================================
+# Raspberry Dashboard - Docker Compose (Fase 1)
+# =============================================================================
+# Avvio:  docker compose up --build
+#   - backend  -> http://localhost:8000  (docs: /docs, health: /api/health)
+#   - frontend -> http://localhost:8080
+# =============================================================================
+
+services:
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - .env
+    environment:
+      # Path interni al container (sovrascrivono eventuali valori dell'env host).
+      DATABASE_URL: "sqlite:////data/raspberry_dashboard.db"
+      DEVICES_CONFIG_PATH: "/config/devices.yaml"
+      SSH_KEYS_DIR: "/secrets/ssh"
+    volumes:
+      - backend_data:/data                       # persistenza DB SQLite
+      - ./config:/config:ro                      # configurazione device (sola lettura)
+      - ./secrets/ssh:/secrets/ssh:ro            # chiavi SSH (sola lettura) - crea questa cartella
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/api/health').status==200 else sys.exit(1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # URL con cui il browser raggiunge il backend (host, non rete interna docker).
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:8000}"
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  backend_data:

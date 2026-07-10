@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  /* Scrollbar sottile con track trasparente (assume il colore dello sfondo)
+     e pollice grigio discreto, adattata alla dark mode. */
+  .scrollbar-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent; /* slate-300 */
+  }
+  .scrollbar-subtle::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-subtle::-webkit-scrollbar-thumb {
+    background-color: rgb(203 213 225); /* slate-300 */
+    border-radius: 9999px;
+  }
+  .dark .scrollbar-subtle {
+    scrollbar-color: rgb(71 85 105) transparent; /* slate-600 */
+  }
+  .dark .scrollbar-subtle::-webkit-scrollbar-thumb {
+    background-color: rgb(71 85 105); /* slate-600 */
+  }
+}

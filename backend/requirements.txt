@@ -1,0 +1,16 @@
+# Backend - dipendenze Python (Fase 1)
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+SQLAlchemy==2.0.36
+PyYAML==6.0.2
+paramiko==3.5.0
+APScheduler==3.11.0
+python-jose[cryptography]==3.3.0
+bcrypt==4.2.1
+python-multipart==0.0.20
+
+# Dev / test
+pytest==8.3.4
+httpx==0.28.1

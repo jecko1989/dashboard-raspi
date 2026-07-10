@@ -1,0 +1,6 @@
+# Ignora file non necessari nel contesto di build del frontend.
+node_modules/
+dist/
+.vite/
+*.local
+.env

@@ -1,0 +1,10 @@
+# Ignora file non necessari nel contesto di build del backend.
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+*.db
+*.sqlite3
+tests/
