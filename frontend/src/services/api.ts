@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
   Apartment,
   Device,
+  DeviceCreatePayload,
   Alert,
   DashboardEvent,
   Metric,
@@ -71,6 +72,14 @@ export async function getDevices(apartmentId?: string): Promise<Device[]> {
 
 export async function getDevice(id: string): Promise<Device> {
   const { data } = await api.get<Device>(`/devices/${id}`);
+  return data;
+}
+
+// Crea un nuovo device. Emette 'devices:changed' cosi' sidebar/overview si
+// aggiornano senza refresh manuale.
+export async function createDevice(payload: DeviceCreatePayload): Promise<Device> {
+  const { data } = await api.post<Device>('/devices', payload);
+  window.dispatchEvent(new Event('devices:changed'));
   return data;
 }
 

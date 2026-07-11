@@ -121,3 +121,45 @@ def resolve_thresholds(config: DevicesConfig, device_id: str) -> Thresholds:
     merged.update(override)
     return Thresholds.model_validate(merged)
 
+
+def append_device_to_config(
+    apartment_id: str, device: dict, path: str | None = None
+) -> None:
+    """Aggiunge un device alla config YAML sotto l'appartamento indicato.
+
+    Riscrive l'intero file `devices.yaml` (fonte di verita' dei device). I
+    commenti presenti nel file non vengono preservati dalla serializzazione.
+    Il valore `key_path` deve arrivare gia' con `${SSH_KEYS_DIR}` non espanso.
+    Solleva `KeyError` se l'appartamento non esiste nel file.
+    """
+    settings = get_settings()
+    config_path = Path(path or settings.devices_config_path)
+
+    raw = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
+    data = yaml.safe_load(raw) or {}
+    apartments = data.get("apartments") or []
+
+    for apartment in apartments:
+        if apartment.get("id") == apartment_id:
+            devices = apartment.get("devices")
+            if devices is None:
+                devices = []
+                apartment["devices"] = devices
+            devices.append(device)
+            data["apartments"] = apartments
+            serialized = yaml.safe_dump(
+                data,
+                sort_keys=False,
+                allow_unicode=True,
+                default_flow_style=False,
+            )
+            config_path.write_text(serialized, encoding="utf-8")
+            logger.info(
+                "Device '%s' aggiunto alla config sotto l'appartamento '%s'.",
+                device.get("id"),
+                apartment_id,
+            )
+            return
+
+    raise KeyError(apartment_id)
+

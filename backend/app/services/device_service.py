@@ -5,6 +5,9 @@ funzioni di lettura di base. Nessuna raccolta metriche reale ancora.
 """
 from __future__ import annotations
 
+import ipaddress
+import re
+
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -15,9 +18,67 @@ from app.models.command_audit_log import CommandAuditLog
 from app.models.device import Device
 from app.models.event import Event
 from app.models.metric import Metric
+from app.services import config_loader
 from app.services.config_loader import DevicesConfig, load_devices_config
 
 logger = get_logger(__name__)
+
+# --- Validazione input creazione device --------------------------------------
+
+# Id logico: minuscole/numeri, separatori '-' e '_', inizia con alfanumerico.
+_DEVICE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+# Hostname RFC-1123 (label separate da punto, senza trattini iniziali/finali).
+_HOSTNAME_RE = re.compile(
+    r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)"
+    r"(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$"
+)
+# Utente SSH POSIX.
+_SSH_USER_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
+
+
+class DeviceCreateError(Exception):
+    """Errore base nella creazione di un device."""
+
+
+class InvalidDeviceData(DeviceCreateError):
+    """Dati del device non validi (formato)."""
+
+
+class ApartmentNotFound(DeviceCreateError):
+    """Appartamento indicato inesistente."""
+
+
+class DuplicateDevice(DeviceCreateError):
+    """Device duplicato (id, hostname o indirizzo)."""
+
+    def __init__(self, field: str, value: str) -> None:
+        self.field = field
+        self.value = value
+        super().__init__(f"{field} gia' in uso: {value}")
+
+
+def is_valid_device_id(value: str) -> bool:
+    """Valida l'id logico di un device."""
+    return bool(_DEVICE_ID_RE.fullmatch(value))
+
+
+def is_valid_hostname(value: str) -> bool:
+    """Valida un hostname (label RFC-1123)."""
+    return bool(_HOSTNAME_RE.fullmatch(value))
+
+
+def is_valid_ip_vpn(value: str) -> bool:
+    """Valida l'indirizzo VPN: IPv4, IPv6 oppure nome host/MagicDNS."""
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        return is_valid_hostname(value)
+
+
+def is_valid_ssh_username(value: str) -> bool:
+    """Valida un username SSH POSIX."""
+    return bool(_SSH_USER_RE.fullmatch(value))
 
 
 def sync_config_to_db(db: Session, config: DevicesConfig | None = None) -> None:
@@ -107,3 +168,103 @@ def build_ssh_command(device: Device) -> str:
         f"ssh -i {device.ssh_key_path} -p {device.ssh_port} "
         f"{device.ssh_username}@{device.ip_vpn}"
     )
+
+
+def create_device(db: Session, payload) -> Device:
+    """Crea un nuovo device: valida, scrive nella config YAML e sincronizza il DB.
+
+    La config `devices.yaml` resta la fonte di verita' (config-driven): scrive li'
+    il device e poi riallinea il DB con `sync_config_to_db`. I campi runtime
+    (online, latenza, ultima verifica) NON sono impostabili qui: restano gestiti
+    dai processi di monitoraggio.
+
+    Solleva:
+      - InvalidDeviceData: formato non valido;
+      - ApartmentNotFound: appartamento inesistente;
+      - DuplicateDevice: id/hostname/indirizzo gia' in uso.
+    """
+    # Normalizzazione (trim degli spazi iniziali/finali).
+    dev_id = (payload.id or "").strip()
+    name = (payload.name or "").strip()
+    hostname = (payload.hostname or "").strip()
+    ip_vpn = (payload.ip_vpn or "").strip()
+    apartment_id = (payload.apartment_id or "").strip()
+    ssh_username = (payload.ssh_username or "").strip()
+    ssh_port = payload.ssh_port
+    description = (payload.description or "").strip() or None
+    tags = [t.strip() for t in (payload.tags or []) if t and t.strip()]
+
+    # Validazione di formato.
+    if not is_valid_device_id(dev_id):
+        raise InvalidDeviceData(
+            "Identificativo non valido: usa minuscole, numeri, '-' o '_' "
+            "(1-64 caratteri, inizio alfanumerico)."
+        )
+    if not name:
+        raise InvalidDeviceData("Il nome visualizzato e' obbligatorio.")
+    if not is_valid_hostname(hostname):
+        raise InvalidDeviceData("Hostname non valido.")
+    if not is_valid_ip_vpn(ip_vpn):
+        raise InvalidDeviceData(
+            "Indirizzo VPN/Tailscale non valido: usa un IPv4, un IPv6 "
+            "oppure un nome host/MagicDNS."
+        )
+    if not is_valid_ssh_username(ssh_username):
+        raise InvalidDeviceData("Utente SSH non valido.")
+    if not (1 <= ssh_port <= 65535):
+        raise InvalidDeviceData("Porta SSH non valida (1-65535).")
+
+    config = load_devices_config()
+
+    # Appartamento esistente?
+    if not any(a.id == apartment_id for a in config.apartments):
+        raise ApartmentNotFound(apartment_id)
+
+    # Duplicati: controlla sia la config sia il DB.
+    existing_ids = {d.id for a in config.apartments for d in a.devices}
+    if dev_id in existing_ids or db.get(Device, dev_id) is not None:
+        raise DuplicateDevice("id", dev_id)
+
+    existing_hostnames = {
+        d.hostname.strip().lower() for a in config.apartments for d in a.devices
+    }
+    if hostname.lower() in existing_hostnames:
+        raise DuplicateDevice("hostname", hostname)
+
+    existing_ips = {
+        d.ip_vpn.strip().lower() for a in config.apartments for d in a.devices
+    }
+    if ip_vpn.lower() in existing_ips:
+        raise DuplicateDevice("ip_vpn", ip_vpn)
+
+    # Path chiave SSH generato (variabile NON espansa: portabile tra ambienti).
+    key_suffix = dev_id.replace("-", "_")
+    key_path = f"${{SSH_KEYS_DIR}}/id_{key_suffix}"
+
+    device_yaml: dict = {
+        "id": dev_id,
+        "name": name,
+        "hostname": hostname,
+        "ip_vpn": ip_vpn,
+    }
+    if description:
+        device_yaml["description"] = description
+    if tags:
+        device_yaml["tags"] = tags
+    device_yaml["ssh"] = {
+        "username": ssh_username,
+        "port": ssh_port,
+        "key_path": key_path,
+    }
+    device_yaml["services"] = []
+
+    config_loader.append_device_to_config(apartment_id, device_yaml)
+
+    # Riallinea il DB alla config aggiornata (upsert + prune coerenti).
+    sync_config_to_db(db)
+
+    device = db.get(Device, dev_id)
+    if device is None:  # pragma: no cover - non dovrebbe accadere dopo il sync
+        raise DeviceCreateError("Creazione device non riuscita dopo la sincronizzazione.")
+    logger.info("Device creato: %s (appartamento %s).", dev_id, apartment_id)
+    return device

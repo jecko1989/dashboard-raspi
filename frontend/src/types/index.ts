@@ -26,6 +26,19 @@ export interface Device {
   ssh_command: string | null;
 }
 
+// Payload per la creazione di un device (i campi runtime non sono impostabili).
+export interface DeviceCreatePayload {
+  id: string;
+  name: string;
+  hostname: string;
+  ip_vpn: string;
+  apartment_id: string;
+  ssh_username: string;
+  ssh_port: number;
+  description?: string | null;
+  tags?: string[];
+}
+
 export interface Metric {
   id: number;
   device_id: string;
