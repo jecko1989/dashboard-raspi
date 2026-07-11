@@ -1009,6 +1009,11 @@ docker builder prune -f
 
 La dashboard sarà su `http://<IP-LAN-del-raspberry>:8080`, l'API su `:8000`.
 
+> **Deploy automatizzato (alternativa).** Invece dei passi manuali qui sopra puoi
+> usare gli script inclusi lanciandoli da un altro PC:
+> `./scripts/deploy.sh --mode docker` (build + `up -d`, health check, nessun
+> segreto trasferito). Guida completa in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 > **Nota sull'SSD piccolo.** Dopo ogni `--build` esegui `docker builder prune -f`
 > per non accumulare layer intermedi; `docker image prune -f` rimuove le immagini
 > vecchie non più referenziate.

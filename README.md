@@ -18,8 +18,10 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 - Autenticazione JWT con login locale (bcrypt)
 - Shell web interattiva admin-only (WebSocket + SSH PTY, xterm.js)
 - Esportazione CSV delle metriche
+- Aggiunta di nuovi device dalla dashboard (persistiti in `config/devices.yaml`)
 - Dark mode, timeline attività, badge VPN/latenza
 - Deploy con Docker Compose o esecuzione locale (script PowerShell incluso)
+- Script di deploy sul Raspberry (Docker o nativo systemd) via Tailscale o LAN — vedi [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ---
 
@@ -30,7 +32,7 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 | Backend   | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0, APScheduler, Paramiko |
 | Frontend  | React 18, TypeScript, Vite, Tailwind CSS, React Router, Recharts |
 | Database  | SQLite (migrabile a PostgreSQL cambiando solo `DATABASE_URL`) |
-| Deploy    | Docker Compose (backend + frontend Nginx) |
+| Deploy    | Docker Compose (backend + frontend Nginx); script deploy Docker/nativo per Raspberry ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)) |
 
 ---
 
@@ -65,6 +67,10 @@ dashboard-raspi/
     devices.example.yaml # template versionato
     devices.yaml         # configurazione reale (ignorato da git)
   secrets/ssh/           # chiavi SSH private (mai committare)
+  scripts/               # deploy.sh + lib (deploy Docker/nativo)
+  deploy/                # deploy.env.example + template systemd
+  docs/
+    DEPLOYMENT.md        # guida deploy e accesso LAN/Tailscale
   docker-compose.yml
   .env.example
 ```
@@ -185,6 +191,24 @@ npm run dev
 ```
 
 Frontend su <http://localhost:5173>.
+
+---
+
+## Deploy su Raspberry (LAN / Tailscale)
+
+Per distribuire la dashboard su un Raspberry Pi raggiungibile via **Tailscale** o
+**rete locale** sono inclusi script di deploy generici (nessun dato personale
+viene committato):
+
+```bash
+cp deploy/deploy.env.example deploy/deploy.env   # poi personalizza host/porte
+./scripts/deploy.sh --mode docker --dry-run      # prova a secco
+./scripts/deploy.sh --mode docker                # deploy con Docker Compose
+./scripts/deploy.sh --mode native                # deploy nativo con systemd
+```
+
+Guida completa (binding `0.0.0.0`, `VITE_API_BASE_URL`, CORS, firewall, accesso
+LAN e Tailscale/MagicDNS): **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 ---
 

@@ -22,5 +22,5 @@ su `/secrets/ssh` (vedi `docker-compose.yml`).
 
 - Questa cartella è in `.gitignore`: **le chiavi non devono mai essere committate**.
 - Non inserire qui password: si usa **solo autenticazione a chiave**.
-- In Fase 1 le chiavi non vengono ancora usate (SSH è skeleton), ma predisponi
-  già la struttura.
+- Le chiavi vengono usate dal backend per le connessioni SSH ai device
+  (monitoraggio, comandi remoti e shell web): predisponi la struttura come sopra.
