@@ -111,6 +111,15 @@ Comportamento:
 3. Se trova novita' rilasciabili, apre/aggiorna una Release PR.
 4. Al merge della Release PR crea tag `vX.Y.Z`, GitHub Release e aggiorna `CHANGELOG.md`.
 
+Prerequisito repository (obbligatorio):
+
+- In `Settings -> Actions -> General -> Workflow permissions` attivare:
+	- `Read and write permissions`
+	- `Allow GitHub Actions to create and approve pull requests`
+
+Se quest'ultima opzione e' disattivata, il workflow fallisce con errore:
+`GitHub Actions is not permitted to create or approve pull requests`.
+
 Nota: senza commit Conventional corretti il bump versione potrebbe risultare errato.
 
 ### Flusso manuale (fallback)
