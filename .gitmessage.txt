@@ -1,0 +1,23 @@
+# Conventional Commits template
+#
+# Formato:
+# type(scope): descrizione breve in italiano
+#
+# Tipi comuni:
+# feat     nuova funzionalita
+# fix      correzione bug
+# docs     documentazione
+# refactor refactoring senza cambi funzionali
+# test     test
+# chore    manutenzione/tooling
+# ci       pipeline CI/CD
+#
+# Esempi:
+# feat(devices): aggiunge modifica e rimozione da menu contestuale
+# fix(cors): include origine tailscale in CORS_ORIGINS
+# docs(deploy): aggiunge troubleshooting per preflight login
+# feat(api)!: rinomina apartment in location
+#
+# Footer opzionale per breaking change:
+# BREAKING CHANGE: descrizione del cambio incompatibile
+

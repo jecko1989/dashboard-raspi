@@ -1,6 +1,11 @@
 # Changelog
 
-Tutte le funzionalità aggiunte per fase di sviluppo.
+Questo file segue una struttura compatibile con Keep a Changelog.
+Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`.
+
+## Unreleased
+
+- In preparazione.
 
 ---
 

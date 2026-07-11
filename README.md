@@ -71,6 +71,8 @@ dashboard-raspi/
   deploy/                # deploy.env.example + template systemd
   docs/
     DEPLOYMENT.md        # guida deploy e accesso LAN/Tailscale
+    ROADMAP.md           # roadmap funzionale per milestone
+    VERSIONING.md        # convenzione commit/versioni/release
   docker-compose.yml
   .env.example
 ```
