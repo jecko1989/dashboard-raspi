@@ -249,6 +249,54 @@ Attenzione:
 - Elenca solo le origini davvero necessarie (LAN e/o Tailscale).
 - L'origine include schema, host **e porta** (es. `http://rpi-dashboard:8080`).
 
+### 9.1 Troubleshooting rapido errore CORS in login
+
+Se in console vedi errori come _"blocked by CORS policy"_ sulla chiamata
+`/api/auth/login`, in produzione la causa tipica e' che l'origine reale del
+frontend non e' presente in `CORS_ORIGINS` nel file `${DEPLOY_PATH}/.env` del
+Raspberry.
+
+Esempio reale: frontend aperto da `http://<ip_tailscale>:8080` mentre nel backend
+erano consentiti solo `http://localhost:5173,http://localhost:8080`.
+
+Passi consigliati sul Raspberry:
+
+```bash
+# 1) Verifica il valore attuale
+grep -E '^CORS_ORIGINS=' /home/<utente>/workspace/dashboard-raspi/.env
+
+# 2) Backup rapido del file
+cp /home/<utente>/workspace/dashboard-raspi/.env \
+   /home/<utente>/workspace/dashboard-raspi/.env.bak-cors-$(date +%Y%m%d)
+
+# 3) Aggiorna CORS_ORIGINS includendo l'origine esatta del frontend
+#    (schema + host + porta)
+#    Esempio:
+#    CORS_ORIGINS="http://localhost:5173,http://localhost:8080,http://<magicDNS_tailscale>:8080,http://<ip_tailscale>:8080"
+
+# 4) Riavvia il backend
+sudo systemctl restart dashboard-raspi
+systemctl is-active dashboard-raspi
+```
+
+Verifica tecnica del preflight CORS:
+
+```bash
+curl -i -X OPTIONS 'http://localhost:8000/api/auth/login' \
+  -H 'Origin: http://<ip_tailscale>:8080' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Access-Control-Request-Headers: content-type'
+```
+
+Se la configurazione e' corretta, la risposta include:
+
+- `HTTP/1.1 200 OK`
+- `Access-Control-Allow-Origin: http://<ip_tailscale>:8080`
+
+Nota: in modalita' native il backend legge CORS da `${DEPLOY_PATH}/.env`
+(EnvironmentFile della unit systemd), quindi modificare file locali del repo non
+basta senza aggiornare quel file sul Raspberry e riavviare il servizio.
+
 ---
 
 ## 10. Docker: esporre la porta su tutte le interfacce
