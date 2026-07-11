@@ -14,6 +14,7 @@
 param(
     [switch]$SkipInstall,
     [switch]$InstallPython,
+    [switch]$InstallNode,
     [int]$BackendPort = 8000,
     [int]$FrontendPort = 5173
 )
@@ -80,6 +81,19 @@ function Get-InstalledPythonsInfo {
     return '  (nessun interprete Python trovato)'
 }
 
+# --- Installazione automatica di Node.js LTS tramite winget -----------------
+function Install-NodeLTS {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "winget non disponibile. Installa Node.js 20 LTS manualmente da https://nodejs.org/en/download e riesegui lo script."
+    }
+    Write-Step "Installazione di Node.js LTS tramite winget"
+    winget install -e --id OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
+    # Ricarica il PATH nella sessione corrente per rendere visibile 'node'/'npm'.
+    $machinePath = [System.Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $userPath    = [System.Environment]::GetEnvironmentVariable('Path', 'User')
+    $env:Path    = "$machinePath;$userPath"
+}
+
 # --- Installazione automatica di Python 3.12 tramite winget ------------------
 function Install-Python312 {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -95,7 +109,23 @@ function Install-Python312 {
 
 # --- Verifica Node.js --------------------------------------------------------
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    throw "Node.js non trovato. Installa Node.js 20 LTS (vedi README)."
+    if ($InstallNode) {
+        Install-NodeLTS
+    }
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        Write-Host @"
+
+Node.js non trovato: e' obbligatorio per il frontend.
+
+Come procedere:
+  - Installazione automatica:   .\run-local.ps1 -InstallNode
+  - Manuale con winget:         winget install -e --id OpenJS.NodeJS.LTS
+  - Download manuale:           https://nodejs.org/en/download
+
+Dopo l'installazione riesegui:  .\run-local.ps1
+"@ -ForegroundColor Yellow
+        exit 1
+    }
 }
 
 # --- Setup backend: virtualenv + dipendenze ---------------------------------

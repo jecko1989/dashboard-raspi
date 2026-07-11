@@ -131,11 +131,13 @@ Usa questa modalità se Docker non è disponibile.
 
 ### Prerequisiti
 
-- **Python 3.12** — obbligatorio (`py -3.12 --version` su Windows).
+- **Python 3.12** — obbligatorio.
 - **Node.js 20 LTS** + npm.
 - (Per metriche reali) VPN attiva + chiavi SSH in `secrets/ssh/`.
 
-### Avvio con script
+Gli script di avvio possono installare automaticamente le dipendenze mancanti (vedi sotto).
+
+### Avvio con script — Windows (PowerShell)
 
 ```powershell
 .\run-local.ps1                  # prima esecuzione: crea venv, installa dipendenze, avvia
@@ -143,10 +145,12 @@ Usa questa modalità se Docker non è disponibile.
 .\run-local.ps1 -BackendPort 8001 -FrontendPort 5174
 ```
 
-Lo script apre due finestre PowerShell (backend e frontend). Se Python 3.12 non è installato:
+Lo script apre due finestre PowerShell (backend e frontend). Se le dipendenze non sono installate:
 
 ```powershell
-.\run-local.ps1 -InstallPython   # installa via winget
+.\run-local.ps1 -InstallPython             # installa Python 3.12 via winget
+.\run-local.ps1 -InstallNode               # installa Node.js LTS via winget
+.\run-local.ps1 -InstallPython -InstallNode   # entrambi in un colpo solo
 ```
 
 **Login locale**: `admin` / `admin` (impostato dallo script per sviluppo).
@@ -156,6 +160,28 @@ Se PowerShell blocca l'esecuzione degli script:
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
+
+### Avvio con script — Linux / macOS (Bash)
+
+```bash
+chmod +x run-local.sh            # solo la prima volta
+./run-local.sh                   # prima esecuzione: crea venv, installa dipendenze, avvia
+./run-local.sh --skip-install    # avvii successivi: più veloce
+./run-local.sh --backend-port 8001 --frontend-port 5174
+```
+
+Lo script avvia backend e frontend in background nella stessa sessione; Ctrl+C li ferma entrambi. Se le dipendenze non sono installate:
+
+```bash
+./run-local.sh --install-python            # installa Python 3.12 (apt/dnf/brew)
+./run-local.sh --install-node              # installa Node.js LTS via nvm
+./run-local.sh --install-python --install-node   # entrambi in un colpo solo
+```
+
+> `--install-python` usa il gestore di pacchetti di sistema (`apt` su Ubuntu/Debian, `dnf` su Fedora, `brew` su macOS).  
+> `--install-node` installa [nvm](https://github.com/nvm-sh/nvm) se assente, poi installa l'LTS corrente con `nvm install --lts`.
+
+**Login locale**: `admin` / `admin` (impostato dallo script per sviluppo).
 
 ### Avvio manuale
 
