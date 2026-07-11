@@ -21,9 +21,15 @@ export function Sidebar({ apartments }: SidebarProps) {
       </h1>
       <nav className="space-y-1">
         <NavLink to="/" end className={linkClass}>
+          <span aria-hidden="true" className="mr-2">
+            📊
+          </span>
           Overview
         </NavLink>
         <NavLink to="/alerts" className={linkClass}>
+          <span aria-hidden="true" className="mr-2">
+            🚨
+          </span>
           Alert
         </NavLink>
         <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -31,14 +37,26 @@ export function Sidebar({ apartments }: SidebarProps) {
         </p>
         {apartments.map((ap) => (
           <NavLink key={ap.id} to={`/apartments/${ap.id}`} className={linkClass}>
+            <span aria-hidden="true" className="mr-2">
+              🏠
+            </span>
             {ap.name}
             <span className="ml-1 text-xs text-gray-400">({ap.device_count})</span>
           </NavLink>
         ))}
+        <NavLink to="/devices/new" className={linkClass}>
+          <span aria-hidden="true" className="mr-2">
+            ➕
+          </span>
+          Aggiungi device
+        </NavLink>
         <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
           Sistema
         </p>
         <NavLink to="/settings" className={linkClass}>
+          <span aria-hidden="true" className="mr-2">
+            ⚙️
+          </span>
           Impostazioni
         </NavLink>
       </nav>
