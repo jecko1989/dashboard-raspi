@@ -1,11 +1,14 @@
 # Roadmap - Prossimi miglioramenti
 
 Stato: attiva (pianificazione)
-Data ultimo aggiornamento: 2026-07-11
+Data ultimo aggiornamento: 2026-07-12
 Baseline corrente: release v0.1.0 (monitoraggio + comandi + deploy + shell web)
 Prossimo target: milestone v0.6.0
 
-## Priorita' immediata - UX mobile dashboard
+## Priorita' immediata - UX mobile dashboard [COMPLETATA]
+
+Stato: completata (2026-07-12). Le viste principali sono state rese responsive
+e la navigazione mobile usa un drawer con hamburger. Build frontend verde.
 
 ### Problema rilevato
 - La dashboard risulta poco usabile su smartphone (test reale su Pixel 8).
@@ -23,14 +26,14 @@ Prossimo target: milestone v0.6.0
 
 ### Piano tecnico (task operativi)
 
-1. Audit responsive delle pagine principali (`Overview`, `DeviceDetailPage`, `ApartmentPage`, `AlertsPage`, `Settings`).
-2. Refactor layout generale (`Layout`, `Sidebar`) con navigazione mobile-first e gestione corretta degli spazi.
-3. Refactor delle card (`ApartmentSection`, `DeviceCard`, `MetricCard`) con breakpoint coerenti e gerarchia tipografica leggibile.
-4. Ottimizzazione del dettaglio device (`DeviceDetails`, `DeviceCommands`, `DeviceSSHKey`) per viewport stretta e azioni touch-friendly.
-5. Gestione grafici responsive (`MetricChart`) con altezze dinamiche e fallback leggibile su schermi piccoli.
-6. Gestione tabelle e timeline (`ServiceStatusTable`, `EventTimeline`) con strategie anti-overflow (stacking, scroll controllato, semplificazione colonne).
-7. Revisione modali (`CommandModal`, `ShellModal`) per uso mobile (fullscreen/sheet, pulsanti grandi, focus/scroll sicuri).
-8. Test finale su dispositivi reali e viewport target (Pixel 8 + range 360-430 px) con correzione regressioni.
+1. [x] Audit responsive delle pagine principali (`Overview`, `DeviceDetailPage`, `ApartmentPage`, `AlertsPage`, `Settings`).
+2. [x] Refactor layout generale (`Layout`, `Sidebar`) con navigazione mobile-first (drawer + hamburger) e gestione corretta degli spazi.
+3. [x] Refactor delle card (`ApartmentSection`, `DeviceCard`, `MetricCard`) con breakpoint coerenti e gerarchia tipografica leggibile.
+4. [x] Ottimizzazione del dettaglio device (`DeviceDetails`, `DeviceCommands`) per viewport stretta e azioni touch-friendly.
+5. [x] Gestione grafici responsive (`MetricChart`) con altezze dinamiche e fallback leggibile su schermi piccoli.
+6. [x] Gestione tabelle e timeline (`ServiceStatusTable`, `EventTimeline`) con strategie anti-overflow (scroll controllato).
+7. [x] Revisione modali (`CommandModal`, `ShellModal`) per uso mobile (fullscreen/sheet, padding adattivo).
+8. [ ] Test finale su dispositivi reali e viewport target (Pixel 8 + range 360-430 px) con correzione regressioni.
 
 ### Definition of Done (mobile)
 

@@ -4,8 +4,9 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 
 > Il progetto è pensato per gestire più appartamenti, ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
 
-## Stato attuale del progetto (2026-07-11)
+## Stato attuale del progetto (2026-07-12)
 
+- Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
 - Deploy operativo in modalità Docker e nativa (systemd) con script dedicati.
 - Gestione CORS documentata con troubleshooting pratico in produzione.
 - Roadmap funzionale disponibile in `docs/ROADMAP.md`.
@@ -36,6 +37,7 @@ Documenti di riferimento rapido:
 - Esportazione CSV delle metriche
 - Aggiunta di nuovi device dalla dashboard (persistiti in `config/devices.yaml`)
 - Dark mode, timeline attività, badge VPN/latenza
+- Interfaccia responsive mobile-first: navigazione a drawer, griglie e grafici adattivi, tabelle anti-overflow
 - Deploy con Docker Compose o esecuzione locale (script PowerShell incluso)
 - Script di deploy sul Raspberry (Docker o nativo systemd) via Tailscale o LAN — vedi [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 

@@ -25,6 +25,7 @@ Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`
 
 ## Unreleased
 
+- **UX mobile**: viste principali rese responsive (mobile-first). Navigazione con drawer + hamburger su schermi piccoli (`Layout`, `Sidebar`), griglia metriche adattiva (`grid-cols-2 sm:grid-cols-3`), grafici ad altezza dinamica (`MetricChart`), tabelle con scroll anti-overflow (`ServiceStatusTable`), header e pagine core (`Overview`, `DeviceDetailPage`, `AlertsPage`, `Settings`) fluidi su viewport 360-430 px.
 - Documentazione di progetto allineata con stato corrente (roadmap, versioning, deploy).
 - Aggiunta roadmap milestone-based in `docs/ROADMAP.md`.
 - Aggiunta guida `docs/VERSIONING.md` con Conventional Commits + SemVer.
