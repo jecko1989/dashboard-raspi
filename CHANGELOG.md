@@ -5,7 +5,17 @@ Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`
 
 ## Unreleased
 
-- In preparazione.
+- Documentazione di progetto allineata con stato corrente (roadmap, versioning, deploy).
+- Aggiunta roadmap milestone-based in `docs/ROADMAP.md`.
+- Aggiunta guida `docs/VERSIONING.md` con Conventional Commits + SemVer.
+- Configurata automazione release/versioning con Release Please:
+  - `.github/workflows/release-please.yml`
+  - `release-please-config.json`
+  - `.release-please-manifest.json`
+- Aggiunti template di collaborazione Git:
+  - `.gitmessage.txt` (commit template)
+  - `.github/pull_request_template.md` (PR checklist)
+- Aggiornata guida deploy con troubleshooting CORS in login/preflight.
 
 ---
 

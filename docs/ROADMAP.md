@@ -1,7 +1,9 @@
 # Roadmap - Prossimi miglioramenti
 
-Stato: proposta iniziale
-Data: 2026-07-11
+Stato: attiva (pianificazione)
+Data ultimo aggiornamento: 2026-07-11
+Baseline corrente: release v0.1.0 (monitoraggio + comandi + deploy + shell web)
+Prossimo target: milestone v0.6.0
 
 ## Obiettivo
 Pianificare i prossimi miglioramenti per release incrementali, con priorita' e dipendenze chiare.

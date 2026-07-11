@@ -1,5 +1,12 @@
 # Setup consigliato — Ubuntu + Tailscale + Mysterium (+ CUPS)
 
+Documenti correlati (stato progetto):
+
+- `README.md` (panoramica e stato attuale)
+- `docs/DEPLOYMENT.md` (deploy dashboard su Raspberry)
+- `docs/ROADMAP.md` (prossimi miglioramenti)
+- `docs/VERSIONING.md` (convenzione commit/versioni/release)
+
 Guida operativa per allestire, in ogni appartamento, un nodo basato su **Ubuntu
 (Desktop o Server)**. La base comune a **tutti** i nodi è:
 

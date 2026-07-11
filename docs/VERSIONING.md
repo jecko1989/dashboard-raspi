@@ -12,6 +12,19 @@ Questa guida definisce la convenzione di versionamento del progetto usando:
 - Tag release: `vMAJOR.MINOR.PATCH` (es. `v0.7.0`).
 - Branch principale: `main`.
 
+## Stato attuale nel repository
+
+Configurazione presente e pronta all'uso:
+
+- Workflow GitHub Actions: `.github/workflows/release-please.yml`
+- Config Release Please: `release-please-config.json`
+- Manifest versioni: `.release-please-manifest.json`
+- Template commit locale: `.gitmessage.txt`
+- Template PR: `.github/pull_request_template.md`
+
+Operativita': a ogni push su `main` viene valutata l'apertura/aggiornamento della
+Release PR in base ai commit Conventional.
+
 ## Mapping commit -> incremento versione
 
 - `fix:` -> PATCH (`x.y.Z`)

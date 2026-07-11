@@ -1,5 +1,12 @@
 # Test PoC — Rilevamento di un nodo Tailscale dalla dashboard (Windows 11)
 
+Documenti correlati (stato progetto):
+
+- `README.md` (panoramica generale)
+- `docs/DEPLOYMENT.md` (rete/deploy/CORS)
+- `docs/ROADMAP.md` (milestone future)
+- `docs/VERSIONING.md` (regole commit/release)
+
 Guida rapida per verificare, su un **singolo laptop Windows 11**, che la
 Raspberry Dashboard rilevi un nodo tramite **Tailscale**. Il laptop fa sia da
 **nodo monitorato** (Tailscale + server SSH) sia da **host della dashboard**.
