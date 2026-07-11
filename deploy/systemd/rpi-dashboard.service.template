@@ -1,0 +1,33 @@
+# =============================================================================
+# RPi Dashboard - Template unit systemd (modalita' nativa)
+# =============================================================================
+# Questo e' un TEMPLATE generico: NON contiene username, percorsi personali,
+# segreti o hostname reali. I marcatori __NOME__ vengono sostituiti da
+# scripts/deploy-native.sh al momento del deploy.
+#
+# Serve il backend FastAPI/Uvicorn. Il frontend statico (dist) viene servito
+# separatamente (vedi docs/DEPLOYMENT.md, es. tramite nginx).
+# =============================================================================
+
+[Unit]
+Description=RPi Dashboard backend (FastAPI/Uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__SERVICE_USER__
+Group=__SERVICE_USER__
+WorkingDirectory=__DEPLOY_PATH__/current/backend
+EnvironmentFile=__DEPLOY_PATH__/.env
+ExecStart=__DEPLOY_PATH__/current/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port __BACKEND_PORT__
+Restart=on-failure
+RestartSec=5
+
+# Hardening di base (non privilegiato).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

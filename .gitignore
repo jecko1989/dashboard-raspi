@@ -3,6 +3,10 @@
 *.env
 !.env.example
 
+# Deploy: file di configurazione reale (host/utenti reali). Usa il .example.
+deploy/deploy.env
+!deploy/deploy.env.example
+
 # Segreti / chiavi SSH (non committare mai)
 secrets/*
 !secrets/ssh/

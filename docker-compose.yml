@@ -22,7 +22,7 @@ services:
       - ./config:/config:ro                      # configurazione device (sola lettura)
       - ./secrets/ssh:/secrets/ssh:ro            # chiavi SSH (sola lettura) - crea questa cartella
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     healthcheck:
       test:
         - "CMD"
@@ -42,7 +42,7 @@ services:
         # URL con cui il browser raggiunge il backend (host, non rete interna docker).
         VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:8000}"
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       backend:
         condition: service_healthy

@@ -1,0 +1,4 @@
+# Garantisce line-ending LF per gli script e i template di deploy,
+# cosi' restano eseguibili sul Raspberry anche se modificati su Windows.
+*.sh text eol=lf
+*.template text eol=lf
