@@ -85,8 +85,13 @@ build_ssh_opts
 log_info "Modalita': $MODE | Host: $(ssh_target) | Path: $DEPLOY_PATH | dry-run: $DRY_RUN"
 
 # --- Controlli preliminari comuni --------------------------------------------
-require_cmd ssh
-require_cmd rsync
+require_cmd "$SSH_BIN"
+require_cmd "$SCP_BIN"
+if is_windows_shell; then
+  require_cmd tar
+else
+  require_cmd rsync
+fi
 check_ssh
 
 # --- Dispatch ----------------------------------------------------------------

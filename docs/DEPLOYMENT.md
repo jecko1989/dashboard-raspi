@@ -34,15 +34,25 @@ Modi per raggiungere il Raspberry in produzione:
 ## 2. Prerequisiti
 
 **Sul tuo PC (da cui lanci il deploy):**
-- `ssh` e `rsync`
+- `ssh`
+- `rsync` su Linux/macOS; su Windows gli script possono usare il fallback `tar+ssh`
 - accesso SSH **a chiave** al Raspberry (niente password)
 - per la modalità nativa: `node` e `npm` (build del frontend)
+
+Su **Windows** puoi lanciare `deploy.sh` da **Git Bash**: gli script provano a
+usare OpenSSH nativo di Windows e, se necessario, fanno il trasferimento file
+via `tar+ssh` invece di `rsync`.
 
 **Sul Raspberry:**
 - **Docker**: Docker Engine + plugin **Docker Compose V2** (`docker compose`)
 - **Nativo**: `python3`, `python3-venv`, `systemd`, `sudo` (idealmente NOPASSWD
   ristretto per `systemctl`/`install`), e un web server statico (es. `nginx`) per
   servire il frontend
+
+Per la modalità **native** gli script ora verificano esplicitamente che `sudo`
+sia usabile in modo **non interattivo** per i comandi necessari al deploy. Se il
+tuo utente SSH non ha già questi permessi, configura una regola `sudoers`
+mirata prima del primo deploy.
 
 Gli script **non installano** pacchetti di sistema: se manca qualcosa, si fermano
 e indicano cosa installare (es. `sudo apt-get install -y python3 python3-venv`).
@@ -70,6 +80,22 @@ e indicano cosa installare (es. `sudo apt-get install -y python3 python3-venv`).
    ```
 
    Il deploy avvisa con un warning se `.env` o `config/devices.yaml` mancano.
+
+    Se usi la modalità **native**, dentro `${DEPLOY_PATH}/.env` non lasciare i
+    path di default pensati per Docker (`/data`, `/secrets`, `/config`). Usa path
+    reali sul Raspberry, ad esempio:
+
+    ```bash
+    DATABASE_URL="sqlite:////home/<utente>/workspace/dashboard-raspi/raspberry_dashboard.db"
+    SSH_KEYS_DIR="/home/<utente>/workspace/dashboard-raspi/secrets/ssh"
+    DEVICES_CONFIG_PATH="/home/<utente>/workspace/dashboard-raspi/config/devices.yaml"
+    ```
+
+    Se `${DEPLOY_PATH}` e il frontend statico stanno sotto `/home/<utente>/...`, il
+    web server deve poter **attraversare** tutte le directory padre. Con `nginx`
+    su Ubuntu può servire almeno il bit `x` per gli altri utenti sulla home, ad
+    esempio `chmod o+x /home/<utente>`, oppure in alternativa puoi scegliere un
+    `DEPLOY_PATH` fuori dalla home (es. `/opt/...` o `/srv/...`).
 
 ---
 
@@ -120,18 +146,32 @@ virtualenv del backend, installa/riavvia la unit systemd e fa l'health check con
 
 Il servizio systemd serve il **backend** (uvicorn su `0.0.0.0:${BACKEND_PORT}`). Il
 **frontend statico** (`${DEPLOY_PATH}/current/frontend`) va servito da un web
-server, ad esempio nginx:
+server, ad esempio nginx. Nel repo e' incluso anche un template pronto in
+[`deploy/nginx/dashboard-raspi.conf`](../deploy/nginx/dashboard-raspi.conf):
 
 ```nginx
 server {
-    listen 8080;
-    server_name _;
-    root /opt/rpi-dashboard/current/frontend;
-    index index.html;
-    location / {
-        try_files $uri $uri/ /index.html;   # fallback SPA per il routing client
-    }
+  listen 8080;
+  server_name _;
+  root ${DEPLOY_PATH}/current/frontend;
+  index index.html;
+  location / {
+    try_files $uri $uri/ /index.html;   # fallback SPA per il routing client
+  }
 }
+```
+
+Ricorda di personalizzare la direttiva `root` del template in base al tuo
+`DEPLOY_PATH` reale prima di installarlo sul Raspberry.
+
+Per installarlo sul Raspberry puoi usare, ad esempio:
+
+```bash
+sudo install -m 0644 deploy/nginx/dashboard-raspi.conf /etc/nginx/sites-available/dashboard-raspi
+sudo ln -sfn /etc/nginx/sites-available/dashboard-raspi /etc/nginx/sites-enabled/dashboard-raspi
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl restart nginx
 ```
 
 La unit richiede `sudo` sul Pi per `systemctl` e per installare il file in
@@ -141,6 +181,20 @@ La unit richiede `sudo` sul Pi per `systemctl` e per installare il file in
 systemctl status rpi-dashboard
 sudo journalctl -u rpi-dashboard -n 100 --no-pager
 ```
+
+`SERVICE_USER` in `deploy.env` deve corrispondere a un utente gia' esistente sul
+Raspberry. Se non hai creato un utente dedicato al servizio, usa lo stesso
+utente del deploy SSH.
+
+Per evitare prompt password durante il deploy `native`, una configurazione minima
+di `sudoers` puo' essere simile a questa:
+
+```sudoers
+<utente-deploy> ALL=(root) NOPASSWD: /usr/bin/install, /usr/bin/systemctl, /usr/sbin/nginx
+```
+
+Installa la regola in modo sicuro con `visudo` oppure creando un file dedicato in
+`/etc/sudoers.d/` con permessi `0440`.
 
 ---
 

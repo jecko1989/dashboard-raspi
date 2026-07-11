@@ -236,6 +236,17 @@ cp deploy/deploy.env.example deploy/deploy.env   # poi personalizza host/porte
 Guida completa (binding `0.0.0.0`, `VITE_API_BASE_URL`, CORS, firewall, accesso
 LAN e Tailscale/MagicDNS): **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
+Note pratiche per il deploy `native`:
+
+- su **Windows** puoi lanciare gli script da **Git Bash**; se `rsync` non e'
+  affidabile, il deploy usa automaticamente un fallback `tar+ssh`
+- `SERVICE_USER` in `deploy.env` deve essere un utente gia' esistente sul Raspberry
+- il deploy `native` richiede `sudo` non interattivo almeno per `install` e
+  `systemctl`
+- se servi il frontend con `nginx` da un path sotto `/home/<utente>`, assicurati
+  che il web server possa attraversare la home oppure usa un path fuori da `/home`
+- il repo include un template `nginx` in `deploy/nginx/dashboard-raspi.conf`
+
 ---
 
 ## Configurazione

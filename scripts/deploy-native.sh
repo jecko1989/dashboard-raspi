@@ -30,6 +30,8 @@ deploy_native() {
       log_error "Installale manualmente, es.: sudo apt-get install -y python3 python3-venv"
       die "Deploy interrotto: prerequisiti mancanti."
     fi
+    ssh_probe "sudo -n /usr/bin/install --version >/dev/null 2>&1 && sudo -n /usr/bin/systemctl --version >/dev/null 2>&1" \
+      || die "La modalita' native richiede sudo non interattivo sul Raspberry per install/systemctl. Configura NOPASSWD mirato per l'utente di deploy oppure usa un utente gia' abilitato."
     log_ok "Prerequisiti presenti."
   else
     log_dry "ssh $(ssh_target): verifica python3 / venv / systemctl / sudo"
@@ -64,6 +66,7 @@ deploy_native() {
   log_info "Trasferimento backend e frontend (solo artefatti necessari)..."
   rsync_to_remote "${REPO_ROOT}/backend/" "${release}/backend/"
   rsync_to_remote "${REPO_ROOT}/frontend/dist/" "${release}/frontend/"
+  ssh_exec "chmod -R a+rX '${release}/frontend'"
 
   # --- Virtualenv + dipendenze backend ---------------------------------------
   log_info "Creazione virtualenv e installazione dipendenze backend..."
@@ -81,7 +84,7 @@ deploy_native() {
     -e "s#__BACKEND_PORT__#${BACKEND_PORT}#g" \
     "$template" > "$rendered"
 
-  rsync_to_remote "$rendered" "${release}/${SERVICE_NAME}.service"
+  copy_file_to_remote "$rendered" "${release}/${SERVICE_NAME}.service"
   ssh_exec "sudo install -m 0644 '${release}/${SERVICE_NAME}.service' '/etc/systemd/system/${SERVICE_NAME}.service'"
   ssh_exec "sudo systemctl daemon-reload"
   ssh_exec "sudo systemctl enable '${SERVICE_NAME}' >/dev/null 2>&1 || true"

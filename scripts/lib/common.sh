@@ -84,15 +84,42 @@ validate_deploy_path() {
 
 # --- SSH sicuro --------------------------------------------------------------
 # Costruisce l'array SSH_OPTS. Non disabilita MAI la verifica dell'host key.
+SSH_BIN="ssh"
+SCP_BIN="scp"
 SSH_OPTS=()
+SCP_OPTS=()
+
+is_windows_shell() {
+  case "$(uname -s 2>/dev/null || true)" in
+    MINGW*|MSYS*|CYGWIN*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+select_ssh_binaries() {
+  SSH_BIN="ssh"
+  SCP_BIN="scp"
+
+  if is_windows_shell; then
+    local win_ssh="/c/Windows/System32/OpenSSH/ssh.exe"
+    local win_scp="/c/Windows/System32/OpenSSH/scp.exe"
+    [[ -x "$win_ssh" ]] && SSH_BIN="$win_ssh"
+    [[ -x "$win_scp" ]] && SCP_BIN="$win_scp"
+  fi
+}
+
 build_ssh_opts() {
+  select_ssh_binaries
   SSH_OPTS=( -p "${DEPLOY_PORT:-22}" -o BatchMode=yes -o ConnectTimeout=10 )
+  SCP_OPTS=( -P "${DEPLOY_PORT:-22}" -o BatchMode=yes -o ConnectTimeout=10 )
   if [[ -n "${SSH_IDENTITY_FILE:-}" ]]; then
     [[ -f "$SSH_IDENTITY_FILE" ]] || die "SSH_IDENTITY_FILE non trovato: $SSH_IDENTITY_FILE"
     SSH_OPTS+=( -i "$SSH_IDENTITY_FILE" )
+    SCP_OPTS+=( -i "$SSH_IDENTITY_FILE" )
   fi
   if [[ -n "${SSH_KNOWN_HOSTS_FILE:-}" ]]; then
     SSH_OPTS+=( -o "UserKnownHostsFile=${SSH_KNOWN_HOSTS_FILE}" -o "StrictHostKeyChecking=yes" )
+    SCP_OPTS+=( -o "UserKnownHostsFile=${SSH_KNOWN_HOSTS_FILE}" -o "StrictHostKeyChecking=yes" )
   fi
 }
 
@@ -106,57 +133,93 @@ ssh_exec() {
     log_dry "ssh $(ssh_target): $cmd"
     return 0
   fi
-  ssh "${SSH_OPTS[@]}" "$(ssh_target)" "$cmd"
+  "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" "$cmd"
 }
 
 # Come ssh_exec ma esegue sempre (anche in dry-run): per sole letture/verifiche.
 ssh_probe() {
-  ssh "${SSH_OPTS[@]}" "$(ssh_target)" "$1"
+  "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" "$1"
 }
 
 # Verifica la raggiungibilita' SSH.
 check_ssh() {
   log_info "Verifica connessione SSH a $(ssh_target) (porta ${DEPLOY_PORT:-22})..."
-  if ssh "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$(ssh_target)" "true" 2>/dev/null; then
+  if "$SSH_BIN" "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$(ssh_target)" "true" 2>/dev/null; then
     log_ok "Connessione SSH riuscita."
   else
     die "SSH non raggiungibile. Verifica host/porta/chiave e che l'host sia in known_hosts (vedi docs/DEPLOYMENT.md)."
   fi
 }
 
-# --- rsync -------------------------------------------------------------------
+# --- Trasferimento file ------------------------------------------------------
 # Esclusioni comuni: mai trasferire git, dipendenze ricostruibili, segreti,
 # config personale, artefatti e file dell'IDE.
-RSYNC_EXCLUDES=(
-  --exclude ".git"
-  --exclude ".gitignore"
-  --exclude ".github"
-  --exclude "node_modules"
-  --exclude "dist"
-  --exclude "build"
-  --exclude "__pycache__"
-  --exclude "*.py[cod]"
-  --exclude ".venv"
-  --exclude "venv"
-  --exclude ".pytest_cache"
-  --exclude ".mypy_cache"
-  --exclude "*.db"
-  --exclude "*.sqlite"
-  --exclude "*.sqlite3"
-  --exclude ".env"
-  --exclude "*.env"
-  --exclude "secrets"
-  --exclude "config/devices.yaml"
-  --exclude "*.pem"
-  --exclude "*.key"
-  --exclude "id_*"
-  --exclude "*.ovpn"
-  --exclude ".vscode"
-  --exclude ".idea"
-  --exclude ".DS_Store"
-  --exclude "*.log"
-  --exclude "tsconfig.tsbuildinfo"
+TRANSFER_EXCLUDE_PATTERNS=(
+  ".git"
+  ".gitignore"
+  ".github"
+  "node_modules"
+  "dist"
+  "build"
+  "__pycache__"
+  "*.py[cod]"
+  ".venv"
+  "venv"
+  ".pytest_cache"
+  ".mypy_cache"
+  "*.db"
+  "*.sqlite"
+  "*.sqlite3"
+  ".env"
+  "*.env"
+  "secrets"
+  "config/devices.yaml"
+  "*.pem"
+  "*.key"
+  "id_*"
+  "*.ovpn"
+  ".vscode"
+  ".idea"
+  ".DS_Store"
+  "*.log"
+  "tsconfig.tsbuildinfo"
 )
+RSYNC_EXCLUDES=()
+TAR_EXCLUDES=()
+for _pattern in "${TRANSFER_EXCLUDE_PATTERNS[@]}"; do
+  RSYNC_EXCLUDES+=( --exclude "${_pattern}" )
+  TAR_EXCLUDES+=( "--exclude=${_pattern}" )
+done
+unset _pattern
+
+tar_dir_to_remote() {
+  local src="$1" dest="$2"
+
+  [[ -d "$src" ]] || die "Il fallback tar+ssh richiede una directory sorgente: '$src'."
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_dry "tar+ssh $src -> $(ssh_target):$dest"
+    return 0
+  fi
+
+  ssh_exec "mkdir -p '$dest'"
+  tar -czf - "${TAR_EXCLUDES[@]}" -C "$src" . | \
+    "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" "tar -xzf - -C '$dest'"
+}
+
+copy_file_to_remote() {
+  local src="$1" dest="$2"
+
+  [[ -f "$src" ]] || die "File sorgente non trovato: '$src'."
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_dry "scp $src -> $(ssh_target):$dest"
+    return 0
+  fi
+
+  ssh_exec "mkdir -p '$(dirname "$dest")'"
+  "$SCP_BIN" "${SCP_OPTS[@]}" "$src" "$(ssh_target):$dest"
+}
 
 # Sincronizza una sorgente locale verso una destinazione remota.
 # NON usa --delete: preserva i file presenti solo sul server (es. .env, secrets).
@@ -164,7 +227,14 @@ rsync_to_remote() {
   local src="$1" dest="$2"
   shift 2
   local extra=( "$@" )
-  local ssh_cmd="ssh ${SSH_OPTS[*]}"
+
+  if is_windows_shell; then
+    log_info "Shell Windows rilevata: uso fallback tar+ssh per '$src'."
+    tar_dir_to_remote "$src" "$dest"
+    return 0
+  fi
+
+  local ssh_cmd="${SSH_BIN} ${SSH_OPTS[*]}"
   if [[ "$DRY_RUN" == "true" ]]; then
     log_dry "rsync $src -> $(ssh_target):$dest"
     rsync -azn --human-readable -e "$ssh_cmd" "${RSYNC_EXCLUDES[@]}" "${extra[@]}" \
