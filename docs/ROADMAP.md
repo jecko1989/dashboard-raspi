@@ -5,6 +5,39 @@ Data ultimo aggiornamento: 2026-07-11
 Baseline corrente: release v0.1.0 (monitoraggio + comandi + deploy + shell web)
 Prossimo target: milestone v0.6.0
 
+## Priorita' immediata - UX mobile dashboard
+
+### Problema rilevato
+- La dashboard risulta poco usabile su smartphone (test reale su Pixel 8).
+
+### Intervento pianificato
+- Rendere completamente responsive le viste principali (overview, card device, dettaglio, tabelle, modali).
+- Migliorare spaziature, tipografia e gerarchia visiva per viewport mobile.
+- Ridurre overflow orizzontali e componenti compressi/non leggibili.
+
+### Criteri di accettazione
+- Navigazione completa da mobile senza zoom manuale.
+- Nessun overflow orizzontale nelle pagine principali.
+- Card, grafici, tabelle e modali leggibili su larghezze tipiche smartphone (es. 360-430 px).
+- Performance e leggibilita' mantenute su Pixel 8.
+
+### Piano tecnico (task operativi)
+
+1. Audit responsive delle pagine principali (`Overview`, `DeviceDetailPage`, `ApartmentPage`, `AlertsPage`, `Settings`).
+2. Refactor layout generale (`Layout`, `Sidebar`) con navigazione mobile-first e gestione corretta degli spazi.
+3. Refactor delle card (`ApartmentSection`, `DeviceCard`, `MetricCard`) con breakpoint coerenti e gerarchia tipografica leggibile.
+4. Ottimizzazione del dettaglio device (`DeviceDetails`, `DeviceCommands`, `DeviceSSHKey`) per viewport stretta e azioni touch-friendly.
+5. Gestione grafici responsive (`MetricChart`) con altezze dinamiche e fallback leggibile su schermi piccoli.
+6. Gestione tabelle e timeline (`ServiceStatusTable`, `EventTimeline`) con strategie anti-overflow (stacking, scroll controllato, semplificazione colonne).
+7. Revisione modali (`CommandModal`, `ShellModal`) per uso mobile (fullscreen/sheet, pulsanti grandi, focus/scroll sicuri).
+8. Test finale su dispositivi reali e viewport target (Pixel 8 + range 360-430 px) con correzione regressioni.
+
+### Definition of Done (mobile)
+
+- Nessun contenuto tagliato o fuori viewport nelle pagine core.
+- Interazioni principali utilizzabili con una mano (tap target adeguati).
+- Layout stabile in portrait e landscape sui device target.
+
 ## Obiettivo
 Pianificare i prossimi miglioramenti per release incrementali, con priorita' e dipendenze chiare.
 
