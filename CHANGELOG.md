@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.1](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.0...v0.1.1) (2026-07-11)
+
+
+### Features
+
+* add allowScripts configuration for esbuild ([990c09d](https://github.com/jecko1989/dashboard-raspi/commit/990c09d219770716924126b35be8eb6c162e3c61))
+* add interactive web shell for admin users ([3367852](https://github.com/jecko1989/dashboard-raspi/commit/3367852297f54939f04ceb677c87e51ae9afb50e))
+* aggiunto changelog con dettagli sulle funzionalità delle fasi di sviluppo ([1bdf857](https://github.com/jecko1989/dashboard-raspi/commit/1bdf85716c15ddd353b15a069c757b0a444fa2d7))
+* **devices:** implement device creation flow ([528b4f8](https://github.com/jecko1989/dashboard-raspi/commit/528b4f8e6e1d24b846fae9e3631bfeb39580b1e4))
+* **scripts:** add multi-platform local run scripts with automatic dependency installation ([75a08ae](https://github.com/jecko1989/dashboard-raspi/commit/75a08ae0f8d4cb4829c2913dd7b60c764591a060))
+* **ui:** add sidebar emojis and device creation entry ([4c24ce0](https://github.com/jecko1989/dashboard-raspi/commit/4c24ce0f89ae2a8a8d17a826ac8338c5636abcd6))
+
+
+### Bug Fixes
+
+* **ci:** aggiorna release-please e documenta permessi Actions ([24c7c5e](https://github.com/jecko1989/dashboard-raspi/commit/24c7c5ecea1b5d191262dece516ddbef19c3dd0c))
+* **tsconfig:** add missing device create page to project root ([42a6448](https://github.com/jecko1989/dashboard-raspi/commit/42a644889aef9ed86240c6dbcbef001f8f6b6777))
+
+## Changelog
+
 Questo file segue una struttura compatibile con Keep a Changelog.
 Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`.
 
