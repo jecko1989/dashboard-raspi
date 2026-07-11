@@ -19,7 +19,7 @@ export function DeviceDetails({ device }: DeviceDetailsProps) {
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-xl font-semibold">{device.name}</h2>

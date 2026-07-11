@@ -31,7 +31,7 @@ export function Settings() {
     <div>
       <h1 className="mb-6 text-2xl font-bold">Impostazioni</h1>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
         <h2 className="mb-4 text-lg font-semibold">Soglie alert</h2>
         {error && <p className="text-red-600">Errore: {error}</p>}
         {!thresholds && !error && <p className="text-gray-500">Caricamento…</p>}

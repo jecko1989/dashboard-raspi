@@ -34,25 +34,27 @@ export function MetricChart({ title, metrics, dataKey, color, unit }: MetricChar
       {data.length === 0 ? (
         <p className="py-8 text-center text-sm text-gray-400">Nessun dato</p>
       ) : (
-        <ResponsiveContainer width="100%" height={180}>
-          <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#88888822" />
-            <XAxis dataKey="time" tick={{ fontSize: 10 }} minTickGap={24} />
-            <YAxis tick={{ fontSize: 10 }} width={40} unit={unit} />
-            <Tooltip
-              contentStyle={{ fontSize: 12 }}
-              formatter={(v: number) => [`${v}${unit ?? ''}`, title]}
-            />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke={color}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <div className="h-44 w-full sm:h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#88888822" />
+              <XAxis dataKey="time" tick={{ fontSize: 10 }} minTickGap={24} />
+              <YAxis tick={{ fontSize: 10 }} width={40} unit={unit} />
+              <Tooltip
+                contentStyle={{ fontSize: 12 }}
+                formatter={(v: number) => [`${v}${unit ?? ''}`, title]}
+              />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke={color}
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </div>
   );

@@ -481,7 +481,7 @@ export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceComman
 
       {logs && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+          <div className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800 sm:p-6">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Log · {logs.service}</h3>
               <button

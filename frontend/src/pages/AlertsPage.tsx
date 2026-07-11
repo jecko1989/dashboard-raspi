@@ -39,8 +39,8 @@ export function AlertsPage() {
                 severityStyles[a.severity] ?? severityStyles.warning
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="break-words font-semibold text-gray-900 dark:text-gray-100">
                   {a.type.toUpperCase()} · {a.device_id}
                 </span>
                 <span className="text-xs uppercase text-gray-500">{a.severity}</span>
