@@ -38,13 +38,13 @@ jobs:
           # Determina il bump massimo usando grep
           BUMP="none"
           
-          if echo "$COMMITS" | grep -q "^feat!("; then
-            echo "Found BREAKING CHANGE (feat!)"
+          if echo "$COMMITS" | grep -Eq "^(feat|fix)(\([^)]+\))?!:"; then
+            echo "Found BREAKING CHANGE (! in conventional commit)"
             BUMP="major"
-          elif echo "$COMMITS" | grep -q "^feat("; then
+          elif echo "$COMMITS" | grep -Eq "^feat(\([^)]+\))?:"; then
             echo "Found feat"
             BUMP="minor"
-          elif echo "$COMMITS" | grep -q "^fix("; then
+          elif echo "$COMMITS" | grep -Eq "^fix(\([^)]+\))?:"; then
             echo "Found fix"
             BUMP="patch"
           else
@@ -61,7 +61,8 @@ jobs:
         run: |
           # Estrai milestone dal footer dell'ultimo commit su main
           MILESTONE=$(git log -1 --pretty=format:"%b" | grep -i "^Milestone:" | awk '{print $2}' || echo "")
-          echo "target_version=$MILESTONE" >> $GITHUB_OUTPUT
+          MILESTONE="${MILESTONE#v}"
+          echo "release_as=$MILESTONE" >> $GITHUB_OUTPUT
           if [ -n "$MILESTONE" ]; then
             echo "✅ Milestone trovato: $MILESTONE"
           else
@@ -69,16 +70,16 @@ jobs:
           fi
       
       - name: Release Please (con milestone)
-        if: steps.milestone.outputs.target_version != '' && steps.milestone.outputs.target_version != null
+        if: steps.milestone.outputs.release_as != '' && steps.milestone.outputs.release_as != null
         uses: googleapis/release-please-action@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          target-version: ${{ steps.milestone.outputs.target_version }}
+          release-as: ${{ steps.milestone.outputs.release_as }}
       
       - name: Release Please (senza milestone, calcolo automatico)
-        if: (steps.milestone.outputs.target_version == '' || steps.milestone.outputs.target_version == null) && steps.bump-calc.outputs.bump != 'none'
+        if: (steps.milestone.outputs.release_as == '' || steps.milestone.outputs.release_as == null) && steps.bump-calc.outputs.bump != 'none'
         uses: googleapis/release-please-action@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
