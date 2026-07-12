@@ -19,6 +19,7 @@ Documenti di riferimento rapido:
 - `docs/DEPLOYMENT.md` (deploy, rete, CORS)
 - `docs/ROADMAP.md` (milestone future)
 - `docs/VERSIONING.md` (Conventional Commits, SemVer, release)
+- `docs/MILESTONE_WORKFLOW.md` (guida flusso milestone per developer) **← LEGGI QUESTO PRIMA DI FARE PR**
 - `CHANGELOG.md` (stato evolutivo e voci Unreleased)
 
 ---

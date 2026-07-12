@@ -20,4 +20,14 @@
 #
 # Footer opzionale per breaking change:
 # BREAKING CHANGE: descrizione del cambio incompatibile
+#
+# Footer opzionale per milestone (workflow release-please legge questo):
+# Milestone: v0.6.0
+#
+# Esempi completi:
+# feat(ui): aggiunge menu contestuale device
+# Milestone: v0.6.0
+#
+# fix(auth): corregge scadenza JWT
+# Milestone: v0.6.0
 

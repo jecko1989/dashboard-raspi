@@ -13,9 +13,26 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history per leggere tutti i commit
+      
+      - name: Extract milestone version from commit footer
+        id: milestone
+        run: |
+          # Estrai milestone dal footer dell'ultimo commit su main
+          MILESTONE=$(git log -1 --pretty=format:"%b" | grep -i "^Milestone:" | awk '{print $2}' || echo "")
+          echo "target_version=$MILESTONE" >> $GITHUB_OUTPUT
+          if [ -n "$MILESTONE" ]; then
+            echo "✅ Milestone trovato: $MILESTONE"
+          else
+            echo "ℹ️ Nessun milestone nel commit, Release Please determinerà il bump automaticamente"
+          fi
+      
       - name: Release Please
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          target-version: ${{ steps.milestone.outputs.target_version }}
