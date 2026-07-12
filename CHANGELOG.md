@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/jecko1989/dashboard-raspi/compare/v0.3.0...v0.3.1) (2026-07-12)
+
+
+### Bug Fixes
+
+* **release:** trigger release-please PR ([f87bb4e](https://github.com/jecko1989/dashboard-raspi/commit/f87bb4e0fcf32c10775a43fa95092449a2e37b0c))
+
 ## [0.3.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.2.1...v0.3.0) (2026-07-12)
 
 
