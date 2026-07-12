@@ -17,8 +17,54 @@ jobs:
         with:
           fetch-depth: 0  # Full history per leggere tutti i commit
       
-      - name: Extract milestone version from commit footer
+      - name: Calculate bump based on commit types (ignore chore/docs/etc)
+        id: bump-calc
+        run: |
+          # Ultimo tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "Last tag: $LAST_TAG"
+          
+          # Estrai commit di tipo feat/fix dal tag al HEAD
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"%s")
+          else
+            COMMITS=$(git log --pretty=format:"%s")
+          fi
+          
+          # Determina il bump massimo
+          BUMP="none"
+          HAS_FEATURE=false
+          HAS_FIX=false
+          HAS_BREAKING=false
+          
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^feat!(\(|:)|\(BREAKING\ CHANGE ]] || [[ "$line" =~ BREAKING\ CHANGE ]]; then
+              echo "⚡ Found BREAKING CHANGE: $line"
+              HAS_BREAKING=true
+            elif [[ "$line" =~ ^feat(\(|:) ]]; then
+              echo "📝 Found feat: $line"
+              HAS_FEATURE=true
+            elif [[ "$line" =~ ^fix(\(|:) ]]; then
+              echo "🐛 Found fix: $line"
+              HAS_FIX=true
+            fi
+          done <<< "$COMMITS"
+          
+          # Calcola il bump massimo
+          if [ "$HAS_BREAKING" = true ]; then
+            BUMP="major"
+          elif [ "$HAS_FEATURE" = true ]; then
+            BUMP="minor"
+          elif [ "$HAS_FIX" = true ]; then
+            BUMP="patch"
+          fi
+          
+          echo "bump=$BUMP" >> $GITHUB_OUTPUT
+          echo "✅ Determined bump: $BUMP"
+      
+      - name: Extract milestone version from commit footer (if bump found)
         id: milestone
+        if: steps.bump-calc.outputs.bump != 'none'
         run: |
           # Estrai milestone dal footer dell'ultimo commit su main
           MILESTONE=$(git log -1 --pretty=format:"%b" | grep -i "^Milestone:" | awk '{print $2}' || echo "")
@@ -30,7 +76,7 @@ jobs:
           fi
       
       - name: Release Please (con milestone)
-        if: steps.milestone.outputs.target_version != ''
+        if: steps.milestone.outputs.target_version != '' && steps.milestone.outputs.target_version != null
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -38,10 +84,15 @@ jobs:
           manifest-file: .release-please-manifest.json
           target-version: ${{ steps.milestone.outputs.target_version }}
       
-      - name: Release Please (senza milestone)
-        if: steps.milestone.outputs.target_version == ''
+      - name: Release Please (senza milestone, calcolo automatico)
+        if: (steps.milestone.outputs.target_version == '' || steps.milestone.outputs.target_version == null) && steps.bump-calc.outputs.bump != 'none'
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+      
+      - name: No release (solo chore/docs/etc)
+        if: steps.bump-calc.outputs.bump == 'none'
+        run: |
+          echo "✅ Nessun commit release-eligible (feat/fix), skippando release"
