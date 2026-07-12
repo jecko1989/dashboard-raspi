@@ -17,8 +17,23 @@ jobs:
         with:
           fetch-depth: 0  # Full history per leggere tutti i commit
       
+      - name: Check commit type (skip non-feature/fix)
+        id: commit-type
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          echo "Message: $COMMIT_MSG"
+          # Skip release per commit type: chore, docs, refactor, test, ci, style, perf
+          if [[ "$COMMIT_MSG" =~ ^(chore|docs|refactor|test|ci|style|perf)\( ]]; then
+            echo "skip_release=true" >> $GITHUB_OUTPUT
+            echo "⏭️ Skip release: commit type non-feature/fix"
+          else
+            echo "skip_release=false" >> $GITHUB_OUTPUT
+            echo "✅ Release eligible: $COMMIT_MSG"
+          fi
+      
       - name: Extract milestone version from commit footer
         id: milestone
+        if: steps.commit-type.outputs.skip_release == 'false'
         run: |
           # Estrai milestone dal footer dell'ultimo commit su main
           MILESTONE=$(git log -1 --pretty=format:"%b" | grep -i "^Milestone:" | awk '{print $2}' || echo "")
@@ -30,8 +45,8 @@ jobs:
           fi
       
       - name: Release Please (con milestone)
-        if: steps.milestone.outputs.target_version != ''
-        uses: googleapis/release-please-action@v4.8.0
+        if: steps.commit-type.outputs.skip_release == 'false' && steps.milestone.outputs.target_version != ''
+        uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
@@ -39,8 +54,8 @@ jobs:
           target-version: ${{ steps.milestone.outputs.target_version }}
       
       - name: Release Please (senza milestone)
-        if: steps.milestone.outputs.target_version == ''
-        uses: googleapis/release-please-action@v4.8.0
+        if: steps.commit-type.outputs.skip_release == 'false' && steps.milestone.outputs.target_version == ''
+        uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
