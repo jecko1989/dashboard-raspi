@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.5](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.4...v0.1.5) (2026-07-12)
+
+
+### Features
+
+* **ci:** applica approccio 1 per release selective + fixa versione action ([f942732](https://github.com/jecko1989/dashboard-raspi/commit/f942732e7de79b823f24b7499b6e56520cec94f5))
+
+
+### Bug Fixes
+
+* **ci:** calcolo manuale del bump nel workflow, ignora commit non-release ([e6acfc8](https://github.com/jecko1989/dashboard-raspi/commit/e6acfc877b216d2559d61e2651dedf1c23ba6288))
+* **ci:** Release Please esegue sempre, commit-skip gestisce il bump ([2d2aa3b](https://github.com/jecko1989/dashboard-raspi/commit/2d2aa3b36c9473ce696da1bcd096ca72a9a6a4c2))
+* **release:** configura Release Please per ignorare commit type non-release nel bump ([3dabce3](https://github.com/jecko1989/dashboard-raspi/commit/3dabce33ff28412c8c3af96e8e7b805e0424486f))
+
 ## [0.1.4](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.3...v0.1.4) (2026-07-12)
 
 
