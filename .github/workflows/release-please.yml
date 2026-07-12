@@ -31,36 +31,29 @@ jobs:
             COMMITS=$(git log --pretty=format:"%s")
           fi
           
-          # Determina il bump massimo
+          echo "=== Commits from tag ==="
+          echo "$COMMITS"
+          echo "======================="
+          
+          # Determina il bump massimo usando grep
           BUMP="none"
-          HAS_FEATURE=false
-          HAS_FIX=false
-          HAS_BREAKING=false
           
-          while IFS= read -r line; do
-            if [[ "$line" =~ ^feat!(\(|:)|\(BREAKING\ CHANGE ]] || [[ "$line" =~ BREAKING\ CHANGE ]]; then
-              echo "⚡ Found BREAKING CHANGE: $line"
-              HAS_BREAKING=true
-            elif [[ "$line" =~ ^feat(\(|:) ]]; then
-              echo "📝 Found feat: $line"
-              HAS_FEATURE=true
-            elif [[ "$line" =~ ^fix(\(|:) ]]; then
-              echo "🐛 Found fix: $line"
-              HAS_FIX=true
-            fi
-          done <<< "$COMMITS"
-          
-          # Calcola il bump massimo
-          if [ "$HAS_BREAKING" = true ]; then
+          if echo "$COMMITS" | grep -q "^feat!("; then
+            echo "Found BREAKING CHANGE (feat!)"
             BUMP="major"
-          elif [ "$HAS_FEATURE" = true ]; then
+          elif echo "$COMMITS" | grep -q "^feat("; then
+            echo "Found feat"
             BUMP="minor"
-          elif [ "$HAS_FIX" = true ]; then
+          elif echo "$COMMITS" | grep -q "^fix("; then
+            echo "Found fix"
             BUMP="patch"
+          else
+            echo "No feat/fix found, only chore/docs/etc"
+            BUMP="none"
           fi
           
+          echo "Determined bump: $BUMP"
           echo "bump=$BUMP" >> $GITHUB_OUTPUT
-          echo "✅ Determined bump: $BUMP"
       
       - name: Extract milestone version from commit footer (if bump found)
         id: milestone
