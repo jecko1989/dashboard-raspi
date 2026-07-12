@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.2.1...v0.3.0) (2026-07-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **api:** endpoint e schema usano "luogo/luoghi" al posto di "apartment/apartments"; il DB viene migrato automaticamente al primo avvio. Il loader YAML accetta ancora la vecchia chiave "apartments" per compatibilità.
+
+### Features
+
+* **api:** rinomina apartment in luogo e aggiunge CRUD entità da UI ([10d9706](https://github.com/jecko1989/dashboard-raspi/commit/10d970618af72a3ae281a2943e315b26abfe8bca))
+* **ui:** add favicon, enhance KebabMenu, and implement device creation link in Overview ([4a8088f](https://github.com/jecko1989/dashboard-raspi/commit/4a8088f972d55623a0dc5642c90e2d614a6a6e70))
+
 ## [0.2.1](https://github.com/jecko1989/dashboard-raspi/compare/v0.2.0...v0.2.1) (2026-07-12)
 
 
