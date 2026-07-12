@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.2...v0.1.3) (2026-07-12)
+
+
+### Features
+
+* **ci:** implementa milestone workflow automatico con Release Please ([5e88364](https://github.com/jecko1989/dashboard-raspi/commit/5e8836473037089d4f48ca8d4ef8cf6bc007f213))
+
 ## [0.1.2](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.1...v0.1.2) (2026-07-11)
 
 
