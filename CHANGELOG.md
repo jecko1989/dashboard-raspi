@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.3...v0.1.4) (2026-07-12)
+
+
+### Bug Fixes
+
+* **ci:** release-please passa target-version solo se milestone è presente ([bd41563](https://github.com/jecko1989/dashboard-raspi/commit/bd41563b4743937718c45687de518403ce7cc76c))
+
 ## [0.1.3](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.2...v0.1.3) (2026-07-12)
 
 
