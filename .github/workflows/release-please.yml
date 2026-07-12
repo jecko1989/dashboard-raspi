@@ -29,10 +29,19 @@ jobs:
             echo "ℹ️ Nessun milestone nel commit, Release Please determinerà il bump automaticamente"
           fi
       
-      - name: Release Please
+      - name: Release Please (con milestone)
+        if: steps.milestone.outputs.target_version != ''
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-version: ${{ steps.milestone.outputs.target_version }}
+      
+      - name: Release Please (senza milestone)
+        if: steps.milestone.outputs.target_version == ''
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
