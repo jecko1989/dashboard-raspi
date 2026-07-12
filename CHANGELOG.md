@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/jecko1989/dashboard-raspi/compare/v0.2.0...v0.2.1) (2026-07-12)
+
+
+### Bug Fixes
+
+* **ci:** aggiorna actions a versioni Node.js 24 native ([5eee6b5](https://github.com/jecko1989/dashboard-raspi/commit/5eee6b55ae48000c0ca3a64e4a3e32ad4a9d2ca5))
+
 ## [0.2.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.4...v0.2.0) (2026-07-12)
 
 
