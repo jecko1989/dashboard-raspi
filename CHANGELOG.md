@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/jecko1989/dashboard-raspi/compare/v0.3.1...v0.3.2) (2026-07-12)
+
+
+### Bug Fixes
+
+* **release:** force milestone target ([79b5993](https://github.com/jecko1989/dashboard-raspi/commit/79b5993756a9f1423a459e62ed6bc1f45c31fe8f))
+* **release:** set milestone target 0.6.0 ([3476c84](https://github.com/jecko1989/dashboard-raspi/commit/3476c84dce6ceed4d6a8f10274e65368476ba349))
+
 ## [0.3.1](https://github.com/jecko1989/dashboard-raspi/compare/v0.3.0...v0.3.1) (2026-07-12)
 
 
