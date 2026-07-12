@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.1...v0.1.2) (2026-07-11)
+
+
+### Features
+
+* **ui:** rendi responsive le viste principali per mobile ([98d50e2](https://github.com/jecko1989/dashboard-raspi/commit/98d50e2e1147b5f0846d22a4a1ffaf8ae884f1b8))
+
 ## [0.1.1](https://github.com/jecko1989/dashboard-raspi/compare/v0.1.0...v0.1.1) (2026-07-11)
 
 
