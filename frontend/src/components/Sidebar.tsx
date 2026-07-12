@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { Luogo } from '../types';
+import { KebabMenu } from './KebabMenu';
+import { CommandModal } from './CommandModal';
 import { LuogoFormModal } from './LuogoFormModal';
+import { deleteLuogo } from '../services/api';
 
 // Sidebar con navigazione: overview globale + lista luoghi.
 // Usata come rail fisso su desktop e come drawer su mobile (vedi Layout).
@@ -15,6 +18,31 @@ interface SidebarProps {
 
 export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
   const [creatingLuogo, setCreatingLuogo] = useState(false);
+  const [editingLuogo, setEditingLuogo] = useState<Luogo | null>(null);
+  const [deletingLuogo, setDeletingLuogo] = useState<Luogo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const confirmDeleteLuogo = async () => {
+    if (!deletingLuogo) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteLuogo(deletingLuogo.id);
+      setDeletingLuogo(null);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      setError(
+        status === 409
+          ? 'Il luogo contiene ancora dei device: rimuovili prima di eliminarlo.'
+          : 'Eliminazione del luogo non riuscita.',
+      );
+      setDeletingLuogo(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `block rounded-md px-3 py-2 text-sm transition ${
       isActive
@@ -45,14 +73,42 @@ export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
         <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
           Luoghi
         </p>
+        {error && (
+          <p className="px-3 py-1 text-xs text-red-600 dark:text-red-400">{error}</p>
+        )}
         {luoghi.map((lg) => (
-          <NavLink key={lg.id} to={`/luoghi/${lg.id}`} className={linkClass}>
-            <span aria-hidden="true" className="mr-2">
-              🏠
-            </span>
-            {lg.name}
-            <span className="ml-1 text-xs text-gray-400">({lg.device_count})</span>
-          </NavLink>
+          <div key={lg.id} className="flex items-center gap-1">
+            <NavLink to={`/luoghi/${lg.id}`} className="min-w-0 flex-1">
+              {({ isActive }) => (
+                <span className={linkClass({ isActive })}>
+                  <span aria-hidden="true" className="mr-2">
+                    🏠
+                  </span>
+                  {lg.name}
+                  <span className="ml-1 text-xs text-gray-400">
+                    ({lg.device_count})
+                  </span>
+                </span>
+              )}
+            </NavLink>
+            <KebabMenu
+              horizontal
+              ariaLabel={`Azioni luogo ${lg.name}`}
+              items={[
+                {
+                  label: 'Modifica luogo',
+                  icon: '✏️',
+                  onSelect: () => setEditingLuogo(lg),
+                },
+                {
+                  label: 'Elimina luogo',
+                  icon: '🗑️',
+                  destructive: true,
+                  onSelect: () => setDeletingLuogo(lg),
+                },
+              ]}
+            />
+          </div>
         ))}
         <button
           type="button"
@@ -85,6 +141,29 @@ export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
       </nav>
 
       <LuogoFormModal open={creatingLuogo} onClose={() => setCreatingLuogo(false)} />
+
+      {editingLuogo && (
+        <LuogoFormModal
+          open
+          luogo={editingLuogo}
+          onClose={() => setEditingLuogo(null)}
+        />
+      )}
+
+      <CommandModal
+        open={Boolean(deletingLuogo)}
+        title="Elimina luogo"
+        destructive
+        confirmLabel={busy ? 'Eliminazione…' : 'Elimina'}
+        description={
+          <>
+            Vuoi eliminare il luogo <strong>{deletingLuogo?.name}</strong>?
+            L'operazione è possibile solo se non contiene device.
+          </>
+        }
+        onConfirm={confirmDeleteLuogo}
+        onCancel={() => setDeletingLuogo(null)}
+      />
     </aside>
   );
 }

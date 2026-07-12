@@ -80,6 +80,12 @@ export function Overview() {
           >
             ➕ Nuovo luogo
           </button>
+          <Link
+            to="/devices/new"
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+          >
+            ➕ Nuovo device
+          </Link>
         </div>
       </div>
 

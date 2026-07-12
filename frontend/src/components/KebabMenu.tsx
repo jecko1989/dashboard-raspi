@@ -12,10 +12,12 @@ interface KebabMenuProps {
   items: KebabMenuItem[];
   // Etichetta accessibile del pulsante (es. "Azioni luogo").
   ariaLabel?: string;
+  // Usa i tre puntini orizzontali (⋯) invece che verticali (⋮).
+  horizontal?: boolean;
 }
 
 // Menu contestuale a 3 puntini riutilizzabile (card device, sezioni luogo).
-export function KebabMenu({ items, ariaLabel = 'Azioni' }: KebabMenuProps) {
+export function KebabMenu({ items, ariaLabel = 'Azioni', horizontal = true }: KebabMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -42,9 +44,9 @@ export function KebabMenu({ items, ariaLabel = 'Azioni' }: KebabMenuProps) {
           e.stopPropagation();
           setOpen((o) => !o);
         }}
-        className="rounded-md p-1.5 text-lg leading-none text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+        className="rounded-md p-1.5 text-xl leading-none text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
       >
-        ⋮
+        {horizontal ? '⋯' : '⋮'}
       </button>
       {open && (
         <div

@@ -57,13 +57,13 @@ export function LuogoSection({ luogo, devices }: LuogoSectionProps) {
 
   return (
     <section className="mb-8">
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-3 flex items-center gap-2">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {luogo.name}
-          <span className="ml-2 text-sm font-normal text-gray-500">
-            ({devices.length} device)
-          </span>
         </h2>
+        <span className="text-sm font-normal text-gray-500">
+          ({devices.length} device)
+        </span>
         <KebabMenu
           ariaLabel="Azioni luogo"
           items={[
