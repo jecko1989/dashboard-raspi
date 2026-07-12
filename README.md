@@ -2,7 +2,7 @@
 
 Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppata con FastAPI + React.
 
-> Il progetto è pensato per gestire più appartamenti, ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
+> Il progetto è pensato per gestire più luoghi (es. appartamenti), ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
 
 ## Stato attuale del progetto (2026-07-12)
 
@@ -274,7 +274,7 @@ Note pratiche per il deploy `native`:
 
 ### `config/devices.yaml`
 
-Struttura degli appartamenti e dei device. È ignorato da git (usa `devices.example.yaml` come template).
+Struttura dei luoghi e dei device. È ignorato da git (usa `devices.example.yaml` come template).
 
 Campi principali per ogni device:
 

@@ -1,8 +1,11 @@
 import axios from 'axios';
 import type {
-  Apartment,
+  Luogo,
   Device,
   DeviceCreatePayload,
+  DeviceUpdatePayload,
+  LuogoCreatePayload,
+  LuogoUpdatePayload,
   Alert,
   DashboardEvent,
   Metric,
@@ -58,14 +61,14 @@ export async function getMe(): Promise<{ username: string; is_admin: boolean }> 
   return data;
 }
 
-export async function getApartments(): Promise<Apartment[]> {
-  const { data } = await api.get<Apartment[]>('/apartments');
+export async function getLuoghi(): Promise<Luogo[]> {
+  const { data } = await api.get<Luogo[]>('/luoghi');
   return data;
 }
 
-export async function getDevices(apartmentId?: string): Promise<Device[]> {
+export async function getDevices(luogoId?: string): Promise<Device[]> {
   const { data } = await api.get<Device[]>('/devices', {
-    params: apartmentId ? { apartment_id: apartmentId } : undefined,
+    params: luogoId ? { luogo_id: luogoId } : undefined,
   });
   return data;
 }
@@ -81,6 +84,44 @@ export async function createDevice(payload: DeviceCreatePayload): Promise<Device
   const { data } = await api.post<Device>('/devices', payload);
   window.dispatchEvent(new Event('devices:changed'));
   return data;
+}
+
+// Aggiorna un device esistente (id immutabile).
+export async function updateDevice(
+  id: string,
+  payload: DeviceUpdatePayload,
+): Promise<Device> {
+  const { data } = await api.put<Device>(`/devices/${id}`, payload);
+  window.dispatchEvent(new Event('devices:changed'));
+  return data;
+}
+
+// Elimina un device.
+export async function deleteDevice(id: string): Promise<void> {
+  await api.delete(`/devices/${id}`);
+  window.dispatchEvent(new Event('devices:changed'));
+}
+
+// --- Luoghi ------------------------------------------------------------------
+
+export async function createLuogo(payload: LuogoCreatePayload): Promise<Luogo> {
+  const { data } = await api.post<Luogo>('/luoghi', payload);
+  window.dispatchEvent(new Event('devices:changed'));
+  return data;
+}
+
+export async function updateLuogo(
+  id: string,
+  payload: LuogoUpdatePayload,
+): Promise<Luogo> {
+  const { data } = await api.put<Luogo>(`/luoghi/${id}`, payload);
+  window.dispatchEvent(new Event('devices:changed'));
+  return data;
+}
+
+export async function deleteLuogo(id: string): Promise<void> {
+  await api.delete(`/luoghi/${id}`);
+  window.dispatchEvent(new Event('devices:changed'));
 }
 
 export async function getLatestMetric(deviceId: string): Promise<Metric | null> {

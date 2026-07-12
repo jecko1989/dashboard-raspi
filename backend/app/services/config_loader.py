@@ -51,21 +51,21 @@ class DeviceConfig(BaseModel):
     ssh: SSHConfig
     services: list[str] = Field(default_factory=list)
     thresholds: DeviceThresholdOverride | None = None
-    # Ordine di visualizzazione dentro l'appartamento (0 = default).
+    # Ordine di visualizzazione dentro il luogo (0 = default).
     order: int = 0
 
 
-class ApartmentConfig(BaseModel):
+class LuogoConfig(BaseModel):
     id: str
     name: str
     devices: list[DeviceConfig] = Field(default_factory=list)
-    # Ordine di visualizzazione dell'appartamento (0 = default).
+    # Ordine di visualizzazione del luogo (0 = default).
     order: int = 0
 
 
 class DevicesConfig(BaseModel):
     thresholds: Thresholds = Field(default_factory=Thresholds)
-    apartments: list[ApartmentConfig] = Field(default_factory=list)
+    luoghi: list[LuogoConfig] = Field(default_factory=list)
 
 
 def _expand_env(value: str) -> str:
@@ -85,26 +85,30 @@ def load_devices_config(path: str | None = None) -> DevicesConfig:
     raw = config_path.read_text(encoding="utf-8")
     data = yaml.safe_load(raw) or {}
 
+    # Retrocompatibilita': accetta la vecchia chiave 'apartments'.
+    if "luoghi" not in data and "apartments" in data:
+        data["luoghi"] = data.pop("apartments")
+
     # Espande le variabili d'ambiente nei key_path.
-    for apartment in data.get("apartments", []):
-        for device in apartment.get("devices", []):
+    for luogo in data.get("luoghi", []):
+        for device in luogo.get("devices", []):
             ssh = device.get("ssh", {})
             if "key_path" in ssh:
                 ssh["key_path"] = _expand_env(ssh["key_path"])
 
     config = DevicesConfig.model_validate(data)
     logger.info(
-        "Config caricata: %d appartamenti, %d device totali.",
-        len(config.apartments),
-        sum(len(a.devices) for a in config.apartments),
+        "Config caricata: %d luoghi, %d device totali.",
+        len(config.luoghi),
+        sum(len(luogo.devices) for luogo in config.luoghi),
     )
     return config
 
 
 def get_device_config(config: DevicesConfig, device_id: str) -> DeviceConfig | None:
     """Ritorna la configurazione di un device dato il suo id."""
-    for apartment in config.apartments:
-        for device in apartment.devices:
+    for luogo in config.luoghi:
+        for device in luogo.devices:
             if device.id == device_id:
                 return device
     return None
@@ -122,44 +126,165 @@ def resolve_thresholds(config: DevicesConfig, device_id: str) -> Thresholds:
     return Thresholds.model_validate(merged)
 
 
+def _read_raw(path: str | None = None) -> tuple[Path, dict]:
+    """Legge il file YAML grezzo, ritornando (percorso, dati)."""
+    settings = get_settings()
+    config_path = Path(path or settings.devices_config_path)
+    raw = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
+    data = yaml.safe_load(raw) or {}
+    return config_path, data
+
+
+def _write_raw(config_path: Path, data: dict) -> None:
+    """Serializza e riscrive l'intero file YAML (i commenti non sono preservati)."""
+    serialized = yaml.safe_dump(
+        data,
+        sort_keys=False,
+        allow_unicode=True,
+        default_flow_style=False,
+    )
+    config_path.write_text(serialized, encoding="utf-8")
+
+
+def _luoghi(data: dict) -> list:
+    """Ritorna la lista dei luoghi, migrando la vecchia chiave 'apartments'."""
+    if "luoghi" not in data and "apartments" in data:
+        data["luoghi"] = data.pop("apartments")
+    luoghi = data.get("luoghi")
+    if luoghi is None:
+        luoghi = []
+        data["luoghi"] = luoghi
+    return luoghi
+
+
 def append_device_to_config(
-    apartment_id: str, device: dict, path: str | None = None
+    luogo_id: str, device: dict, path: str | None = None
 ) -> None:
-    """Aggiunge un device alla config YAML sotto l'appartamento indicato.
+    """Aggiunge un device alla config YAML sotto il luogo indicato.
 
     Riscrive l'intero file `devices.yaml` (fonte di verita' dei device). I
     commenti presenti nel file non vengono preservati dalla serializzazione.
     Il valore `key_path` deve arrivare gia' con `${SSH_KEYS_DIR}` non espanso.
-    Solleva `KeyError` se l'appartamento non esiste nel file.
+    Solleva `KeyError` se il luogo non esiste nel file.
     """
-    settings = get_settings()
-    config_path = Path(path or settings.devices_config_path)
+    config_path, data = _read_raw(path)
+    luoghi = _luoghi(data)
 
-    raw = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
-    data = yaml.safe_load(raw) or {}
-    apartments = data.get("apartments") or []
-
-    for apartment in apartments:
-        if apartment.get("id") == apartment_id:
-            devices = apartment.get("devices")
+    for luogo in luoghi:
+        if luogo.get("id") == luogo_id:
+            devices = luogo.get("devices")
             if devices is None:
                 devices = []
-                apartment["devices"] = devices
+                luogo["devices"] = devices
             devices.append(device)
-            data["apartments"] = apartments
-            serialized = yaml.safe_dump(
-                data,
-                sort_keys=False,
-                allow_unicode=True,
-                default_flow_style=False,
-            )
-            config_path.write_text(serialized, encoding="utf-8")
+            _write_raw(config_path, data)
             logger.info(
-                "Device '%s' aggiunto alla config sotto l'appartamento '%s'.",
+                "Device '%s' aggiunto alla config sotto il luogo '%s'.",
                 device.get("id"),
-                apartment_id,
+                luogo_id,
             )
             return
 
-    raise KeyError(apartment_id)
+    raise KeyError(luogo_id)
+
+
+def update_device_in_config(
+    device_id: str, new_device: dict, target_luogo_id: str, path: str | None = None
+) -> None:
+    """Aggiorna un device nella config (eventualmente spostandolo di luogo).
+
+    Rimuove il device dovunque si trovi e inserisce `new_device` nel luogo di
+    destinazione. Solleva `KeyError` se il device o il luogo di destinazione
+    non esistono.
+    """
+    config_path, data = _read_raw(path)
+    luoghi = _luoghi(data)
+
+    removed = False
+    for luogo in luoghi:
+        devices = luogo.get("devices") or []
+        for i, dev in enumerate(devices):
+            if dev.get("id") == device_id:
+                devices.pop(i)
+                luogo["devices"] = devices
+                removed = True
+                break
+        if removed:
+            break
+    if not removed:
+        raise KeyError(device_id)
+
+    for luogo in luoghi:
+        if luogo.get("id") == target_luogo_id:
+            devices = luogo.get("devices")
+            if devices is None:
+                devices = []
+                luogo["devices"] = devices
+            devices.append(new_device)
+            _write_raw(config_path, data)
+            logger.info(
+                "Device '%s' aggiornato (luogo '%s').", device_id, target_luogo_id
+            )
+            return
+
+    raise KeyError(target_luogo_id)
+
+
+def remove_device_from_config(device_id: str, path: str | None = None) -> None:
+    """Rimuove un device dalla config. Solleva `KeyError` se non trovato."""
+    config_path, data = _read_raw(path)
+    luoghi = _luoghi(data)
+
+    for luogo in luoghi:
+        devices = luogo.get("devices") or []
+        for i, dev in enumerate(devices):
+            if dev.get("id") == device_id:
+                devices.pop(i)
+                luogo["devices"] = devices
+                _write_raw(config_path, data)
+                logger.info("Device '%s' rimosso dalla config.", device_id)
+                return
+
+    raise KeyError(device_id)
+
+
+def add_luogo_to_config(luogo: dict, path: str | None = None) -> None:
+    """Aggiunge un nuovo luogo alla config."""
+    config_path, data = _read_raw(path)
+    luoghi = _luoghi(data)
+    luoghi.append(luogo)
+    _write_raw(config_path, data)
+    logger.info("Luogo '%s' aggiunto alla config.", luogo.get("id"))
+
+
+def update_luogo_in_config(
+    luogo_id: str, updates: dict, path: str | None = None
+) -> None:
+    """Aggiorna i campi di un luogo (non i device). Solleva `KeyError` se assente."""
+    config_path, data = _read_raw(path)
+    luoghi = _luoghi(data)
+
+    for luogo in luoghi:
+        if luogo.get("id") == luogo_id:
+            luogo.update(updates)
+            _write_raw(config_path, data)
+            logger.info("Luogo '%s' aggiornato nella config.", luogo_id)
+            return
+
+    raise KeyError(luogo_id)
+
+
+def remove_luogo_from_config(luogo_id: str, path: str | None = None) -> None:
+    """Rimuove un luogo dalla config. Solleva `KeyError` se non trovato."""
+    config_path, data = _read_raw(path)
+    luoghi = _luoghi(data)
+
+    for i, luogo in enumerate(luoghi):
+        if luogo.get("id") == luogo_id:
+            luoghi.pop(i)
+            _write_raw(config_path, data)
+            logger.info("Luogo '%s' rimosso dalla config.", luogo_id)
+            return
+
+    raise KeyError(luogo_id)
 

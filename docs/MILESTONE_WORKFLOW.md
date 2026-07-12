@@ -156,11 +156,11 @@ git push origin main
 ### Esempio 3: Breaking Change
 
 ```bash
-git commit -m "feat(api)!: rinomina apartment in location
+git commit -m "feat(api)!: rinomina apartment in luogo
 
 Cambia schema API e DB.
 
-BREAKING CHANGE: endpoint e modelli usano location al posto di apartment
+BREAKING CHANGE: endpoint e modelli usano luogo al posto di apartment
 Milestone: v1.0.0"
 
 # ✅ Release Please riconosce ! + BREAKING CHANGE

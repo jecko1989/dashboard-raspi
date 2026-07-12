@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from app.services.config_loader import (
-    ApartmentConfig,
     DeviceConfig,
     DevicesConfig,
     DeviceThresholdOverride,
+    LuogoConfig,
     SSHConfig,
     Thresholds,
     resolve_thresholds,
@@ -21,10 +21,10 @@ def _make_config(override: DeviceThresholdOverride | None) -> DevicesConfig:
         ssh=SSHConfig(username="pi", port=22, key_path="/tmp/key"),
         thresholds=override,
     )
-    apartment = ApartmentConfig(id="ap1", name="Ap 1", devices=[device])
+    luogo = LuogoConfig(id="lg1", name="Luogo 1", devices=[device])
     return DevicesConfig(
         thresholds=Thresholds(temperature_celsius=70, disk_percent=85),
-        apartments=[apartment],
+        luoghi=[luogo],
     )
 
 

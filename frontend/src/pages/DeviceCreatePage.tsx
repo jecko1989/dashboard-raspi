@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { DeviceCreatePayload } from '../types';
-import { useApartments } from '../hooks/useApartments';
+import { useLuoghi } from '../hooks/useLuoghi';
 import { createDevice } from '../services/api';
 
 // Validatori allineati al backend (device_service).
@@ -23,7 +23,7 @@ interface FormState {
   name: string;
   hostname: string;
   ip_vpn: string;
-  apartment_id: string;
+  luogo_id: string;
   ssh_username: string;
   ssh_port: string;
   description: string;
@@ -35,7 +35,7 @@ const EMPTY: FormState = {
   name: '',
   hostname: '',
   ip_vpn: '',
-  apartment_id: '',
+  luogo_id: '',
   ssh_username: 'pi',
   ssh_port: '22',
   description: '',
@@ -49,7 +49,7 @@ const inputClass =
 // Pagina di creazione device: form coerente con lo stile della dashboard.
 export function DeviceCreatePage() {
   const navigate = useNavigate();
-  const { apartments, loading: loadingApts } = useApartments();
+  const { luoghi, loading: loadingLuoghi } = useLuoghi();
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export function DeviceCreatePage() {
     if (!isValidIpVpn(ipVpn)) {
       next.ip_vpn = 'Usa un IPv4, un IPv6 oppure un nome host/MagicDNS.';
     }
-    if (!form.apartment_id) next.apartment_id = 'Seleziona un appartamento.';
+    if (!form.luogo_id) next.luogo_id = 'Seleziona un luogo.';
     if (!SSH_USER_RE.test(sshUser)) next.ssh_username = 'Utente SSH non valido.';
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
       next.ssh_port = 'Porta non valida (1-65535).';
@@ -102,7 +102,7 @@ export function DeviceCreatePage() {
       name: form.name.trim(),
       hostname: form.hostname.trim(),
       ip_vpn: form.ip_vpn.trim(),
-      apartment_id: form.apartment_id,
+      luogo_id: form.luogo_id,
       ssh_username: form.ssh_username.trim(),
       ssh_port: Number(form.ssh_port.trim()),
       description: form.description.trim() || null,
@@ -126,7 +126,7 @@ export function DeviceCreatePage() {
       } else if (status === 409) {
         setServerError('Device già esistente (id, hostname o indirizzo).');
       } else if (status === 404) {
-        setServerError('Appartamento selezionato inesistente.');
+        setServerError('Luogo selezionato inesistente.');
       } else if (status === 400 || status === 422) {
         setServerError('Dati non validi: controlla i campi evidenziati.');
       } else {
@@ -210,22 +210,22 @@ export function DeviceCreatePage() {
           </label>
 
           <label className="block text-sm">
-            <span className="text-gray-600 dark:text-gray-300">Appartamento *</span>
+            <span className="text-gray-600 dark:text-gray-300">Luogo *</span>
             <select
-              value={form.apartment_id}
-              onChange={update('apartment_id')}
-              disabled={loadingApts}
+              value={form.luogo_id}
+              onChange={update('luogo_id')}
+              disabled={loadingLuoghi}
               className={inputClass}
             >
-              <option value="">{loadingApts ? 'Caricamento…' : 'Seleziona…'}</option>
-              {apartments.map((ap) => (
-                <option key={ap.id} value={ap.id}>
-                  {ap.name}
+              <option value="">{loadingLuoghi ? 'Caricamento…' : 'Seleziona…'}</option>
+              {luoghi.map((lg) => (
+                <option key={lg.id} value={lg.id}>
+                  {lg.name}
                 </option>
               ))}
             </select>
-            {errors.apartment_id && (
-              <p className="mt-1 text-xs text-red-600">{errors.apartment_id}</p>
+            {errors.luogo_id && (
+              <p className="mt-1 text-xs text-red-600">{errors.luogo_id}</p>
             )}
           </label>
 

@@ -12,7 +12,7 @@ class DeviceBase(BaseModel):
     hostname: str
     ip_vpn: str
     description: str | None = None
-    apartment_id: str
+    luogo_id: str
     ssh_username: str
     ssh_port: int = 22
 
@@ -20,7 +20,7 @@ class DeviceBase(BaseModel):
 class DeviceCreate(BaseModel):
     """Payload per la creazione di un nuovo device dalla dashboard.
 
-    La validazione di formato, i duplicati e l'esistenza dell'appartamento sono
+    La validazione di formato, i duplicati e l'esistenza del luogo sono
     verificati nel service (`device_service.create_device`). Qui restano solo i
     tipi: i campi runtime (online, latenza, ultima verifica) non sono impostabili
     dall'utente perche' gestiti dai processi di monitoraggio.
@@ -30,7 +30,24 @@ class DeviceCreate(BaseModel):
     name: str
     hostname: str
     ip_vpn: str
-    apartment_id: str
+    luogo_id: str
+    ssh_username: str
+    ssh_port: int = 22
+    description: str | None = None
+    tags: list[str] = []
+
+
+class DeviceUpdate(BaseModel):
+    """Payload per la modifica di un device (l'id e' immutabile).
+
+    I campi runtime non sono modificabili qui. La validazione, i duplicati e
+    l'esistenza del luogo di destinazione sono verificati nel service.
+    """
+
+    name: str
+    hostname: str
+    ip_vpn: str
+    luogo_id: str
     ssh_username: str
     ssh_port: int = 22
     description: str | None = None

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import type { DashboardEvent, Device, Metric } from '../types';
 import {
   getDevice,
@@ -9,6 +9,7 @@ import {
   checkDevice,
   muteDeviceAlerts,
   unmuteDeviceAlerts,
+  deleteDevice,
   downloadMetricsCsv,
 } from '../services/api';
 import { DeviceDetails } from '../components/DeviceDetails';
@@ -17,6 +18,8 @@ import { MetricChart } from '../components/MetricChart';
 import { EventTimeline } from '../components/EventTimeline';
 import { DeviceCommands } from '../components/DeviceCommands';
 import { DeviceSSHKey } from '../components/DeviceSSHKey';
+import { DeviceFormModal } from '../components/DeviceFormModal';
+import { CommandModal } from '../components/CommandModal';
 import {
   formatLoad,
   formatPercent,
@@ -28,12 +31,16 @@ import {
 // FASE 4: metriche + storico + eventi + comandi remoti sicuri (con conferma e audit).
 export function DeviceDetailPage() {
   const { deviceId } = useParams<{ deviceId: string }>();
+  const navigate = useNavigate();
   const [device, setDevice] = useState<Device | null>(null);
   const [metric, setMetric] = useState<Metric | null>(null);
   const [history, setHistory] = useState<Metric[]>([]);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletingBusy, setDeletingBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!deviceId) return;
@@ -78,6 +85,20 @@ export function DeviceDetailPage() {
     setDevice(updated);
   };
 
+  const handleDelete = async () => {
+    if (!device) return;
+    setDeletingBusy(true);
+    try {
+      await deleteDevice(device.id);
+      navigate('/');
+    } catch {
+      setError('Eliminazione del device non riuscita.');
+      setDeleting(false);
+    } finally {
+      setDeletingBusy(false);
+    }
+  };
+
   if (error) return <p className="text-red-600">Errore: {error}</p>;
   if (!device) return <p className="text-gray-500">Caricamento…</p>;
 
@@ -98,6 +119,18 @@ export function DeviceDetailPage() {
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {checking ? 'Verifica…' : 'Verifica ora'}
+          </button>
+          <button
+            onClick={() => setEditing(true)}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+          >
+            ✏️ Modifica
+          </button>
+          <button
+            onClick={() => setDeleting(true)}
+            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+          >
+            🗑️ Elimina
           </button>
         </div>
       </div>
@@ -160,6 +193,30 @@ export function DeviceDetailPage() {
         <h3 className="mb-3 text-lg font-semibold">Chiave SSH</h3>
         <DeviceSSHKey deviceId={device.id} />
       </section>
+
+      {editing && (
+        <DeviceFormModal
+          open
+          device={device}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => setDevice(updated)}
+        />
+      )}
+
+      <CommandModal
+        open={deleting}
+        title="Elimina device"
+        destructive
+        confirmLabel={deletingBusy ? 'Eliminazione…' : 'Elimina'}
+        description={
+          <>
+            Vuoi eliminare il device <strong>{device.name}</strong>? Verranno rimossi
+            anche metriche, alert ed eventi associati. L'operazione non è reversibile.
+          </>
+        }
+        onConfirm={handleDelete}
+        onCancel={() => setDeleting(false)}
+      />
     </div>
   );
 }

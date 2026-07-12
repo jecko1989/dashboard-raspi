@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 
 class Device(Base):
-    """Raspberry Pi monitorato, associato a un appartamento."""
+    """Raspberry Pi monitorato, associato a un luogo."""
 
     __tablename__ = "devices"
 
@@ -20,11 +20,13 @@ class Device(Base):
     hostname: Mapped[str] = mapped_column(String(128), nullable=False)
     ip_vpn: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Etichette libere del device (persistite come JSON, default lista vuota).
+    tags: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
 
-    apartment_id: Mapped[str] = mapped_column(
-        ForeignKey("apartments.id"), index=True, nullable=False
+    luogo_id: Mapped[str] = mapped_column(
+        ForeignKey("luoghi.id"), index=True, nullable=False
     )
-    # Ordine di visualizzazione dentro l'appartamento (crescente); a parita', per nome.
+    # Ordine di visualizzazione dentro il luogo (crescente); a parita', per nome.
     display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Parametri SSH (nessuna password: solo path chiave).
@@ -46,6 +48,6 @@ class Device(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    apartment: Mapped["Apartment"] = relationship(  # noqa: F821
+    luogo: Mapped["Luogo"] = relationship(  # noqa: F821
         back_populates="devices"
     )

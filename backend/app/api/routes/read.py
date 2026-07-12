@@ -13,9 +13,9 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.metric import Metric
 from app.schemas.alert import AlertRead, EventRead
-from app.schemas.apartment import ApartmentRead
 from app.schemas.command import CommandAuditRead, ServiceLogs, ServiceStatus
 from app.schemas.device import DeviceRead
+from app.schemas.luogo import LuogoRead
 from app.schemas.metric import MetricRead
 from app.services import device_service
 
@@ -29,25 +29,25 @@ def _to_device_read(device) -> DeviceRead:
     return data
 
 
-@router.get("/apartments", response_model=list[ApartmentRead])
-def list_apartments(db: Session = Depends(get_db)) -> list[ApartmentRead]:
-    apartments = device_service.get_apartments(db)
+@router.get("/luoghi", response_model=list[LuogoRead])
+def list_luoghi(db: Session = Depends(get_db)) -> list[LuogoRead]:
+    luoghi = device_service.get_luoghi(db)
     return [
-        ApartmentRead(
-            id=a.id,
-            name=a.name,
-            device_count=len(a.devices),
-            display_order=a.display_order,
+        LuogoRead(
+            id=lg.id,
+            name=lg.name,
+            device_count=len(lg.devices),
+            display_order=lg.display_order,
         )
-        for a in apartments
+        for lg in luoghi
     ]
 
 
 @router.get("/devices", response_model=list[DeviceRead])
 def list_devices(
-    apartment_id: str | None = None, db: Session = Depends(get_db)
+    luogo_id: str | None = None, db: Session = Depends(get_db)
 ) -> list[DeviceRead]:
-    devices = device_service.get_devices(db, apartment_id=apartment_id)
+    devices = device_service.get_devices(db, luogo_id=luogo_id)
     return [_to_device_read(d) for d in devices]
 
 

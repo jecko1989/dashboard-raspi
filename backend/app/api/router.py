@@ -4,7 +4,17 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user
-from app.api.routes import auth, commands, devices, health, monitoring, read, shell, ssh_keys
+from app.api.routes import (
+    auth,
+    commands,
+    devices,
+    health,
+    luoghi,
+    monitoring,
+    read,
+    shell,
+    ssh_keys,
+)
 
 api_router = APIRouter(prefix="/api")
 
@@ -16,6 +26,7 @@ api_router.include_router(auth.router)
 _protected = [Depends(get_current_user)]
 api_router.include_router(read.router, dependencies=_protected)
 api_router.include_router(devices.router, dependencies=_protected)
+api_router.include_router(luoghi.router, dependencies=_protected)
 api_router.include_router(monitoring.router, dependencies=_protected)
 api_router.include_router(commands.router, dependencies=_protected)
 api_router.include_router(ssh_keys.router, dependencies=_protected)

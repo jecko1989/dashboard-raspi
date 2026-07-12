@@ -1,6 +1,6 @@
 // Tipi condivisi allineati agli schemi Pydantic del backend.
 
-export interface Apartment {
+export interface Luogo {
   id: string;
   name: string;
   device_count: number;
@@ -13,7 +13,7 @@ export interface Device {
   hostname: string;
   ip_vpn: string;
   description: string | null;
-  apartment_id: string;
+  luogo_id: string;
   ssh_username: string;
   ssh_port: number;
   is_online: boolean;
@@ -32,11 +32,36 @@ export interface DeviceCreatePayload {
   name: string;
   hostname: string;
   ip_vpn: string;
-  apartment_id: string;
+  luogo_id: string;
   ssh_username: string;
   ssh_port: number;
   description?: string | null;
   tags?: string[];
+}
+
+// Payload per la modifica di un device (l'id e' immutabile).
+export interface DeviceUpdatePayload {
+  name: string;
+  hostname: string;
+  ip_vpn: string;
+  luogo_id: string;
+  ssh_username: string;
+  ssh_port: number;
+  description?: string | null;
+  tags?: string[];
+}
+
+// Payload per la creazione di un luogo.
+export interface LuogoCreatePayload {
+  id: string;
+  name: string;
+  display_order?: number;
+}
+
+// Payload per la modifica di un luogo (l'id e' immutabile).
+export interface LuogoUpdatePayload {
+  name: string;
+  display_order?: number | null;
 }
 
 export interface Metric {

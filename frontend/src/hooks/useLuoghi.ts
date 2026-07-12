@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Apartment } from '../types';
-import { getApartments } from '../services/api';
+import type { Luogo } from '../types';
+import { getLuoghi } from '../services/api';
 
-interface UseApartmentsResult {
-  apartments: Apartment[];
+interface UseLuoghiResult {
+  luoghi: Luogo[];
   loading: boolean;
   error: string | null;
   reload: () => Promise<void>;
 }
 
-// Hook per caricare la lista degli appartamenti.
-export function useApartments(): UseApartmentsResult {
-  const [apartments, setApartments] = useState<Apartment[]>([]);
+// Hook per caricare la lista dei luoghi.
+export function useLuoghi(): UseLuoghiResult {
+  const [luoghi, setLuoghi] = useState<Luogo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
-      const data = await getApartments();
-      setApartments(data);
+      const data = await getLuoghi();
+      setLuoghi(data);
       setError(null);
     } catch (err) {
       setError((err as Error)?.message ?? 'Errore di rete');
@@ -29,11 +29,11 @@ export function useApartments(): UseApartmentsResult {
 
   useEffect(() => {
     void reload();
-    // Aggiorna i conteggi (es. sidebar) quando cambia l'elenco device.
+    // Aggiorna i conteggi (es. sidebar) quando cambia l'elenco device/luoghi.
     const onChange = () => void reload();
     window.addEventListener('devices:changed', onChange);
     return () => window.removeEventListener('devices:changed', onChange);
   }, [reload]);
 
-  return { apartments, loading, error, reload };
+  return { luoghi, loading, error, reload };
 }

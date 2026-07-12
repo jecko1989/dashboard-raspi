@@ -1,6 +1,6 @@
 # AGENTS.md — Raspberry Dashboard
 
-Dashboard per monitorare e gestire piu Raspberry Pi (4 appartamenti) via VPN. Stack backend FastAPI + frontend React, orchestrati con Docker Compose.
+Dashboard per monitorare e gestire piu Raspberry Pi (organizzati in "luoghi", es. 4 appartamenti) via VPN. Stack backend FastAPI + frontend React, orchestrati con Docker Compose.
 
 ## Architettura (big picture)
 - **Config-driven**: la fonte dei device e in `config/devices.yaml` (gitignored, template in `devices.example.yaml`).

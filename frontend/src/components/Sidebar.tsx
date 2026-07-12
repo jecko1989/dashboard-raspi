@@ -1,17 +1,20 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import type { Apartment } from '../types';
+import type { Luogo } from '../types';
+import { LuogoFormModal } from './LuogoFormModal';
 
-// Sidebar con navigazione: overview globale + lista appartamenti.
+// Sidebar con navigazione: overview globale + lista luoghi.
 // Usata come rail fisso su desktop e come drawer su mobile (vedi Layout).
 interface SidebarProps {
-  apartments: Apartment[];
+  luoghi: Luogo[];
   // Classi aggiuntive per adattare il contenitore (es. drawer mobile).
   className?: string;
   // Callback invocata dopo la navigazione (chiude il drawer su mobile).
   onNavigate?: () => void;
 }
 
-export function Sidebar({ apartments, className = '', onNavigate }: SidebarProps) {
+export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
+  const [creatingLuogo, setCreatingLuogo] = useState(false);
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `block rounded-md px-3 py-2 text-sm transition ${
       isActive
@@ -40,17 +43,30 @@ export function Sidebar({ apartments, className = '', onNavigate }: SidebarProps
           Alert
         </NavLink>
         <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-          Appartamenti
+          Luoghi
         </p>
-        {apartments.map((ap) => (
-          <NavLink key={ap.id} to={`/apartments/${ap.id}`} className={linkClass}>
+        {luoghi.map((lg) => (
+          <NavLink key={lg.id} to={`/luoghi/${lg.id}`} className={linkClass}>
             <span aria-hidden="true" className="mr-2">
               🏠
             </span>
-            {ap.name}
-            <span className="ml-1 text-xs text-gray-400">({ap.device_count})</span>
+            {lg.name}
+            <span className="ml-1 text-xs text-gray-400">({lg.device_count})</span>
           </NavLink>
         ))}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCreatingLuogo(true);
+          }}
+          className="block w-full rounded-md px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          <span aria-hidden="true" className="mr-2">
+            ➕
+          </span>
+          Aggiungi luogo
+        </button>
         <NavLink to="/devices/new" className={linkClass}>
           <span aria-hidden="true" className="mr-2">
             ➕
@@ -67,6 +83,8 @@ export function Sidebar({ apartments, className = '', onNavigate }: SidebarProps
           Impostazioni
         </NavLink>
       </nav>
+
+      <LuogoFormModal open={creatingLuogo} onClose={() => setCreatingLuogo(false)} />
     </aside>
   );
 }

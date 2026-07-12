@@ -53,9 +53,9 @@ Esempi:
 feat(devices): aggiunge modifica e rimozione da menu contestuale
 fix(cors): include origine tailscale in CORS_ORIGINS
 docs(deploy): aggiunge troubleshooting per preflight login
-feat(api)!: rinomina apartment in location
+feat(api)!: rinomina apartment in luogo
 
-BREAKING CHANGE: schema e endpoint usano location al posto di apartment
+BREAKING CHANGE: schema e endpoint usano luogo al posto di apartment
 ```
 
 ## Template commit locale

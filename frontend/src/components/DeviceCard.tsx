@@ -1,14 +1,19 @@
 import { Link } from 'react-router-dom';
 import type { Device } from '../types';
 import { StatusBadge } from './StatusBadge';
+import { KebabMenu } from './KebabMenu';
 import { formatDateTime, formatLatency } from '../utils/format';
 
 // Card che rappresenta un singolo Raspberry.
 interface DeviceCardProps {
   device: Device;
+  // Azioni opzionali (menu a 3 puntini): modifica ed eliminazione.
+  onEdit?: (device: Device) => void;
+  onDelete?: (device: Device) => void;
 }
 
-export function DeviceCard({ device }: DeviceCardProps) {
+export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
+  const hasMenu = Boolean(onEdit || onDelete);
   return (
     <Link
       to={`/devices/${device.id}`}
@@ -23,7 +28,29 @@ export function DeviceCard({ device }: DeviceCardProps) {
             {device.hostname} · {device.ip_vpn}
           </p>
         </div>
-        <StatusBadge online={device.is_online} />
+        <div className="flex items-center gap-1">
+          <StatusBadge online={device.is_online} />
+          {hasMenu && (
+            <KebabMenu
+              ariaLabel="Azioni device"
+              items={[
+                ...(onEdit
+                  ? [{ label: 'Modifica', icon: '✏️', onSelect: () => onEdit(device) }]
+                  : []),
+                ...(onDelete
+                  ? [
+                      {
+                        label: 'Elimina',
+                        icon: '🗑️',
+                        destructive: true,
+                        onSelect: () => onDelete(device),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">

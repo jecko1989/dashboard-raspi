@@ -1,5 +1,5 @@
 # =============================================================================
-# Raspberry Dashboard - Configurazione appartamenti e dispositivi (TEMPLATE)
+# Raspberry Dashboard - Configurazione luoghi e dispositivi (TEMPLATE)
 # =============================================================================
 # Questo è il TEMPLATE versionato. Per usarlo:
 #
@@ -23,8 +23,8 @@
 #   - services      : servizi systemd da monitorare per quel device
 #
 # ORDINE DI VISUALIZZAZIONE (opzionale):
-#   - order (appartamento) : ordina gli appartamenti nella dashboard (crescente).
-#   - order (device)       : ordina i device dentro l'appartamento (crescente).
+#   - order (luogo)  : ordina i luoghi nella dashboard (crescente).
+#   - order (device) : ordina i device dentro il luogo (crescente).
 #   A parita' di 'order' vale l'ordine ALFABETICO per nome. Default: 0.
 #
 # NOTA SICUREZZA: qui NON vanno password. Si usano solo chiavi SSH.
@@ -46,14 +46,14 @@ thresholds:
   cpu_percent: 90              # alert se uso CPU supera questa percentuale
   offline_after_failures: 3    # device considerato offline dopo N check falliti
 
-apartments:
+luoghi:
   - id: casa_mia
     name: "Casa Mia"
-    order: 1                                 # ordine di visualizzazione dell'appartamento
+    order: 1                                 # ordine di visualizzazione del luogo
     devices:
       - id: rpi-casa-mia-01
         name: "Raspberry Casa Mia 01"
-        order: 1                             # ordine del device dentro l'appartamento
+        order: 1                             # ordine del device dentro il luogo
         hostname: "rpi-casamia-01"          # MODIFICA QUI
         ip_vpn: "10.8.0.10"                 # MODIFICA QUI — con Tailscale usa il nome MagicDNS (es. "rpi-casa-mia") o l'IP 100.x
         description: "Raspberry principale casa mia"

@@ -16,7 +16,7 @@
 # feat(devices): aggiunge modifica e rimozione da menu contestuale
 # fix(cors): include origine tailscale in CORS_ORIGINS
 # docs(deploy): aggiunge troubleshooting per preflight login
-# feat(api)!: rinomina apartment in location
+# feat(api)!: rinomina apartment in luogo
 #
 # Footer opzionale per breaking change:
 # BREAKING CHANGE: descrizione del cambio incompatibile

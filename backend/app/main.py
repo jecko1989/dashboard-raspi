@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     logger.info("Avvio %s (env=%s)", settings.app_name, settings.environment)
     init_db()
 
-    # Sincronizza appartamenti/device dalla config al DB.
+    # Sincronizza luoghi/device dalla config al DB.
     db = SessionLocal()
     try:
         sync_config_to_db(db)

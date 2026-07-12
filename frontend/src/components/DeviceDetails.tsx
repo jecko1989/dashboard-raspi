@@ -43,8 +43,8 @@ export function DeviceDetails({ device }: DeviceDetailsProps) {
           <dd className="font-mono">{device.ip_vpn}</dd>
         </div>
         <div>
-          <dt className="text-gray-500">Appartamento</dt>
-          <dd>{device.apartment_id}</dd>
+          <dt className="text-gray-500">Luogo</dt>
+          <dd>{device.luogo_id}</dd>
         </div>
         <div>
           <dt className="text-gray-500">Utente SSH</dt>

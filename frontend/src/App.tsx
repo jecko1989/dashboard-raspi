@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import { Overview } from './pages/Overview';
-import { ApartmentPage } from './pages/ApartmentPage';
+import { LuogoPage } from './pages/LuogoPage';
 import { DeviceDetailPage } from './pages/DeviceDetailPage';
 import { DeviceCreatePage } from './pages/DeviceCreatePage';
 import { AlertsPage } from './pages/AlertsPage';
@@ -16,7 +16,7 @@ function AuthenticatedApp() {
         <Routes>
           <Route path="/" element={<Overview />} />
           <Route path="/alerts" element={<AlertsPage />} />
-          <Route path="/apartments/:apartmentId" element={<ApartmentPage />} />
+          <Route path="/luoghi/:luogoId" element={<LuogoPage />} />
           <Route path="/devices/new" element={<DeviceCreatePage />} />
           <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
           <Route path="/settings" element={<Settings />} />

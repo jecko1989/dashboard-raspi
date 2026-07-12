@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { DashboardEvent } from '../types';
-import { useApartments } from '../hooks/useApartments';
+import { useLuoghi } from '../hooks/useLuoghi';
 import { useDevices } from '../hooks/useDevices';
-import { ApartmentSection } from '../components/ApartmentSection';
+import { LuogoSection } from '../components/LuogoSection';
+import { LuogoFormModal } from '../components/LuogoFormModal';
 import { EventTimeline } from '../components/EventTimeline';
 import { refreshAll, getAlerts, getEvents } from '../services/api';
 
-// Pagina overview globale: tutti gli appartamenti con i loro device.
+// Pagina overview globale: tutti i luoghi con i loro device.
 export function Overview() {
-  const { apartments, loading: loadingApts, error: errApts } = useApartments();
+  const { luoghi, loading: loadingLuoghi, error: errLuoghi } = useLuoghi();
   const { devices, loading: loadingDevs, error: errDevs, reload } = useDevices();
   const [refreshing, setRefreshing] = useState(false);
+  const [creatingLuogo, setCreatingLuogo] = useState(false);
   const [alertCount, setAlertCount] = useState<number>(0);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
 
@@ -39,13 +41,13 @@ export function Overview() {
     }
   };
 
-  if (loadingApts || loadingDevs) {
+  if (loadingLuoghi || loadingDevs) {
     return <p className="text-gray-500">Caricamento…</p>;
   }
-  if (errApts || errDevs) {
+  if (errLuoghi || errDevs) {
     return (
       <p className="text-red-600">
-        Errore di caricamento: {errApts ?? errDevs}
+        Errore di caricamento: {errLuoghi ?? errDevs}
       </p>
     );
   }
@@ -72,16 +74,22 @@ export function Overview() {
           >
             {refreshing ? 'Aggiornamento…' : 'Aggiorna tutto'}
           </button>
+          <button
+            onClick={() => setCreatingLuogo(true)}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+          >
+            ➕ Nuovo luogo
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          {apartments.map((ap) => (
-            <ApartmentSection
-              key={ap.id}
-              apartment={ap}
-              devices={devices.filter((d) => d.apartment_id === ap.id)}
+          {luoghi.map((lg) => (
+            <LuogoSection
+              key={lg.id}
+              luogo={lg}
+              devices={devices.filter((d) => d.luogo_id === lg.id)}
             />
           ))}
         </div>
@@ -90,6 +98,8 @@ export function Overview() {
           <EventTimeline events={events} />
         </div>
       </div>
+
+      <LuogoFormModal open={creatingLuogo} onClose={() => setCreatingLuogo(false)} />
     </div>
   );
 }

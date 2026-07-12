@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
-import { useApartments } from '../hooks/useApartments';
+import { useLuoghi } from '../hooks/useLuoghi';
 import { useAuth } from '../context/AuthContext';
 
 // Layout principale: sidebar + area contenuti, con toggle dark mode.
@@ -11,7 +11,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { apartments } = useApartments();
+  const { luoghi } = useLuoghi();
   const { username, logout } = useAuth();
   const location = useLocation();
   const [dark, setDark] = useState<boolean>(
@@ -39,7 +39,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       {/* Rail fisso su desktop */}
-      <Sidebar apartments={apartments} className="hidden lg:block" />
+      <Sidebar luoghi={luoghi} className="hidden lg:block" />
 
       {/* Drawer di navigazione su mobile */}
       {menuOpen && (
@@ -50,7 +50,7 @@ export function Layout({ children }: LayoutProps) {
             aria-hidden="true"
           />
           <Sidebar
-            apartments={apartments}
+            luoghi={luoghi}
             className="absolute inset-y-0 left-0 z-50 max-w-[85%] shadow-xl"
             onNavigate={() => setMenuOpen(false)}
           />

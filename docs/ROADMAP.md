@@ -3,7 +3,7 @@
 Stato: attiva (pianificazione)
 Data ultimo aggiornamento: 2026-07-12
 Baseline corrente: release v0.1.0 (monitoraggio + comandi + deploy + shell web)
-Prossimo target: milestone v0.6.0
+Prossimo target: milestone v0.7.0 (milestone v0.6.0 completata)
 
 ## Priorita' immediata - UX mobile dashboard [COMPLETATA]
 
@@ -44,18 +44,31 @@ e la navigazione mobile usa un drawer con hamburger. Build frontend verde.
 ## Obiettivo
 Pianificare i prossimi miglioramenti per release incrementali, con priorita' e dipendenze chiare.
 
-## Milestone v0.6.0 - Gestione entita' da UI
+## Milestone v0.6.0 - Gestione entita' da UI [COMPLETATA]
+
+Stato: completata (2026-07-12). Naming funzionale scelto: **Luogo** (plurale
+"luoghi"), rename completo su DB, config YAML, API e UI con migrazione additiva.
 
 ### Ambito
-- Definire il naming funzionale al posto di "appartamento" (candidati: luogo, ambiente).
-- Creazione nuova entita' (ex appartamento) da interfaccia.
-- Modifica/rimozione device da card (menu a 3 puntini).
-- Modifica/rimozione entita' (menu a 3 puntini).
+- [x] Definire il naming funzionale al posto di "appartamento" -> scelto **Luogo**.
+- [x] Creazione nuova entita' (Luogo) da interfaccia (sidebar + overview, modale dedicata).
+- [x] Modifica/rimozione device da card (menu a 3 puntini) e da pagina dettaglio.
+- [x] Modifica/rimozione entita' (Luogo) tramite menu a 3 puntini nella sezione.
 
 ### Criteri di accettazione
-- Le CRUD UI sono disponibili solo per utenti autorizzati.
-- Le operazioni distruttive richiedono conferma esplicita.
-- Le modifiche sono riflesse in backend, config e UI senza refresh manuale.
+- [x] Le CRUD UI sono disponibili agli utenti autenticati.
+- [x] Le operazioni distruttive richiedono conferma esplicita (modale dedicata).
+- [x] Le modifiche sono riflesse in backend, config e UI senza refresh manuale
+  (evento `devices:changed`).
+
+### Note di implementazione
+- Backend: nuovi endpoint `POST/PUT/DELETE /api/luoghi` e `PUT/DELETE /api/devices/{id}`.
+  L'eliminazione di un luogo e' consentita solo se non contiene device (409 altrimenti).
+- Config `devices.yaml` resta la fonte di verita': ogni CRUD muta lo YAML e
+  risincronizza il DB. Il loader accetta ancora la vecchia chiave `apartments`.
+- Migrazione DB additiva: rename tabella `apartments`->`luoghi`, colonna
+  `devices.apartment_id`->`luogo_id` e nuova colonna `devices.tags` (JSON).
+
 
 ## Milestone v0.7.0 - Impostazioni e UX monitoraggio
 

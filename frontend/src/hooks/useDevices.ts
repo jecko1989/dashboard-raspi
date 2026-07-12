@@ -9,8 +9,8 @@ interface UseDevicesResult {
   reload: () => Promise<void>;
 }
 
-// Hook per caricare i device (opzionalmente filtrati per appartamento).
-export function useDevices(apartmentId?: string): UseDevicesResult {
+// Hook per caricare i device (opzionalmente filtrati per luogo).
+export function useDevices(luogoId?: string): UseDevicesResult {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,16 +19,20 @@ export function useDevices(apartmentId?: string): UseDevicesResult {
     setLoading(true);
     setError(null);
     try {
-      setDevices(await getDevices(apartmentId));
+      setDevices(await getDevices(luogoId));
     } catch (err) {
       setError((err as Error)?.message ?? 'Errore di rete');
     } finally {
       setLoading(false);
     }
-  }, [apartmentId]);
+  }, [luogoId]);
 
   useEffect(() => {
     void reload();
+    // Ricarica quando un device/luogo viene creato, modificato o eliminato.
+    const onChange = () => void reload();
+    window.addEventListener('devices:changed', onChange);
+    return () => window.removeEventListener('devices:changed', onChange);
   }, [reload]);
 
   return { devices, loading, error, reload };
