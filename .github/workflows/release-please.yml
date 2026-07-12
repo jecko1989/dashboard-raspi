@@ -13,7 +13,7 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Full history per leggere tutti i commit
       
@@ -70,7 +70,7 @@ jobs:
       
       - name: Release Please (con milestone)
         if: steps.milestone.outputs.target_version != '' && steps.milestone.outputs.target_version != null
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
@@ -79,7 +79,7 @@ jobs:
       
       - name: Release Please (senza milestone, calcolo automatico)
         if: (steps.milestone.outputs.target_version == '' || steps.milestone.outputs.target_version == null) && steps.bump-calc.outputs.bump != 'none'
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
