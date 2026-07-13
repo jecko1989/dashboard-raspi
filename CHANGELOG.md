@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.6.0...v0.7.0) (2026-07-13)
+
+
+### Features
+
+* **monitoring:** completa milestone v0.7.0 ([81f5263](https://github.com/jecko1989/dashboard-raspi/commit/81f5263bc7ed4988ac273cd2c9b5d9e6ab9c80f6))
+
 ## [0.6.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.3.2...v0.6.0) (2026-07-12)
 
 
