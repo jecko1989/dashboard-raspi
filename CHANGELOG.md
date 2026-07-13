@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.7.0...v0.8.0) (2026-07-13)
+
+
+### Features
+
+* **frontend:** complete milestone v0.8.0 events and layout redesign ([b4a2209](https://github.com/jecko1989/dashboard-raspi/commit/b4a22097010f3a03179eb5eb6734f5e2ff5f44c2))
+
 ## [0.7.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.6.0...v0.7.0) (2026-07-13)
 
 
