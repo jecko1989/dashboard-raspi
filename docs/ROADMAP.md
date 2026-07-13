@@ -125,7 +125,7 @@ vista storica dettagliata.
 - Tutte le azioni passano da endpoint protetti e auditati.
 - Le azioni sensibili mantengono vincolo admin e conferma obbligatoria.
 
-## Milestone v1.0.0 - Wiki e documentazione UI
+## Milestone v0.9.5 - Wiki e documentazione UI
 
 ### Ambito
 - Creazione Wiki completa per l'utilizzo della dashboard con documentazione visuale.
@@ -144,6 +144,39 @@ vista storica dettagliata.
 - Screenshots catturati su viewport standard (desktop 1920x1080 e mobile 375x667).
 - Link nella UI che rimandano alla Wiki (footer o icona help contextuale).
 - Possibile integrazione futura con search interno per ricerca nella documentazione.
+
+## Milestone v1.0.0 - Guida interattiva per il primo utilizzo
+
+### Ambito
+- Implementazione di un onboarding interattivo per nuovi utenti al primo login.
+- Tour guidato delle sezioni principali (overview, luogo, device, impostazioni).
+- Tooltip contextual e evidenziazione degli elementi UI chiave durante la guida.
+- Possibilità di saltare o ripetere la guida da impostazioni utente.
+- Integrazione con la Wiki per rinvii approfonditi.
+- Tasto help floating in basso a destra per aiuto interattivo contestuale.
+- Aiuto dinamico basato sulla sezione corrente (overview, luoghi, device, aggiunta luoghi, aggiunta device, etc).
+
+### Criteri di accettazione
+- La guida interattiva appare automaticamente al primo login dell'utente.
+- Ogni step evidenzia chiaramente l'elemento da interagire con tooltip descrittivo.
+- L'utente può navigare tra gli step (next, previous, skip all).
+- La guida è completabile in 3-5 minuti senza bloccare l'accesso alle funzionalità.
+- Stato della guida è persistito in user preferences (non ripete se completata).
+- Il tasto help floating è sempre disponibile e non intralcia la navigazione.
+- Su mobile, il tasto help floating è posizionato in modo da non coprire elementi interattivi (es. FAB per azioni principali).
+- Il contenuto help contestuale è rilevante alla pagina corrente.
+
+### Note di implementazione
+- Frontend: nuovo componente `OnboardingGuide` con logica di step sequenziali e overlay.
+- Tour builder: hook `useOnboarding` per gestire stato, highlights e tooltip.
+- Storage: flag `onboarding_completed` nel profilo utente o localStorage con UUID utente.
+- Highlights: uso di libreria leggera (es. Shepherd.js o custom overlay) per evidenziare elementi.
+- Accessibilità: keyboard navigation, focus trap e ARIA labels per screen reader.
+- Analytics: tracking degli step completati per misurare engagement.
+- Tasto help floating: componente `FloatingHelpButton` con detection della route corrente e mapping a contenuti help specifici.
+- Help engine: hook `useContextualHelp` che espone title, description, link alla Wiki basato su route/context.
+- Responsive: su mobile (< 768px), il tasto help è visualizzato con icona ridotta e positioning adeguato per evitare conflitti con altre FAB o azioni bottom.
+- Help content: file markdown in `docs/wiki/help-topics/` con sezioni per ogni pagina (overview.md, luoghi.md, device.md, etc).
 
 ## Backlog trasversale
 
