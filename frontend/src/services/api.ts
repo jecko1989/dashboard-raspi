@@ -10,6 +10,7 @@ import type {
   DashboardEvent,
   Metric,
   Thresholds,
+  ThresholdsUpdatePayload,
   ServiceStatus,
   ServiceLogs,
   CommandResult,
@@ -172,6 +173,13 @@ export async function getEvents(limit = 50): Promise<DashboardEvent[]> {
 
 export async function getThresholds(): Promise<Thresholds> {
   const { data } = await api.get<Thresholds>('/settings/thresholds');
+  return data;
+}
+
+export async function updateThresholds(
+  payload: ThresholdsUpdatePayload,
+): Promise<Thresholds> {
+  const { data } = await api.put<Thresholds>('/settings/thresholds', payload);
   return data;
 }
 

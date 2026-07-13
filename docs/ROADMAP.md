@@ -70,15 +70,28 @@ Stato: completata (2026-07-12). Naming funzionale scelto: **Luogo** (plurale
   `devices.apartment_id`->`luogo_id` e nuova colonna `devices.tags` (JSON).
 
 
-## Milestone v0.7.0 - Impostazioni e UX monitoraggio
+## Milestone v0.7.0 - Impostazioni e UX monitoraggio [COMPLETATA]
+
+Stato: completata (2026-07-13). Le soglie globali alert sono ora modificabili da
+UI per gli admin con persistenza su `devices.yaml`; i grafici sono stati
+integrati direttamente nei blocchi di "Metriche attuali" mantenendo anche una
+vista storica dettagliata.
 
 ### Ambito
-- Modifica dei valori dal menu impostazioni se utente admin.
-- Integrazione dei grafici dentro i blocchi di "Metriche attuali".
+- [x] Modifica dei valori dal menu impostazioni se utente admin.
+- [x] Integrazione dei grafici dentro i blocchi di "Metriche attuali".
 
 ### Criteri di accettazione
-- Le impostazioni admin sono persistite e validate lato backend.
-- I grafici sono leggibili su desktop e mobile senza regressioni UX.
+- [x] Le impostazioni admin sono persistite e validate lato backend.
+- [x] I grafici sono leggibili su desktop e mobile senza regressioni UX.
+
+### Note di implementazione
+- Backend: nuovo endpoint `PUT /api/settings/thresholds` riservato agli admin,
+  con validazione Pydantic e persistenza config-driven su `config/devices.yaml`.
+- Frontend: pagina `Settings` con modalità admin editabile e fallback read-only
+  per utenti non admin.
+- UX monitoraggio: ogni `MetricCard` mostra valore corrente e trend recente;
+  lo storico completo resta disponibile come vista dettagliata con export CSV.
 
 ## Milestone v0.8.0 - Servizi operativi unificati
 

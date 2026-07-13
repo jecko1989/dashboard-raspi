@@ -104,6 +104,13 @@ Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`
 
 ## Unreleased
 
+- **v0.7.0 - Impostazioni e UX monitoraggio**
+  - Nuovo endpoint `PUT /api/settings/thresholds` riservato agli admin, con validazione Pydantic e persistenza delle soglie globali in `config/devices.yaml`.
+  - Pagina `Settings` aggiornata: modalità admin editabile con salvataggio immediato, fallback read-only per utenti non admin.
+  - Pagina dettaglio device rifinita: sezione `Prestazioni` al posto di `Metriche attuali`, con trend recente dietro ai valori delle card.
+  - Rimossa la sezione `Storico dettagliato`; il pulsante `Esporta CSV` è stato spostato dentro il box `Prestazioni`.
+  - Tooltip dei mini-grafici compatti reso meno invasivo e compatibile con hover sulle card.
+
 - **UX mobile**: viste principali rese responsive (mobile-first). Navigazione con drawer + hamburger su schermi piccoli (`Layout`, `Sidebar`), griglia metriche adattiva (`grid-cols-2 sm:grid-cols-3`), grafici ad altezza dinamica (`MetricChart`), tabelle con scroll anti-overflow (`ServiceStatusTable`), header e pagine core (`Overview`, `DeviceDetailPage`, `AlertsPage`, `Settings`) fluidi su viewport 360-430 px.
 - Documentazione di progetto allineata con stato corrente (roadmap, versioning, deploy).
 - Aggiunta roadmap milestone-based in `docs/ROADMAP.md`.
@@ -178,8 +185,8 @@ Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`
 - **Soglie configurabili** in `config/devices.yaml` (globali + override per device).
 - **Pagina Alert** e **timeline eventi** nel frontend.
 - **Silenziamento alert per device** (mute/unmute): `POST /api/devices/{id}/alerts/mute` e `.../unmute`
-- `GET /api/alerts` (filtro `active_only`), `GET /api/settings/thresholds`
-- **Pagina Impostazioni** con le soglie correnti.
+- `GET /api/alerts` (filtro `active_only`), `GET /api/settings/thresholds`, `PUT /api/settings/thresholds`
+- **Pagina Impostazioni** con lettura e, per admin, modifica delle soglie correnti.
 
 ---
 

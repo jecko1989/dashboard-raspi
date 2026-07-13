@@ -157,6 +157,14 @@ def _luoghi(data: dict) -> list:
     return luoghi
 
 
+def update_thresholds_in_config(thresholds: dict, path: str | None = None) -> None:
+    """Aggiorna le soglie globali nella config YAML."""
+    config_path, data = _read_raw(path)
+    data["thresholds"] = thresholds
+    _write_raw(config_path, data)
+    logger.info("Soglie globali aggiornate nella config.")
+
+
 def append_device_to_config(
     luogo_id: str, device: dict, path: str | None = None
 ) -> None:

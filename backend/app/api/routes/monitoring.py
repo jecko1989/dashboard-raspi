@@ -8,11 +8,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.device import DeviceRead
-from app.schemas.settings import ThresholdsRead
+from app.schemas.settings import ThresholdsRead, ThresholdsUpdate
 from app.services import device_service, metrics_service
-from app.services.config_loader import load_devices_config
+from app.services.config_loader import load_devices_config, update_thresholds_in_config
 
 router = APIRouter(tags=["monitoring"])
 
@@ -70,5 +72,21 @@ def unmute_alerts(device_id: str, db: Session = Depends(get_db)) -> DeviceRead:
 @router.get("/settings/thresholds", response_model=ThresholdsRead)
 def get_thresholds() -> ThresholdsRead:
     """Ritorna le soglie globali configurate per gli alert."""
+    config = load_devices_config()
+    return ThresholdsRead.model_validate(config.thresholds.model_dump())
+
+
+@router.put("/settings/thresholds", response_model=ThresholdsRead)
+def update_thresholds(
+    body: ThresholdsUpdate,
+    current_user: User = Depends(get_current_user),
+) -> ThresholdsRead:
+    """Aggiorna le soglie globali configurate per gli alert (solo admin)."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Operazione riservata agli amministratori",
+        )
+    update_thresholds_in_config(body.model_dump())
     config = load_devices_config()
     return ThresholdsRead.model_validate(config.thresholds.model_dump())

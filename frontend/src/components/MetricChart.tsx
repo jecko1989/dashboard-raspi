@@ -1,4 +1,6 @@
 import {
+  Area,
+  AreaChart,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -9,16 +11,29 @@ import {
 } from 'recharts';
 import type { Metric } from '../types';
 
+function formatCompactTooltipValue(value: number, unit?: string): string {
+  const formatted = Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return `${formatted}${unit ?? ''}`;
+}
+
 // Grafico a linea per una singola metrica nel tempo.
 interface MetricChartProps {
-  title: string;
+  title?: string;
   metrics: Metric[];
   dataKey: keyof Metric;
   color: string;
   unit?: string;
+  compact?: boolean;
 }
 
-export function MetricChart({ title, metrics, dataKey, color, unit }: MetricChartProps) {
+export function MetricChart({
+  title,
+  metrics,
+  dataKey,
+  color,
+  unit,
+  compact = false,
+}: MetricChartProps) {
   const data = metrics
     .filter((m) => m[dataKey] != null)
     .map((m) => ({
@@ -26,11 +41,64 @@ export function MetricChart({ title, metrics, dataKey, color, unit }: MetricChar
       value: m[dataKey] as number,
     }));
 
+  if (compact) {
+    if (data.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="h-20 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id={`trend-${String(dataKey)}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.22} />
+                <stop offset="95%" stopColor={color} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <Tooltip
+              contentStyle={{
+                fontSize: 11,
+                padding: '6px 8px',
+                borderRadius: 8,
+                border: '1px solid rgba(148, 163, 184, 0.28)',
+                background: 'rgba(15, 23, 42, 0.82)',
+                color: '#e5e7eb',
+                boxShadow: '0 8px 22px rgba(15, 23, 42, 0.18)',
+              }}
+              itemStyle={{ color: '#e5e7eb', paddingTop: 0, paddingBottom: 0 }}
+              labelStyle={{
+                color: '#94a3b8',
+                fontSize: 10,
+                marginBottom: 2,
+              }}
+              formatter={(v: number) => [formatCompactTooltipValue(v, unit), title ?? String(dataKey)]}
+              labelFormatter={() => 'Trend recente'}
+              wrapperStyle={{ zIndex: 30 }}
+              cursor={{ stroke: color, strokeOpacity: 0.25, strokeWidth: 1 }}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              fill={`url(#trend-${String(dataKey)})`}
+              strokeWidth={1.75}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <h4 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
-        {title}
-      </h4>
+      {title && (
+        <h4 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+          {title}
+        </h4>
+      )}
       {data.length === 0 ? (
         <p className="py-8 text-center text-sm text-gray-400">Nessun dato</p>
       ) : (
@@ -42,7 +110,7 @@ export function MetricChart({ title, metrics, dataKey, color, unit }: MetricChar
               <YAxis tick={{ fontSize: 10 }} width={40} unit={unit} />
               <Tooltip
                 contentStyle={{ fontSize: 12 }}
-                formatter={(v: number) => [`${v}${unit ?? ''}`, title]}
+                formatter={(v: number) => [`${v}${unit ?? ''}`, title ?? String(dataKey)]}
               />
               <Line
                 type="monotone"

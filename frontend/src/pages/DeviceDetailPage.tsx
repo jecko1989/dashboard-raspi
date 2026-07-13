@@ -27,6 +27,50 @@ import {
   formatUptime,
 } from '../utils/format';
 
+const metricTrends = [
+  {
+    label: 'CPU',
+    value: (metric: Metric | null) => formatPercent(metric?.cpu_percent),
+    dataKey: 'cpu_percent' as const,
+    color: '#3b82f6',
+    unit: '%',
+  },
+  {
+    label: 'RAM',
+    value: (metric: Metric | null) => formatPercent(metric?.ram_percent),
+    dataKey: 'ram_percent' as const,
+    color: '#10b981',
+    unit: '%',
+  },
+  {
+    label: 'Disco',
+    value: (metric: Metric | null) => formatPercent(metric?.disk_percent),
+    dataKey: 'disk_percent' as const,
+    color: '#f59e0b',
+    unit: '%',
+  },
+  {
+    label: 'Temp.',
+    value: (metric: Metric | null) => formatTemp(metric?.temperature_celsius),
+    dataKey: 'temperature_celsius' as const,
+    color: '#ef4444',
+    unit: '°C',
+  },
+  {
+    label: 'Load 1m',
+    value: (metric: Metric | null) => formatLoad(metric?.load_average_1m),
+    dataKey: 'load_average_1m' as const,
+    color: '#0f766e',
+  },
+  {
+    label: 'Uptime',
+    value: (metric: Metric | null) => formatUptime(metric?.uptime_seconds),
+    dataKey: 'uptime_seconds' as const,
+    color: '#7c3aed',
+    unit: 's',
+  },
+];
+
 // Pagina dettaglio dispositivo.
 // FASE 4: metriche + storico + eventi + comandi remoti sicuri (con conferma e audit).
 export function DeviceDetailPage() {
@@ -139,14 +183,38 @@ export function DeviceDetailPage() {
         <DeviceDetails device={device} />
 
         <section className="flex h-full flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
-          <h3 className="mb-3 text-xl font-semibold">Metriche attuali</h3>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-xl font-semibold">Prestazioni</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Valori correnti e trend recente per ogni metrica.
+              </p>
+            </div>
+            <button
+              onClick={() => downloadMetricsCsv(device.id)}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+            >
+              ⬇️ Esporta CSV
+            </button>
+          </div>
           <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-            <MetricCard label="CPU" value={formatPercent(metric?.cpu_percent)} />
-            <MetricCard label="RAM" value={formatPercent(metric?.ram_percent)} />
-            <MetricCard label="Disco" value={formatPercent(metric?.disk_percent)} />
-            <MetricCard label="Temp." value={formatTemp(metric?.temperature_celsius)} />
-            <MetricCard label="Load 1m" value={formatLoad(metric?.load_average_1m)} />
-            <MetricCard label="Uptime" value={formatUptime(metric?.uptime_seconds)} />
+            {metricTrends.map((item) => (
+              <MetricCard
+                key={item.label}
+                label={item.label}
+                value={item.value(metric)}
+                trend={
+                  <MetricChart
+                    metrics={history}
+                    dataKey={item.dataKey}
+                    color={item.color}
+                    unit={item.unit}
+                    compact
+                    title={item.label}
+                  />
+                }
+              />
+            ))}
           </div>
           {metric ? (
             <p className="mt-2 text-xs text-gray-400">
@@ -159,24 +227,6 @@ export function DeviceDetailPage() {
           )}
         </section>
       </div>
-
-      <section>
-        <h3 className="mb-3 text-lg font-semibold">Storico</h3>
-        <div className="mb-3">
-          <button
-            onClick={() => downloadMetricsCsv(device.id)}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-          >
-            ⬇️ Esporta CSV
-          </button>
-        </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <MetricChart title="CPU %" metrics={history} dataKey="cpu_percent" color="#3b82f6" unit="%" />
-          <MetricChart title="RAM %" metrics={history} dataKey="ram_percent" color="#10b981" unit="%" />
-          <MetricChart title="Disco %" metrics={history} dataKey="disk_percent" color="#f59e0b" unit="%" />
-          <MetricChart title="Temperatura °C" metrics={history} dataKey="temperature_celsius" color="#ef4444" unit="°C" />
-        </div>
-      </section>
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>

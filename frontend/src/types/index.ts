@@ -111,6 +111,14 @@ export interface Thresholds {
   offline_after_failures: number;
 }
 
+export interface ThresholdsUpdatePayload {
+  temperature_celsius: number;
+  disk_percent: number;
+  ram_percent: number;
+  cpu_percent: number;
+  offline_after_failures: number;
+}
+
 export interface CommandResult {
   device_id: string;
   command: string;

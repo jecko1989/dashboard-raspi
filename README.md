@@ -4,9 +4,11 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 
 > Il progetto è pensato per gestire più luoghi (es. appartamenti), ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
 
-## Stato attuale del progetto (2026-07-12)
+## Stato attuale del progetto (2026-07-13)
 
 - Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
+- Milestone v0.7.0 completata: soglie alert modificabili da UI per admin con persistenza su `config/devices.yaml`.
+- Dettaglio device semplificato: sezione `Prestazioni` con valori correnti, trend recente per card e pulsante CSV nello stesso box.
 - Deploy operativo in modalità Docker e nativa (systemd) con script dedicati.
 - Gestione CORS documentata con troubleshooting pratico in produzione.
 - Roadmap funzionale disponibile in `docs/ROADMAP.md`.
@@ -28,14 +30,14 @@ Documenti di riferimento rapido:
 
 - Stato online/offline in tempo reale con check TCP e latenza
 - Raccolta metriche SSH: CPU, RAM, disco, temperatura, uptime, load average
-- Storico metriche con grafici (Recharts)
+- Trend recente delle metriche integrato nelle card `Prestazioni` del dettaglio device
 - Alert configurabili (temperatura, disco, RAM, CPU, offline, riavvio) con auto-risoluzione
 - Comandi remoti sicuri: reboot, shutdown, aggiornamenti, restart servizi
 - Stato e log dei servizi systemd (read-only)
 - Audit log completo di ogni comando eseguito
 - Autenticazione JWT con login locale (bcrypt)
 - Shell web interattiva admin-only (WebSocket + SSH PTY, xterm.js)
-- Esportazione CSV delle metriche
+- Esportazione CSV delle metriche dal box `Prestazioni`
 - Aggiunta di nuovi device dalla dashboard (persistiti in `config/devices.yaml`)
 - Dark mode, timeline attività, badge VPN/latenza
 - Interfaccia responsive mobile-first: navigazione a drawer, griglie e grafici adattivi, tabelle anti-overflow
@@ -238,6 +240,8 @@ npm run dev
 ```
 
 Frontend su <http://localhost:5173>.
+
+Nota sviluppo locale: `run-local.ps1` genera un `JWT_SECRET_KEY` casuale se non già impostato. Dopo ogni riavvio del backend, eventuali token JWT salvati nel browser diventano invalidi e il frontend può ricevere `401` finché non si effettua un nuovo login.
 
 ---
 
