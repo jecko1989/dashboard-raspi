@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CommandResult, ServiceStatus } from '../types';
+import { useEffect, useRef, useState } from 'react';
+import type { CommandResult } from '../types';
 import {
-  getServices,
-  getServiceLogs,
   commandReboot,
   commandShutdown,
   commandUpdate,
@@ -13,7 +11,6 @@ import {
   restoreMystBackup,
 } from '../services/api';
 import { CommandModal } from './CommandModal';
-import { ServiceStatusTable } from './ServiceStatusTable';
 import { ShellModal } from './ShellModal';
 import { useAuth } from '../context/AuthContext';
 
@@ -57,36 +54,17 @@ function Spinner() {
 // Pannello comandi remoti + gestione servizi, con conferma modale e audit.
 export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceCommandsProps) {
   const { isAdmin } = useAuth();
-  const [services, setServices] = useState<ServiceStatus[]>([]);
-  const [loadingServices, setLoadingServices] = useState(true);
   const [pending, setPending] = useState<Pending>(null);
   const [dryRun, setDryRun] = useState(true);
   const [running, setRunning] = useState(false);
   const [runningKind, setRunningKind] = useState<NonNullable<Pending>['kind'] | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<CommandResult | null>(null);
-  const [logs, setLogs] = useState<{ service: string; content: string } | null>(null);
   const [backupRunning, setBackupRunning] = useState(false);
   const [mystError, setMystError] = useState<string | null>(null);
   const [shellOpen, setShellOpen] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
-  const loadServices = useCallback(async () => {
-    setLoadingServices(true);
-    try {
-      setServices(await getServices(deviceId));
-    } catch {
-      setServices([]);
-    } finally {
-      setLoadingServices(false);
-    }
-  }, [deviceId]);
-
-  useEffect(() => {
-    void loadServices();
-  }, [loadServices]);
-
-  // Cronometro del comando in corso (feedback "da quanto sta girando").
   useEffect(() => {
     if (!running) return;
     setElapsed(0);
@@ -134,7 +112,6 @@ export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceComman
           break;
       }
       setResult(res);
-      await loadServices();
       onChanged?.();
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: string } } }).response?.data
@@ -148,15 +125,6 @@ export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceComman
     } finally {
       setRunning(false);
       setRunningKind(null);
-    }
-  };
-
-  const viewLogs = async (service: string) => {
-    try {
-      const data = await getServiceLogs(deviceId, service);
-      setLogs({ service, content: data.logs });
-    } catch (err) {
-      setLogs({ service, content: (err as Error)?.message ?? 'Errore' });
     }
   };
 
@@ -447,19 +415,6 @@ export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceComman
         </div>
       )}
 
-      <div>
-        <h3 className="mb-3 text-lg font-semibold">Servizi</h3>
-        {loadingServices ? (
-          <p className="text-sm text-gray-500">Caricamento servizi…</p>
-        ) : (
-          <ServiceStatusTable
-            services={services}
-            onRestart={(name) => setPending({ kind: 'restart', service: name })}
-            onViewLogs={viewLogs}
-          />
-        )}
-      </div>
-
       <CommandModal
         open={Boolean(cfg)}
         title={cfg?.title ?? ''}
@@ -477,25 +432,6 @@ export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceComman
           deviceName={deviceName ?? deviceId}
           onClose={() => setShellOpen(false)}
         />
-      )}
-
-      {logs && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-xl dark:bg-gray-800 sm:p-6">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Log · {logs.service}</h3>
-              <button
-                onClick={() => setLogs(null)}
-                className="rounded-md border border-gray-300 px-3 py-1 text-sm dark:border-gray-600"
-              >
-                Chiudi
-              </button>
-            </div>
-            <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-gray-100 p-3 text-xs dark:bg-gray-900">
-              {logs.content || '(nessun log)'}
-            </pre>
-          </div>
-        </div>
       )}
     </div>
   );

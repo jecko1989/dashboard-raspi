@@ -123,12 +123,6 @@ export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
           </span>
           Aggiungi luogo
         </button>
-        <NavLink to="/devices/new" className={linkClass}>
-          <span aria-hidden="true" className="mr-2">
-            ➕
-          </span>
-          Aggiungi device
-        </NavLink>
         <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
           Sistema
         </p>

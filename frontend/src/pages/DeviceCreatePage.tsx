@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { DeviceCreatePayload } from '../types';
 import { useLuoghi } from '../hooks/useLuoghi';
 import { createDevice } from '../services/api';
@@ -49,11 +49,21 @@ const inputClass =
 // Pagina di creazione device: form coerente con lo stile della dashboard.
 export function DeviceCreatePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { luoghi, loading: loadingLuoghi } = useLuoghi();
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const luogoId = searchParams.get('luogoId')?.trim();
+    if (!luogoId) return;
+    if (!luoghi.some((luogo) => luogo.id === luogoId)) return;
+    setForm((current) =>
+      current.luogo_id === luogoId ? current : { ...current, luogo_id: luogoId },
+    );
+  }, [luoghi, searchParams]);
 
   const update =
     (field: keyof FormState) =>

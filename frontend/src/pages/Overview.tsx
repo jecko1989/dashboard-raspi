@@ -5,7 +5,7 @@ import { useLuoghi } from '../hooks/useLuoghi';
 import { useDevices } from '../hooks/useDevices';
 import { LuogoSection } from '../components/LuogoSection';
 import { LuogoFormModal } from '../components/LuogoFormModal';
-import { EventTimeline } from '../components/EventTimeline';
+import { EventsPanel } from '../components/EventsPanel';
 import { refreshAll, getAlerts, getEvents } from '../services/api';
 
 // Pagina overview globale: tutti i luoghi con i loro device.
@@ -55,7 +55,12 @@ export function Overview() {
   return (
     <div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Overview</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Overview</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Stato complessivo dei luoghi e dei device monitorati.
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Link
             to="/alerts"
@@ -67,6 +72,7 @@ export function Overview() {
           >
             {alertCount > 0 ? `⚠️ ${alertCount} alert attivi` : '✅ Nessun alert'}
           </Link>
+          <EventsPanel events={events} scope={{ kind: 'all' }} title="Eventi" />
           <button
             onClick={handleRefreshAll}
             disabled={refreshing}
@@ -89,21 +95,13 @@ export function Overview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          {luoghi.map((lg) => (
-            <LuogoSection
-              key={lg.id}
-              luogo={lg}
-              devices={devices.filter((d) => d.luogo_id === lg.id)}
-            />
-          ))}
-        </div>
-        <div>
-          <h2 className="mb-3 text-lg font-semibold">Attività recente</h2>
-          <EventTimeline events={events} />
-        </div>
-      </div>
+      {luoghi.map((lg) => (
+        <LuogoSection
+          key={lg.id}
+          luogo={lg}
+          devices={devices.filter((d) => d.luogo_id === lg.id)}
+        />
+      ))}
 
       <LuogoFormModal open={creatingLuogo} onClose={() => setCreatingLuogo(false)} />
     </div>

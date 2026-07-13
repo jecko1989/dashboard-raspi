@@ -15,8 +15,9 @@ import {
 import { DeviceDetails } from '../components/DeviceDetails';
 import { MetricCard } from '../components/MetricCard';
 import { MetricChart } from '../components/MetricChart';
-import { EventTimeline } from '../components/EventTimeline';
+import { EventsPanel } from '../components/EventsPanel';
 import { DeviceCommands } from '../components/DeviceCommands';
+import { DeviceServicesPanel } from '../components/DeviceServicesPanel';
 import { DeviceSSHKey } from '../components/DeviceSSHKey';
 import { DeviceFormModal } from '../components/DeviceFormModal';
 import { CommandModal } from '../components/CommandModal';
@@ -151,6 +152,11 @@ export function DeviceDetailPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="break-words text-xl font-bold sm:text-2xl">{device.name}</h1>
         <div className="flex flex-wrap gap-2">
+          <EventsPanel
+            events={events}
+            scope={{ kind: 'device', deviceId: device.id, deviceName: device.name }}
+            title="Eventi"
+          />
           <button
             onClick={handleToggleMute}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
@@ -179,7 +185,7 @@ export function DeviceDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 xl:grid-cols-2">
         <DeviceDetails device={device} />
 
         <section className="flex h-full flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
@@ -228,14 +234,13 @@ export function DeviceDetailPage() {
         </section>
       </div>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <div>
           <h3 className="mb-3 text-lg font-semibold">Comandi remoti</h3>
           <DeviceCommands deviceId={device.id} deviceName={device.name} onChanged={load} />
         </div>
         <div>
-          <h3 className="mb-3 text-lg font-semibold">Ultimi eventi</h3>
-          <EventTimeline events={events} />
+          <DeviceServicesPanel deviceId={device.id} />
         </div>
       </section>
 
