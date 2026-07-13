@@ -1,9 +1,9 @@
 # Roadmap - Prossimi miglioramenti
 
 Stato: attiva (pianificazione)
-Data ultimo aggiornamento: 2026-07-12
+Data ultimo aggiornamento: 2026-07-14
 Baseline corrente: release v0.1.0 (monitoraggio + comandi + deploy + shell web)
-Prossimo target: milestone v0.7.0 (milestone v0.6.0 completata)
+Prossimo target: milestone v0.9.0 (milestone v0.8.0 completata)
 
 ## Priorita' immediata - UX mobile dashboard [COMPLETATA]
 
@@ -93,26 +93,32 @@ vista storica dettagliata.
 - UX monitoraggio: ogni `MetricCard` mostra valore corrente e trend recente;
   lo storico completo resta disponibile come vista dettagliata con export CSV.
 
-## Milestone v0.8.0 - Re design grafico
+## Milestone v0.8.0 - Re design grafico [COMPLETATA]
+
+Stato: completata (2026-07-14). La UX e' stata riallineata con gerarchia eventi
+contestuale (overview/luogo/device), accesso tramite pulsante campanella con
+modale, layout del dettaglio device rifinito e sezione servizi integrata senza
+card ridondante.
 
 ### Ambito
-- Spostamento della sezione notifiche/eventi in alto a destra (gerarchia logica: overview → tutti device, luogo → device del luogo, device → eventi device).
-- Sostituzione della campanella (come silenzia alert) per accedere agli eventi con UI coerente.
-- Spostamento sezione servizi (dettaglio device) a destra dove erano elencati gli eventi.
-- Aggiunta pulsante "nuovo device" in alto a destra nella pagina dei luoghi.
-- Rimozione voci ridondanti dal menu laterale ("nuovo luogo", "nuovo device").
+- [x] Spostamento della sezione notifiche/eventi in alto a destra (gerarchia logica: overview -> tutti device, luogo -> device del luogo, device -> eventi device).
+- [x] Sostituzione della campanella (come silenzia alert) per accedere agli eventi con UI coerente.
+- [x] Spostamento sezione servizi (dettaglio device) a destra dove erano elencati gli eventi.
+- [x] Aggiunta pulsante "nuovo device" in alto a destra nella pagina dei luoghi.
+- [x] Rimozione delle voci ridondanti dal menu laterale per il flusso "nuovo device".
 
 ### Criteri di accettazione
-- La sezione eventi è accessibile da overview, dettaglio luogo e dettaglio device con logica gerarchica corretta.
-- Il pulsante "nuovo device" nella pagina luoghi è coerente con quello dell'overview.
-- Menu laterale contiene solo voci di navigazione principale (senza CRUD ridondanti).
-- Layout desktop e mobile mantengono leggibilità e usabilità.
+- [x] La sezione eventi e' accessibile da overview, dettaglio luogo e dettaglio device con logica gerarchica corretta.
+- [x] Il pulsante "nuovo device" nella pagina luoghi e' coerente con quello dell'overview.
+- [x] Menu laterale alleggerito dalle azioni ridondanti legate al flusso nuovo device.
+- [x] Layout desktop e mobile mantengono leggibilita' e usabilita'.
 
 ### Note di implementazione
-- Frontend: nuovo componente `EventsPanel` per la sezione notifiche con hook di logica gerarchica (location scope).
-- Refactor componenti page (`ApartmentPage`, `DeviceDetailPage`, `Overview`) per integrare il nuovo panel.
-- Sidebar: rimozione entries per CRUD (voci "nuovo luogo", "nuovo device").
-- UX coerenza: icona campanella restituisce lo stesso design di "silenzia alert" per ridurre cognitive load.
+- Frontend: introdotti `EventsPanel` e hook `useScopedEvents` con scope gerarchico (all/luogo/device).
+- Eventi: resa come pulsante campanella in header pagina con contatore; apertura timeline in modale e chiusura anche con click fuori dalla modale.
+- Refactor pagine (`Overview`, `LuogoPage`, `DeviceDetailPage`) per la nuova gerarchia eventi e l'azione contestuale "nuovo device" su luogo.
+- Sidebar: rimossa la voce ridondante "Aggiungi device".
+- Device detail: sezione servizi separata nella colonna destra, senza box/card dedicata, con sfondo coerente alla sezione comandi.
 
 ## Milestone v0.9.0 - Servizi operativi unificati
 
