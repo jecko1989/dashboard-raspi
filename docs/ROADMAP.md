@@ -93,7 +93,28 @@ vista storica dettagliata.
 - UX monitoraggio: ogni `MetricCard` mostra valore corrente e trend recente;
   lo storico completo resta disponibile come vista dettagliata con export CSV.
 
-## Milestone v0.8.0 - Servizi operativi unificati
+## Milestone v0.8.0 - Re design grafico
+
+### Ambito
+- Spostamento della sezione notifiche/eventi in alto a destra (gerarchia logica: overview → tutti device, luogo → device del luogo, device → eventi device).
+- Sostituzione della campanella (come silenzia alert) per accedere agli eventi con UI coerente.
+- Spostamento sezione servizi (dettaglio device) a destra dove erano elencati gli eventi.
+- Aggiunta pulsante "nuovo device" in alto a destra nella pagina dei luoghi.
+- Rimozione voci ridondanti dal menu laterale ("nuovo luogo", "nuovo device").
+
+### Criteri di accettazione
+- La sezione eventi è accessibile da overview, dettaglio luogo e dettaglio device con logica gerarchica corretta.
+- Il pulsante "nuovo device" nella pagina luoghi è coerente con quello dell'overview.
+- Menu laterale contiene solo voci di navigazione principale (senza CRUD ridondanti).
+- Layout desktop e mobile mantengono leggibilità e usabilità.
+
+### Note di implementazione
+- Frontend: nuovo componente `EventsPanel` per la sezione notifiche con hook di logica gerarchica (location scope).
+- Refactor componenti page (`ApartmentPage`, `DeviceDetailPage`, `Overview`) per integrare il nuovo panel.
+- Sidebar: rimozione entries per CRUD (voci "nuovo luogo", "nuovo device").
+- UX coerenza: icona campanella restituisce lo stesso design di "silenzia alert" per ridurre cognitive load.
+
+## Milestone v0.9.0 - Servizi operativi unificati
 
 ### Ambito
 - Aggiunta servizi da UI.
@@ -104,15 +125,25 @@ vista storica dettagliata.
 - Tutte le azioni passano da endpoint protetti e auditati.
 - Le azioni sensibili mantengono vincolo admin e conferma obbligatoria.
 
-## Milestone v0.9.0 - Integrazione AI
+## Milestone v1.0.0 - Wiki e documentazione UI
 
 ### Ambito
-- Integrazione AI nell'app (assistente operativo e/o insight su metriche/eventi).
+- Creazione Wiki completa per l'utilizzo della dashboard con documentazione visuale.
+- Screenshot e spiegazioni di tutte le sezioni principali (overview, dettaglio luogo, dettaglio device, impostazioni, shell web).
+- Guide step-by-step per le operazioni comuni (aggiungere device, gestire comandi, monitorare metriche).
+- FAQ e troubleshooting per utenti finali.
 
 ### Criteri di accettazione
-- Funzioni AI attivabili/disattivabili da configurazione.
-- Tracciamento minimo delle azioni AI con log/eventi.
-- Nessuna riduzione delle garanzie di sicurezza esistenti.
+- Ogni sezione della UI è documentata con almeno uno screenshot e descrizione.
+- Le guide step-by-step sono chiare e facili da seguire anche per utenti non tecnici.
+- La Wiki è accessibile da link in-app (footer o menu help).
+- Linguaggio consistente con la UI (italiano).
+
+### Note di implementazione
+- Creazione cartella `docs/wiki` con file markdown organizzati per sezione.
+- Screenshots catturati su viewport standard (desktop 1920x1080 e mobile 375x667).
+- Link nella UI che rimandano alla Wiki (footer o icona help contextuale).
+- Possibile integrazione futura con search interno per ricerca nella documentazione.
 
 ## Backlog trasversale
 
