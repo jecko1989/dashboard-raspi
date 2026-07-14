@@ -5,6 +5,7 @@ import { useLuoghi } from '../hooks/useLuoghi';
 import { useDevices } from '../hooks/useDevices';
 import { LuogoSection } from '../components/LuogoSection';
 import { LuogoFormModal } from '../components/LuogoFormModal';
+import { DeviceCreateModal } from '../components/DeviceCreateModal';
 import { EventsPanel } from '../components/EventsPanel';
 import { refreshAll, getAlerts, getEvents } from '../services/api';
 
@@ -14,6 +15,7 @@ export function Overview() {
   const { devices, loading: loadingDevs, error: errDevs, reload } = useDevices();
   const [refreshing, setRefreshing] = useState(false);
   const [creatingLuogo, setCreatingLuogo] = useState(false);
+  const [creatingDevice, setCreatingDevice] = useState(false);
   const [alertCount, setAlertCount] = useState<number>(0);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
 
@@ -84,14 +86,14 @@ export function Overview() {
             onClick={() => setCreatingLuogo(true)}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
           >
-            ➕ Nuovo luogo
+            ➕ Aggiungi luogo
           </button>
-          <Link
-            to="/devices/new"
+          <button
+            onClick={() => setCreatingDevice(true)}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
           >
-            ➕ Nuovo device
-          </Link>
+            ➕ Aggiungi device
+          </button>
         </div>
       </div>
 
@@ -102,6 +104,8 @@ export function Overview() {
           devices={devices.filter((d) => d.luogo_id === lg.id)}
         />
       ))}
+
+      <DeviceCreateModal open={creatingDevice} onClose={() => setCreatingDevice(false)} />
 
       <LuogoFormModal open={creatingLuogo} onClose={() => setCreatingLuogo(false)} />
     </div>

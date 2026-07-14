@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import type { Luogo } from '../types';
 import { KebabMenu } from './KebabMenu';
 import { CommandModal } from './CommandModal';
+import { DeviceCreateModal } from './DeviceCreateModal';
 import { LuogoFormModal } from './LuogoFormModal';
 import { deleteLuogo } from '../services/api';
 
@@ -17,6 +18,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
+  const [luoghiExpanded, setLuoghiExpanded] = useState(true);
+  const [azioniExpanded, setAzioniExpanded] = useState(true);
+  const [creatingDevice, setCreatingDevice] = useState(false);
   const [creatingLuogo, setCreatingLuogo] = useState(false);
   const [editingLuogo, setEditingLuogo] = useState<Luogo | null>(null);
   const [deletingLuogo, setDeletingLuogo] = useState<Luogo | null>(null);
@@ -50,6 +54,14 @@ export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
         : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
     }`;
 
+  const actionButtonClass =
+    'block w-full rounded-md px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700';
+
+  const sectionToggleClass = (expanded: boolean) =>
+    `mt-4 flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 transition hover:bg-gray-100 dark:hover:bg-gray-700 ${
+      expanded ? '' : 'mb-5'
+    }`;
+
   return (
     <aside
       className={`w-64 shrink-0 overflow-y-auto border-r border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 ${className}`}
@@ -70,69 +82,112 @@ export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
           </span>
           Alert
         </NavLink>
-        <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-          Luoghi
-        </p>
-        {error && (
-          <p className="px-3 py-1 text-xs text-red-600 dark:text-red-400">{error}</p>
-        )}
-        {luoghi.map((lg) => (
-          <div key={lg.id} className="flex items-center gap-1">
-            <NavLink to={`/luoghi/${lg.id}`} className="min-w-0 flex-1">
-              {({ isActive }) => (
-                <span className={linkClass({ isActive })}>
-                  <span aria-hidden="true" className="mr-2">
-                    🏠
-                  </span>
-                  {lg.name}
-                  <span className="ml-1 text-xs text-gray-400">
-                    ({lg.device_count})
-                  </span>
-                </span>
-              )}
-            </NavLink>
-            <KebabMenu
-              horizontal
-              ariaLabel={`Azioni luogo ${lg.name}`}
-              items={[
-                {
-                  label: 'Modifica luogo',
-                  icon: '✏️',
-                  onSelect: () => setEditingLuogo(lg),
-                },
-                {
-                  label: 'Elimina luogo',
-                  icon: '🗑️',
-                  destructive: true,
-                  onSelect: () => setDeletingLuogo(lg),
-                },
-              ]}
-            />
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setCreatingLuogo(true);
-          }}
-          className="block w-full rounded-md px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-        >
-          <span aria-hidden="true" className="mr-2">
-            ➕
-          </span>
-          Aggiungi luogo
-        </button>
-        <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-          Sistema
-        </p>
         <NavLink to="/settings" className={linkClass}>
           <span aria-hidden="true" className="mr-2">
             ⚙️
           </span>
           Impostazioni
         </NavLink>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setLuoghiExpanded((v) => !v);
+          }}
+          className={sectionToggleClass(luoghiExpanded)}
+          aria-expanded={luoghiExpanded}
+        >
+          <span>Luoghi</span>
+          <span aria-hidden="true">{luoghiExpanded ? '▾' : '▸'}</span>
+        </button>
+        {luoghiExpanded && (
+          <>
+            {error && (
+              <p className="px-3 py-1 text-xs text-red-600 dark:text-red-400">{error}</p>
+            )}
+            {luoghi.map((lg) => (
+              <div key={lg.id} className="flex items-center gap-1">
+                <NavLink to={`/luoghi/${lg.id}`} className="min-w-0 flex-1">
+                  {({ isActive }) => (
+                    <span className={linkClass({ isActive })}>
+                      <span aria-hidden="true" className="mr-2">
+                        🏠
+                      </span>
+                      {lg.name}
+                      <span className="ml-1 text-xs text-gray-400">
+                        ({lg.device_count})
+                      </span>
+                    </span>
+                  )}
+                </NavLink>
+                <KebabMenu
+                  horizontal
+                  ariaLabel={`Azioni luogo ${lg.name}`}
+                  items={[
+                    {
+                      label: 'Modifica luogo',
+                      icon: '✏️',
+                      onSelect: () => setEditingLuogo(lg),
+                    },
+                    {
+                      label: 'Elimina luogo',
+                      icon: '🗑️',
+                      destructive: true,
+                      onSelect: () => setDeletingLuogo(lg),
+                    },
+                  ]}
+                />
+              </div>
+            ))}
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setAzioniExpanded((v) => !v);
+          }}
+          className={sectionToggleClass(azioniExpanded)}
+          aria-expanded={azioniExpanded}
+        >
+          <span>Azioni</span>
+          <span aria-hidden="true">{azioniExpanded ? '▾' : '▸'}</span>
+        </button>
+        {azioniExpanded && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCreatingLuogo(true);
+              }}
+              className={actionButtonClass}
+            >
+              <span aria-hidden="true" className="mr-2">
+                ➕
+              </span>
+              Aggiungi luogo
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCreatingDevice(true);
+              }}
+              className={actionButtonClass}
+            >
+              <span aria-hidden="true" className="mr-2">
+                ➕
+              </span>
+              Aggiungi device
+            </button>
+          </>
+        )}
       </nav>
+
+      <DeviceCreateModal open={creatingDevice} onClose={() => setCreatingDevice(false)} />
 
       <LuogoFormModal open={creatingLuogo} onClose={() => setCreatingLuogo(false)} />
 

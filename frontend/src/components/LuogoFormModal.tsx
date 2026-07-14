@@ -65,10 +65,16 @@ export function LuogoFormModal({ open, luogo, onClose, onSaved }: LuogoFormModal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {isEdit ? 'Modifica luogo' : 'Nuovo luogo'}
+          {isEdit ? 'Modifica luogo' : 'Aggiungi luogo'}
         </h3>
 
         {serverError && (

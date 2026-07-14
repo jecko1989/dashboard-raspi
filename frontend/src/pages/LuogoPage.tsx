@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import type { DashboardEvent } from '../types';
 import { useLuoghi } from '../hooks/useLuoghi';
 import { useDevices } from '../hooks/useDevices';
 import { LuogoSection } from '../components/LuogoSection';
+import { DeviceCreateModal } from '../components/DeviceCreateModal';
 import { EventsPanel } from '../components/EventsPanel';
 import { getEvents } from '../services/api';
 
@@ -13,6 +14,7 @@ export function LuogoPage() {
   const { luoghi } = useLuoghi();
   const { devices, loading, error } = useDevices(luogoId);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
+  const [creatingDevice, setCreatingDevice] = useState(false);
 
   const luogo = luoghi.find((lg) => lg.id === luogoId);
 
@@ -47,16 +49,22 @@ export function LuogoPage() {
             }}
             title="Eventi"
           />
-          <Link
-            to={`/devices/new?luogoId=${encodeURIComponent(luogo.id)}`}
+          <button
+            onClick={() => setCreatingDevice(true)}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
           >
-            ➕ Nuovo device
-          </Link>
+            ➕ Aggiungi device
+          </button>
         </div>
       </div>
 
       <LuogoSection luogo={luogo} devices={devices} />
+
+      <DeviceCreateModal
+        open={creatingDevice}
+        initialLuogoId={luogo.id}
+        onClose={() => setCreatingDevice(false)}
+      />
     </div>
   );
 }

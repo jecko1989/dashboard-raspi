@@ -121,9 +121,9 @@ Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`
 - **v0.8.0 - Re design grafico (completata)**
   - Eventi resi contestuali per scope (overview, luogo, device) con nuovo pulsante campanella e contatore in testata pagina.
   - Timeline eventi aperta in modale dedicata con chiusura da pulsante e click su backdrop esterno.
-  - Pagina luogo aggiornata con azione rapida `Nuovo device` in header e pre-selezione del luogo nel form creazione device.
+  - Pagina luogo aggiornata con azione rapida `Aggiungi device` in header e pre-selezione del luogo nel form creazione device.
   - Dettaglio device riallineato: sezione `Servizi` separata da `Comandi remoti` e resa senza card dedicata.
-  - Sidebar semplificata con rimozione della voce ridondante per creazione diretta device.
+  - Sidebar aggiornata: voce `Impostazioni` sotto `Alert`, sezioni `Luoghi` e `Azioni` collassabili (default aperte) e azioni `Aggiungi luogo`/`Aggiungi device` via modale.
 
 - **v0.7.0 - Impostazioni e UX monitoraggio**
   - Nuovo endpoint `PUT /api/settings/thresholds` riservato agli admin, con validazione Pydantic e persistenza delle soglie globali in `config/devices.yaml`.

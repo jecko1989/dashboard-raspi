@@ -8,7 +8,8 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 
 - Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
 - Milestone v0.8.0 completata: eventi accessibili da pulsante campanella contestuale (overview/luogo/device) con modale dedicata.
-- Sidebar semplificata: rimossa la voce ridondante per la creazione diretta device dal menu laterale.
+- Sidebar aggiornata: `Impostazioni` sotto `Alert`, sezioni `Luoghi` e `Azioni` collassabili (default aperte).
+- Azioni di creazione coerenti in tutta la UI: `Aggiungi luogo` e `Aggiungi device` aprono modali con chiusura anche da click esterno.
 - Dettaglio device semplificato: sezione `Prestazioni` con valori correnti, trend recente per card e pulsante CSV nello stesso box.
 - Layout dettaglio device riallineato: box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` senza card separata.
 - Deploy operativo in modalità Docker e nativa (systemd) con script dedicati.
