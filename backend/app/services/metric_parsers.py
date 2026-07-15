@@ -85,6 +85,32 @@ def parse_load_average_1m(output: str) -> float | None:
         return None
 
 
+def parse_fan_rpm(output: str) -> float | None:
+    """Estrae gli RPM della ventola da sysfs (es. `1200`)."""
+    match = re.search(r"(\d+)", output)
+    if not match:
+        return None
+    try:
+        rpm = float(match.group(1))
+    except ValueError:
+        return None
+    return rpm if rpm >= 0 else None
+
+
+def parse_fan_mode(output: str) -> str | None:
+    """Mappa pwm_enable in modalita' logica: auto, fixed, off."""
+    value = output.strip().lower()
+    if not value:
+        return None
+    if value in {"2", "auto", "automatic", "automatica"}:
+        return "auto"
+    if value in {"1", "manual", "manuale", "fixed"}:
+        return "fixed"
+    if value in {"0", "off", "disabled", "disattivata"}:
+        return "off"
+    return None
+
+
 def parse_os_version(output: str) -> str | None:
     """Estrae PRETTY_NAME da `cat /etc/os-release`."""
     match = re.search(r'PRETTY_NAME="?([^"\n]+)"?', output)

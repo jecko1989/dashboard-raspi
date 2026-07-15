@@ -17,6 +17,15 @@ READONLY_COMMANDS: dict[str, str] = {
     "loadavg": "cat /proc/loadavg",
     "os_version": "cat /etc/os-release",
     "kernel": "uname -r",
+    # Ventola CPU (se presente). Sui sistemi passivi i path possono non esistere.
+    "fan_rpm": (
+        "sh -lc 'for f in /sys/class/hwmon/hwmon*/fan*_input; "
+        "do [ -r $f ] && { cat $f; break; }; done'"
+    ),
+    "fan_mode": (
+        "sh -lc 'for f in /sys/class/hwmon/hwmon*/pwm*_enable; "
+        "do [ -r $f ] && { cat $f; break; }; done'"
+    ),
     # Rilevamento rete per l'annuncio delle subnet route Tailscale.
     "default_iface": "ip -o -4 route show default",
     "lan_routes": "ip -o -4 route show scope link",
@@ -50,6 +59,9 @@ PRIVILEGED_COMMANDS: dict[str, str] = {
     "myst_backup": "sudo /usr/bin/tar -czf - -C /var/lib/mysterium-node .",
     "myst_restore": "sudo /usr/bin/tar -xzf - -C /var/lib/mysterium-node",
     "myst_chown": "sudo /usr/bin/chown -R mysterium-node /var/lib/mysterium-node",
+    # Ventola CPU: helper dedicato installato sul Raspberry.
+    "fan_mode_pwm": "sudo /usr/local/sbin/dashboard-fan-control pwm",
+    "fan_mode_fixed": "sudo /usr/local/sbin/dashboard-fan-control fixed {pwm}",
 }
 
 
@@ -75,3 +87,8 @@ def is_valid_cidr(value: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+def is_valid_pwm_value(value: int) -> bool:
+    """Valida il duty-cycle PWM (range sysfs standard 0..255)."""
+    return 0 <= value <= 255

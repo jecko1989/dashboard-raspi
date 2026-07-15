@@ -115,6 +115,8 @@ def export_metrics_csv(
             "temperature_celsius",
             "load_average_1m",
             "uptime_seconds",
+            "fan_rpm",
+            "fan_mode",
             "os_version",
             "kernel",
         ]
@@ -129,6 +131,8 @@ def export_metrics_csv(
                 m.temperature_celsius,
                 m.load_average_1m,
                 m.uptime_seconds,
+                m.fan_rpm,
+                m.fan_mode or "",
                 m.os_version or "",
                 m.kernel or "",
             ]

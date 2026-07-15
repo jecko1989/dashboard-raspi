@@ -56,7 +56,10 @@ def _target(device: Device) -> SSHTarget:
 
 
 def _build_command(
-    command_key: str, service: str | None, subnet: str | None = None
+    command_key: str,
+    service: str | None,
+    subnet: str | None = None,
+    pwm: int | None = None,
 ) -> str:
     """Costruisce la stringa di comando dall'allowlist, validando gli argomenti."""
     if command_key not in allowlist.PRIVILEGED_COMMANDS:
@@ -71,6 +74,10 @@ def _build_command(
         if not subnet or not allowlist.is_valid_cidr(subnet):
             raise CommandError("Subnet (CIDR) non valida")
         return template.format(subnet=subnet)
+    if "{pwm}" in template:
+        if pwm is None or not allowlist.is_valid_pwm_value(pwm):
+            raise CommandError("Valore PWM non valido")
+        return template.format(pwm=pwm)
     return template
 
 
@@ -150,11 +157,12 @@ def run_command(
     requested_by: str | None = None,
     service: str | None = None,
     subnet: str | None = None,
+    pwm: int | None = None,
 ) -> CommandResult:
     """Esegue un comando privilegiato sul device, con audit completo."""
-    audit_target = service or subnet
+    audit_target = service or subnet or (str(pwm) if pwm is not None else None)
     try:
-        command_str = _build_command(command_key, service, subnet)
+        command_str = _build_command(command_key, service, subnet, pwm)
     except CommandError as exc:
         _audit(
             db, device, command_key, "denied", requested_by, target=audit_target, detail=str(exc)
@@ -281,6 +289,44 @@ def run_myst(
     if action not in ("start", "stop"):
         raise CommandError("Azione myst non valida (start|stop)")
     return run_command(db, device, f"myst_{action}", requested_by=requested_by)
+
+
+def run_fan_control(
+    db: Session,
+    device: Device,
+    *,
+    mode: str,
+    rpm: int | None,
+    requested_by: str | None = None,
+) -> CommandResult:
+    """Imposta la modalita' ventola su PWM automatico o fixed con target RPM.
+
+    Il kernel espone in sysfs il duty-cycle PWM (0..255), non RPM assoluti.
+    In modalita' fixed, il target RPM viene convertito in un duty-cycle stimato.
+    """
+    if mode not in {"pwm", "fixed"}:
+        raise CommandError("Modalita' ventola non valida (pwm|fixed)")
+
+    if mode == "pwm":
+        return run_command(db, device, "fan_mode_pwm", requested_by=requested_by)
+
+    if rpm is None:
+        raise CommandError("Per la modalita' fixed e' obbligatorio specificare rpm")
+
+    # Conversione semplice target RPM -> duty-cycle PWM su range pratico.
+    min_rpm = 300
+    max_rpm = 9000
+    bounded = max(min_rpm, min(max_rpm, rpm))
+    pwm = round((bounded - min_rpm) / (max_rpm - min_rpm) * 255)
+    pwm = max(0, min(255, pwm))
+
+    return run_command(
+        db,
+        device,
+        "fan_mode_fixed",
+        requested_by=requested_by,
+        pwm=pwm,
+    )
 
 
 def run_readonly(

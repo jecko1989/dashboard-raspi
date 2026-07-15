@@ -22,7 +22,13 @@ from app.core.ratelimit import RateLimiter
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.alert import EventDeleteResult
-from app.schemas.command import CommandRequest, CommandResult, MystRequest, TailscaleAdvertiseRequest
+from app.schemas.command import (
+    CommandRequest,
+    CommandResult,
+    FanControlRequest,
+    MystRequest,
+    TailscaleAdvertiseRequest,
+)
 from app.services import command_service, device_service, event_service, myst_service
 from app.services.command_service import CommandBusyError, CommandError
 from app.services.myst_service import MystError
@@ -190,6 +196,32 @@ def myst_control(
     _require_confirm(body)
     try:
         return command_service.run_myst(db, device, body.action, current_user.username)
+    except CommandError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post(
+    "/devices/{device_id}/commands/fan",
+    response_model=CommandResult,
+    dependencies=[Depends(rate_limit)],
+)
+def fan_control(
+    device_id: str,
+    body: FanControlRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Imposta la modalita' della ventola CPU (PWM automatico o fixed)."""
+    device = _require_device(db, device_id)
+    _require_confirm(body)
+    try:
+        return command_service.run_fan_control(
+            db,
+            device,
+            mode=body.mode,
+            rpm=body.rpm,
+            requested_by=current_user.username,
+        )
     except CommandError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 

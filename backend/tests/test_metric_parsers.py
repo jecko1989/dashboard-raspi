@@ -39,6 +39,16 @@ def test_parse_load_average_1m() -> None:
     assert p.parse_load_average_1m("0.15 0.10 0.05 1/123 4567") == 0.15
 
 
+def test_parse_fan_rpm() -> None:
+    assert p.parse_fan_rpm("1234\n") == 1234.0
+
+
+def test_parse_fan_mode() -> None:
+    assert p.parse_fan_mode("2\n") == "auto"
+    assert p.parse_fan_mode("1\n") == "fixed"
+    assert p.parse_fan_mode("0\n") == "off"
+
+
 def test_parse_os_version() -> None:
     out = 'NAME="Debian"\nPRETTY_NAME="Debian GNU/Linux 12 (bookworm)"\n'
     assert p.parse_os_version(out) == "Debian GNU/Linux 12 (bookworm)"
@@ -48,3 +58,5 @@ def test_parsers_return_none_on_garbage() -> None:
     assert p.parse_cpu_percent("garbage") is None
     assert p.parse_disk_percent("") is None
     assert p.parse_temperature("not-a-number") is None
+    assert p.parse_fan_rpm("") is None
+    assert p.parse_fan_mode("") is None

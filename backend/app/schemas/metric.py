@@ -18,5 +18,7 @@ class MetricRead(BaseModel):
     temperature_celsius: float | None = None
     load_average_1m: float | None = None
     uptime_seconds: float | None = None
+    fan_rpm: float | None = None
+    fan_mode: str | None = None
     os_version: str | None = None
     kernel: str | None = None

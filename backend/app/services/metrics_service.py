@@ -80,6 +80,8 @@ def collect_metrics(db: Session, device: Device) -> Metric | None:
         temperature_celsius=parsers.parse_temperature(_text(results, "temperature")),
         uptime_seconds=parsers.parse_uptime_seconds(_text(results, "uptime")),
         load_average_1m=parsers.parse_load_average_1m(_text(results, "loadavg")),
+        fan_rpm=parsers.parse_fan_rpm(_text(results, "fan_rpm")),
+        fan_mode=parsers.parse_fan_mode(_text(results, "fan_mode")),
         os_version=parsers.parse_os_version(_text(results, "os_version")),
         kernel=parsers.parse_kernel(_text(results, "kernel")),
     )

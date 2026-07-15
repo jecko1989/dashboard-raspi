@@ -68,4 +68,7 @@ def init_db() -> None:
     _ensure_column("devices", "display_order", "INTEGER NOT NULL DEFAULT 0")
     # v0.6.0: tag del device persistiti in DB (JSON).
     _ensure_column("devices", "tags", "JSON NOT NULL DEFAULT '[]'")
+    # v0.7.0: metriche ventola CPU (sistemi passivi supportati con valori null).
+    _ensure_column("metrics", "fan_rpm", "REAL")
+    _ensure_column("metrics", "fan_mode", "VARCHAR(32)")
     logger.info("Schema database pronto.")

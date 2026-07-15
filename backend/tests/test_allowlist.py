@@ -6,7 +6,8 @@ from app.ssh import allowlist
 
 def test_privileged_commands_present() -> None:
     for key in ("reboot", "shutdown", "update_check", "update_upgrade",
-                "update_dry_run", "service_restart", "service_status", "service_logs"):
+                "update_dry_run", "service_restart", "service_status", "service_logs",
+                "fan_mode_pwm", "fan_mode_fixed"):
         assert key in allowlist.PRIVILEGED_COMMANDS
 
 
@@ -35,3 +36,11 @@ def test_service_template_uses_only_validated_name() -> None:
     template = allowlist.PRIVILEGED_COMMANDS["service_restart"]
     assert "{service}" in template
     assert template.startswith("sudo /bin/systemctl restart")
+
+
+def test_pwm_value_validation() -> None:
+    assert allowlist.is_valid_pwm_value(0)
+    assert allowlist.is_valid_pwm_value(128)
+    assert allowlist.is_valid_pwm_value(255)
+    assert not allowlist.is_valid_pwm_value(-1)
+    assert not allowlist.is_valid_pwm_value(256)

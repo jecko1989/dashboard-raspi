@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ServiceStatus(BaseModel):
@@ -32,6 +32,13 @@ class MystRequest(CommandRequest):
     """Controllo del nodo Mysterium: avvio o arresto."""
 
     action: Literal["start", "stop"] = "stop"
+
+
+class FanControlRequest(CommandRequest):
+    """Impostazione ventola: PWM automatico o fixed con target rpm."""
+
+    mode: Literal["pwm", "fixed"] = "pwm"
+    rpm: int | None = Field(default=None, ge=300, le=9000)
 
 
 class SSHKeyGenerateRequest(BaseModel):

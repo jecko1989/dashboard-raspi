@@ -28,6 +28,8 @@ class Metric(Base):
     temperature_celsius: Mapped[float | None] = mapped_column(Float, nullable=True)
     load_average_1m: Mapped[float | None] = mapped_column(Float, nullable=True)
     uptime_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fan_rpm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fan_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     os_version: Mapped[str | None] = mapped_column(String(128), nullable=True)
     kernel: Mapped[str | None] = mapped_column(String(128), nullable=True)
