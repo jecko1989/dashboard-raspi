@@ -272,6 +272,28 @@ export async function commandRestartService(
   return data;
 }
 
+export async function commandStartService(
+  deviceId: string,
+  serviceName: string,
+): Promise<CommandResult> {
+  const { data } = await api.post<CommandResult>(
+    `/devices/${deviceId}/services/${serviceName}/start`,
+    { confirm: true },
+  );
+  return data;
+}
+
+export async function commandStopService(
+  deviceId: string,
+  serviceName: string,
+): Promise<CommandResult> {
+  const { data } = await api.post<CommandResult>(
+    `/devices/${deviceId}/services/${serviceName}/stop`,
+    { confirm: true },
+  );
+  return data;
+}
+
 export async function commandTailscale(
   deviceId: string,
   opts: { exitNode: boolean; routes: boolean },

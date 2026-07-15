@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ServiceStatus } from '../types';
-import { getServiceLogs, getServices } from '../services/api';
+import {
+  commandRestartService,
+  commandStartService,
+  commandStopService,
+  getServiceLogs,
+  getServices,
+} from '../services/api';
 import { ServiceStatusTable } from './ServiceStatusTable';
 
 interface DeviceServicesPanelProps {
@@ -11,6 +17,9 @@ export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
   const [services, setServices] = useState<ServiceStatus[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [logs, setLogs] = useState<{ service: string; content: string } | null>(null);
+  const [result, setResult] = useState<{ status: 'success' | 'error'; detail: string } | null>(
+    null,
+  );
 
   const loadServices = useCallback(async () => {
     setLoadingServices(true);
@@ -36,6 +45,41 @@ export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
     }
   };
 
+  const runServiceAction = async (
+    service: string,
+    action: 'start' | 'stop' | 'restart',
+  ) => {
+    const labels = {
+      start: 'Avviare',
+      stop: 'Fermare',
+      restart: 'Riavviare',
+    } as const;
+    const ok = window.confirm(`${labels[action]} il servizio ${service}?`);
+    if (!ok) return;
+    setResult(null);
+    try {
+      const res =
+        action === 'start'
+          ? await commandStartService(deviceId, service)
+          : action === 'stop'
+            ? await commandStopService(deviceId, service)
+            : await commandRestartService(deviceId, service);
+      setResult({
+        status: res.status === 'success' ? 'success' : 'error',
+        detail: res.detail ?? `${service}: ${res.status}`,
+      });
+      await loadServices();
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data
+        ?.detail;
+      setResult({ status: 'error', detail: detail ?? (err as Error)?.message ?? 'Errore' });
+    }
+  };
+
+  const startService = (service: string) => runServiceAction(service, 'start');
+  const stopService = (service: string) => runServiceAction(service, 'stop');
+  const restartService = (service: string) => runServiceAction(service, 'restart');
+
   return (
     <section>
       <div className="mb-3">
@@ -48,7 +92,25 @@ export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
       {loadingServices ? (
         <p className="text-sm text-gray-500">Caricamento servizi…</p>
       ) : (
-        <ServiceStatusTable services={services} onViewLogs={viewLogs} />
+        <ServiceStatusTable
+          services={services}
+          onStart={startService}
+          onStop={stopService}
+          onRestart={restartService}
+          onViewLogs={viewLogs}
+        />
+      )}
+
+      {result && (
+        <div
+          className={`mt-3 rounded-md border-l-4 p-3 text-sm ${
+            result.status === 'success'
+              ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
+              : 'border-red-400 bg-red-50 dark:bg-red-900/20'
+          }`}
+        >
+          {result.detail}
+        </div>
       )}
 
       {logs && (

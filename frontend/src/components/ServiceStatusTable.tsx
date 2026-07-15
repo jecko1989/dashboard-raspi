@@ -4,19 +4,23 @@ import { StatusBadge } from './StatusBadge';
 // Tabella con lo stato dei servizi systemd di un device, con azioni opzionali.
 interface ServiceStatusTableProps {
   services: ServiceStatus[];
+  onStart?: (name: string) => void;
+  onStop?: (name: string) => void;
   onRestart?: (name: string) => void;
   onViewLogs?: (name: string) => void;
 }
 
 export function ServiceStatusTable({
   services,
+  onStart,
+  onStop,
   onRestart,
   onViewLogs,
 }: ServiceStatusTableProps) {
   if (services.length === 0) {
     return <p className="text-sm text-gray-500">Nessun servizio monitorato.</p>;
   }
-  const showActions = Boolean(onRestart || onViewLogs);
+  const showActions = Boolean(onViewLogs || onStart || onStop || onRestart);
   return (
     <div className="scrollbar-subtle -mx-1 overflow-x-auto px-1">
       <table className="w-full min-w-[24rem] text-left text-sm">
@@ -44,6 +48,22 @@ export function ServiceStatusTable({
                       className="mr-2 rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
                     >
                       Log
+                    </button>
+                  )}
+                  {onStart && (
+                    <button
+                      onClick={() => onStart(svc.name)}
+                      className="mr-2 rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                    >
+                      Start
+                    </button>
+                  )}
+                  {onStop && (
+                    <button
+                      onClick={() => onStop(svc.name)}
+                      className="mr-2 rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+                    >
+                      Stop
                     </button>
                   )}
                   {onRestart && (

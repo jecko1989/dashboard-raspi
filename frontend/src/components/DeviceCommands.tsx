@@ -429,7 +429,7 @@ export function DeviceCommands({ deviceId, deviceName, metric, onChanged }: Devi
           <button
             onClick={() => setPending({ kind: 'myst', action: 'stop' })}
             disabled={running}
-            className="rounded-md bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Ferma myst
           </button>
