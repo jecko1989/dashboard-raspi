@@ -33,7 +33,7 @@ e la navigazione mobile usa un drawer con hamburger. Build frontend verde.
 5. [x] Gestione grafici responsive (`MetricChart`) con altezze dinamiche e fallback leggibile su schermi piccoli.
 6. [x] Gestione tabelle e timeline (`ServiceStatusTable`, `EventTimeline`) con strategie anti-overflow (scroll controllato).
 7. [x] Revisione modali (`CommandModal`, `ShellModal`) per uso mobile (fullscreen/sheet, padding adattivo).
-8. [ ] Test finale su dispositivi reali e viewport target (Pixel 8 + range 360-430 px) con correzione regressioni.
+8. [x] Test finale su dispositivi reali e viewport target (Pixel 8 + range 360-430 px) con correzione regressioni.
 
 ### Definition of Done (mobile)
 
