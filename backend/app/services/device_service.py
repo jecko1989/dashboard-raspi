@@ -207,7 +207,7 @@ def create_device(db: Session, payload) -> Device:
     Solleva:
       - InvalidDeviceData: formato non valido;
       - LuogoNotFound: luogo inesistente;
-      - DuplicateDevice: id/hostname/indirizzo gia' in uso.
+      - DuplicateDevice: id/indirizzo gia' in uso.
     """
     # Normalizzazione (trim degli spazi iniziali/finali).
     dev_id = (payload.id or "").strip()
@@ -250,12 +250,6 @@ def create_device(db: Session, payload) -> Device:
     existing_ids = {d.id for lg in config.luoghi for d in lg.devices}
     if dev_id in existing_ids or db.get(Device, dev_id) is not None:
         raise DuplicateDevice("id", dev_id)
-
-    existing_hostnames = {
-        d.hostname.strip().lower() for lg in config.luoghi for d in lg.devices
-    }
-    if hostname.lower() in existing_hostnames:
-        raise DuplicateDevice("hostname", hostname)
 
     existing_ips = {
         d.ip_vpn.strip().lower() for lg in config.luoghi for d in lg.devices
@@ -353,16 +347,7 @@ def update_device(db: Session, device_id: str, payload) -> Device:
     if not any(lg.id == luogo_id for lg in config.luoghi):
         raise LuogoNotFound(luogo_id)
 
-    # Duplicati: hostname/indirizzo di ALTRI device.
-    existing_hostnames = {
-        d.hostname.strip().lower()
-        for lg in config.luoghi
-        for d in lg.devices
-        if d.id != device_id
-    }
-    if hostname.lower() in existing_hostnames:
-        raise DuplicateDevice("hostname", hostname)
-
+    # Duplicati: indirizzo di ALTRI device.
     existing_ips = {
         d.ip_vpn.strip().lower()
         for lg in config.luoghi

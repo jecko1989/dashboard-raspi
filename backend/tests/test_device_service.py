@@ -156,12 +156,6 @@ def test_create_device_duplicate_id(db, config_file) -> None:
     assert exc.value.field == "id"
 
 
-def test_create_device_duplicate_hostname(db, config_file) -> None:
-    with pytest.raises(device_service.DuplicateDevice) as exc:
-        device_service.create_device(db, _payload(hostname="rpi-esistente"))
-    assert exc.value.field == "hostname"
-
-
 def test_create_device_duplicate_ip(db, config_file) -> None:
     with pytest.raises(device_service.DuplicateDevice) as exc:
         device_service.create_device(db, _payload(ip_vpn="100.64.0.1"))
