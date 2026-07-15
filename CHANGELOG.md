@@ -118,6 +118,14 @@ Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`
 
 ## Unreleased
 
+- **eventi (backend + frontend)**
+  - Nuovi filtri eventi lato API: `GET /api/events` ora supporta `device_id`, `luogo_id`, `since_hours` e `limit`.
+  - Nuovo conteggio eventi per finestra temporale: `GET /api/events/count` (default ultime 24h).
+  - Nuovo svuotamento eventi contestuale: `DELETE /api/events` (globale/luogo/device), consentito solo ad admin.
+  - Pulsante `Eventi` ora mostra il conteggio delle ultime 24h; al click la modale puo' mostrare anche eventi piu' vecchi.
+  - Aggiunto pulsante `Svuota eventi` in modale con chiusura immediata e toast di esito auto-dismiss.
+  - Toast aggiornato: stile neutro coerente con tema light/dark e barra temporale che si svuota verso destra; colore barra verde/rosso in base all'esito.
+
 - **v0.8.0 - Re design grafico (completata)**
   - Eventi resi contestuali per scope (overview, luogo, device) con nuovo pulsante campanella e contatore in testata pagina.
   - Timeline eventi aperta in modale dedicata con chiusura da pulsante e click su backdrop esterno.

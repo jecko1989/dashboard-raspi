@@ -8,6 +8,8 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 
 - Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
 - Milestone v0.8.0 completata: eventi accessibili da pulsante campanella contestuale (overview/luogo/device) con modale dedicata.
+- Badge eventi in testata allineato alle ultime 24h; la modale mostra anche storico piu' ampio.
+- Svuotamento eventi contestuale (overview/luogo/device) riservato agli admin, con feedback toast auto-dismiss.
 - Sidebar aggiornata: `Impostazioni` sotto `Alert`, sezioni `Luoghi` e `Azioni` collassabili (default aperte).
 - Azioni di creazione coerenti in tutta la UI: `Aggiungi luogo` e `Aggiungi device` aprono modali con chiusura anche da click esterno.
 - Dettaglio device semplificato: sezione `Prestazioni` con valori correnti, trend recente per card e pulsante CSV nello stesso box.
@@ -43,6 +45,7 @@ Documenti di riferimento rapido:
 - Esportazione CSV delle metriche dal box `Prestazioni`
 - Aggiunta di nuovi device dalla dashboard (persistiti in `config/devices.yaml`)
 - Dark mode, timeline attività, badge VPN/latenza
+- Contatore eventi ultime 24h e azione `Svuota eventi` contestuale (solo admin)
 - Interfaccia responsive mobile-first: navigazione a drawer, griglie e grafici adattivi, tabelle anti-overflow
 - Deploy con Docker Compose o esecuzione locale (script PowerShell incluso)
 - Script di deploy sul Raspberry (Docker o nativo systemd) via Tailscale o LAN — vedi [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
@@ -323,6 +326,13 @@ Campi principali per ogni device:
 - **Audit log**: ogni tentativo di comando viene registrato in `command_audit_logs`.
 - **Shell web admin-only**: è l'unica eccezione all'allowlist — riservata agli admin, disattivabile con `SHELL_ENABLED=false`, con rate limit, limite sessioni, timeout e audit dedicato.
 - **Segreti via env**: JWT secret, password admin e path chiavi provengono sempre da `.env`.
+- **Svuotamento eventi admin-only**: `DELETE /api/events` (scope globale/luogo/device) consentito solo agli amministratori.
+
+### Eventi contestuali (overview/luogo/device)
+
+- `GET /api/events?limit=<n>&device_id=<id>&luogo_id=<id>&since_hours=<h>`
+- `GET /api/events/count?device_id=<id>&luogo_id=<id>&since_hours=<h>` (default `24`)
+- `DELETE /api/events?device_id=<id>&luogo_id=<id>` (admin-only)
 
 ### Configurazione sudoers richiesta sui Raspberry
 
