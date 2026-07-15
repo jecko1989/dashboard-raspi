@@ -27,3 +27,11 @@ class EventRead(BaseModel):
     type: str
     message: str
     created_at: datetime
+
+
+class EventCountRead(BaseModel):
+    count: int
+
+
+class EventDeleteResult(BaseModel):
+    deleted: int

@@ -21,8 +21,9 @@ from app.core.logging import get_logger
 from app.core.ratelimit import RateLimiter
 from app.db.session import get_db
 from app.models.user import User
+from app.schemas.alert import EventDeleteResult
 from app.schemas.command import CommandRequest, CommandResult, MystRequest, TailscaleAdvertiseRequest
-from app.services import command_service, device_service, myst_service
+from app.services import command_service, device_service, event_service, myst_service
 from app.services.command_service import CommandBusyError, CommandError
 from app.services.myst_service import MystError
 
@@ -252,3 +253,40 @@ async def myst_restore(
         )
     except MystError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.delete(
+    "/events",
+    response_model=EventDeleteResult,
+    dependencies=[Depends(rate_limit)],
+)
+def clear_events(
+    device_id: str | None = None,
+    luogo_id: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Svuota eventi (tutti o per scope). Operazione riservata agli admin."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail="Operazione riservata agli amministratori"
+        )
+    if device_id and luogo_id:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Specificare solo uno tra device_id e luogo_id",
+        )
+
+    deleted = event_service.delete_events(
+        db,
+        device_id=device_id,
+        luogo_id=luogo_id,
+    )
+    logger.info(
+        "Eventi eliminati: %s (device_id=%s, luogo_id=%s) da %s",
+        deleted,
+        device_id,
+        luogo_id,
+        current_user.username,
+    )
+    return EventDeleteResult(deleted=deleted)

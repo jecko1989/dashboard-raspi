@@ -12,12 +12,12 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.metric import Metric
-from app.schemas.alert import AlertRead, EventRead
+from app.schemas.alert import AlertRead, EventCountRead, EventRead
 from app.schemas.command import CommandAuditRead, ServiceLogs, ServiceStatus
 from app.schemas.device import DeviceRead
 from app.schemas.luogo import LuogoRead
 from app.schemas.metric import MetricRead
-from app.services import device_service
+from app.services import device_service, event_service
 
 router = APIRouter(tags=["read"])
 
@@ -214,14 +214,47 @@ def list_alerts(
 
 
 @router.get("/events", response_model=list[EventRead])
-def list_events(limit: int = 50, db: Session = Depends(get_db)) -> list[EventRead]:
-    from app.models.event import Event
-
-    limit = max(1, min(limit, 500))
-    events = db.scalars(
-        select(Event).order_by(desc(Event.created_at)).limit(limit)
-    ).all()
+def list_events(
+    limit: int = 50,
+    device_id: str | None = None,
+    luogo_id: str | None = None,
+    since_hours: int | None = None,
+    db: Session = Depends(get_db),
+) -> list[EventRead]:
+    if device_id and luogo_id:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Specificare solo uno tra device_id e luogo_id",
+        )
+    events = event_service.list_events(
+        db,
+        limit=limit,
+        device_id=device_id,
+        luogo_id=luogo_id,
+        since_hours=since_hours,
+    )
     return [EventRead.model_validate(e) for e in events]
+
+
+@router.get("/events/count", response_model=EventCountRead)
+def count_events(
+    device_id: str | None = None,
+    luogo_id: str | None = None,
+    since_hours: int | None = 24,
+    db: Session = Depends(get_db),
+) -> EventCountRead:
+    if device_id and luogo_id:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Specificare solo uno tra device_id e luogo_id",
+        )
+    total = event_service.count_events(
+        db,
+        device_id=device_id,
+        luogo_id=luogo_id,
+        since_hours=since_hours,
+    )
+    return EventCountRead(count=total)
 
 
 @router.get("/audit", response_model=list[CommandAuditRead])
