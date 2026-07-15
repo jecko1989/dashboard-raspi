@@ -40,6 +40,8 @@ PRIVILEGED_COMMANDS: dict[str, str] = {
     "update_upgrade": "sudo /usr/bin/apt-get -y upgrade",
     # Simulazione (dry-run): non installa nulla, mostra cosa verrebbe aggiornato.
     "update_dry_run": "sudo /usr/bin/apt-get -s upgrade",
+    "service_start": "sudo /bin/systemctl start {service}",
+    "service_stop": "sudo /bin/systemctl stop {service}",
     "service_restart": "sudo /bin/systemctl restart {service}",
     "service_status": "/bin/systemctl is-active {service}",
     "service_logs": "/bin/journalctl -u {service} -n 100 --no-pager",

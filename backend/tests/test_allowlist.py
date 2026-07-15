@@ -6,7 +6,7 @@ from app.ssh import allowlist
 
 def test_privileged_commands_present() -> None:
     for key in ("reboot", "shutdown", "update_check", "update_upgrade",
-                "update_dry_run", "service_restart", "service_status", "service_logs",
+                "update_dry_run", "service_start", "service_stop", "service_restart", "service_status", "service_logs",
                 "fan_mode_pwm", "fan_mode_fixed"):
         assert key in allowlist.PRIVILEGED_COMMANDS
 

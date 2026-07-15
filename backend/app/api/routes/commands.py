@@ -138,6 +138,40 @@ def update(
 
 
 @router.post(
+    "/devices/{device_id}/services/{service_name}/start",
+    response_model=CommandResult,
+    dependencies=[Depends(rate_limit)],
+)
+def start_service(
+    device_id: str,
+    service_name: str,
+    body: CommandRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    device = _require_device(db, device_id)
+    _require_confirm(body)
+    return _run(db, device, "service_start", current_user.username, service=service_name)
+
+
+@router.post(
+    "/devices/{device_id}/services/{service_name}/stop",
+    response_model=CommandResult,
+    dependencies=[Depends(rate_limit)],
+)
+def stop_service(
+    device_id: str,
+    service_name: str,
+    body: CommandRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    device = _require_device(db, device_id)
+    _require_confirm(body)
+    return _run(db, device, "service_stop", current_user.username, service=service_name)
+
+
+@router.post(
     "/devices/{device_id}/services/{service_name}/restart",
     response_model=CommandResult,
     dependencies=[Depends(rate_limit)],
