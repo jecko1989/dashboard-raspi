@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { CommandResult } from '../types';
+import type { CommandResult, Metric } from '../types';
 import {
+  commandFanControl,
   commandReboot,
   commandShutdown,
   commandUpdate,
@@ -13,6 +14,7 @@ import {
 import { CommandModal } from './CommandModal';
 import { ShellModal } from './ShellModal';
 import { useAuth } from '../context/AuthContext';
+import { formatFanMode, formatFanRpm } from '../utils/format';
 
 type Pending =
   | { kind: 'reboot' }
@@ -20,6 +22,7 @@ type Pending =
   | { kind: 'update' }
   | { kind: 'restart'; service: string }
   | { kind: 'tailscale'; exitNode: boolean; routes: boolean }
+  | { kind: 'fan'; mode: 'pwm' | 'fixed'; rpm?: number }
   | { kind: 'myst'; action: 'start' | 'stop' }
   | { kind: 'myst-restore'; file: File }
   | null;
@@ -27,6 +30,7 @@ type Pending =
 interface DeviceCommandsProps {
   deviceId: string;
   deviceName?: string;
+  metric?: Metric | null;
   onChanged?: () => void;
 }
 
@@ -37,6 +41,7 @@ const RUNNING_LABELS: Record<NonNullable<Pending>['kind'], string> = {
   update: 'Aggiornamento pacchetti in corso',
   restart: 'Riavvio servizio in corso',
   tailscale: 'Configurazione Tailscale in corso',
+  fan: 'Configurazione ventola in corso',
   myst: 'Comando myst in corso',
   'myst-restore': 'Ripristino backup myst in corso',
 };
@@ -52,10 +57,12 @@ function Spinner() {
 }
 
 // Pannello comandi remoti + gestione servizi, con conferma modale e audit.
-export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceCommandsProps) {
+export function DeviceCommands({ deviceId, deviceName, metric, onChanged }: DeviceCommandsProps) {
   const { isAdmin } = useAuth();
   const [pending, setPending] = useState<Pending>(null);
   const [dryRun, setDryRun] = useState(true);
+  const [fanMode, setFanMode] = useState<'pwm' | 'fixed'>('pwm');
+  const [fanRpm, setFanRpm] = useState('2500');
   const [running, setRunning] = useState(false);
   const [runningKind, setRunningKind] = useState<NonNullable<Pending>['kind'] | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -103,6 +110,9 @@ export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceComman
             exitNode: current.exitNode,
             routes: current.routes,
           });
+          break;
+        case 'fan':
+          res = await commandFanControl(deviceId, current.mode, current.rpm);
           break;
         case 'myst':
           res = await commandMyst(deviceId, current.action);
@@ -234,6 +244,19 @@ export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceComman
           destructive: pending.action === 'stop',
           confirmLabel: pending.action === 'stop' ? 'Ferma myst' : 'Avvia myst',
         };
+      case 'fan':
+        return {
+          title:
+            pending.mode === 'pwm'
+              ? 'Impostare ventola in modalità PWM automatica?'
+              : 'Impostare ventola in modalità fixed?',
+          description:
+            pending.mode === 'pwm'
+              ? 'Il controllo della ventola verrà riportato in automatico (PWM).'
+              : `La ventola verrà impostata in fixed con target ${pending.rpm ?? 0} rpm.`,
+          destructive: false,
+          confirmLabel: 'Applica',
+        };
       case 'myst-restore':
         return {
           title: 'Ripristinare il backup del nodo myst?',
@@ -257,6 +280,10 @@ export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceComman
   };
 
   const cfg = modalConfig();
+  const currentFanMode = formatFanMode(metric?.fan_mode) ?? 'N/A';
+  const currentFanRpm = formatFanRpm(metric?.fan_rpm);
+  const parsedFanRpm = Number.parseInt(fanRpm, 10);
+  const canApplyFan = fanMode === 'pwm' || (Number.isFinite(parsedFanRpm) && parsedFanRpm >= 300 && parsedFanRpm <= 9000);
 
   return (
     <div className="space-y-4">
@@ -292,6 +319,69 @@ export function DeviceCommands({ deviceId, deviceName, onChanged }: DeviceComman
           >
             <span aria-hidden="true">🖥️</span> Apri shell
           </button>
+        )}
+      </div>
+
+      <div>
+        <h3 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
+          Ventola CPU
+        </h3>
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <span className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-gray-700">
+            Stato: {currentFanMode}
+          </span>
+          <span className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-gray-700">
+            Velocità: {currentFanRpm}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs text-gray-500 dark:text-gray-400">Modalità</span>
+            <select
+              value={fanMode}
+              onChange={(e) => setFanMode(e.target.value as 'pwm' | 'fixed')}
+              disabled={running}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+            >
+              <option value="pwm">PWM (automatica)</option>
+              <option value="fixed">Fixed</option>
+            </select>
+          </label>
+
+          {fanMode === 'fixed' && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-xs text-gray-500 dark:text-gray-400">RPM target</span>
+              <input
+                type="number"
+                min={300}
+                max={9000}
+                step={100}
+                value={fanRpm}
+                onChange={(e) => setFanRpm(e.target.value)}
+                disabled={running}
+                className="w-36 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+              />
+            </label>
+          )}
+
+          <button
+            onClick={() =>
+              setPending({
+                kind: 'fan',
+                mode: fanMode,
+                rpm: fanMode === 'fixed' ? parsedFanRpm : undefined,
+              })
+            }
+            disabled={running || !canApplyFan}
+            className="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Applica ventola
+          </button>
+        </div>
+        {fanMode === 'fixed' && !canApplyFan && (
+          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+            Inserisci un valore RPM tra 300 e 9000.
+          </p>
         )}
       </div>
 

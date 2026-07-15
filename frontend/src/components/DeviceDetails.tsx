@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import type { Device } from '../types';
+import type { Device, Metric } from '../types';
 import { StatusBadge } from './StatusBadge';
-import { formatDateTime, formatLatency } from '../utils/format';
+import { formatDateTime, formatLatency, formatUptime } from '../utils/format';
 
 // Pannello con i dettagli di un device e il comando SSH pronto da copiare.
 interface DeviceDetailsProps {
   device: Device;
+  metric?: Metric | null;
 }
 
-export function DeviceDetails({ device }: DeviceDetailsProps) {
+export function DeviceDetails({ device, metric }: DeviceDetailsProps) {
   const [copied, setCopied] = useState(false);
 
   const copySsh = async () => {
@@ -61,8 +62,8 @@ export function DeviceDetails({ device }: DeviceDetailsProps) {
           <dd>{formatDateTime(device.last_checked_at)}</dd>
         </div>
         <div>
-          <dt className="text-gray-500">Ultima metrica</dt>
-          <dd>{formatDateTime(device.last_metric_at)}</dd>
+          <dt className="text-gray-500">Uptime</dt>
+          <dd>{formatUptime(metric?.uptime_seconds)}</dd>
         </div>
       </dl>
 

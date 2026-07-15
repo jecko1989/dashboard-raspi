@@ -74,6 +74,8 @@ export interface Metric {
   temperature_celsius: number | null;
   load_average_1m: number | null;
   uptime_seconds: number | null;
+  fan_rpm: number | null;
+  fan_mode: string | null;
   os_version: string | null;
   kernel: string | null;
 }

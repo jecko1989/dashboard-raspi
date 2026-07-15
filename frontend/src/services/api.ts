@@ -294,6 +294,22 @@ export async function commandMyst(
   return data;
 }
 
+export async function commandFanControl(
+  deviceId: string,
+  mode: 'pwm' | 'fixed',
+  rpm?: number,
+): Promise<CommandResult> {
+  const { data } = await api.post<CommandResult>(
+    `/devices/${deviceId}/commands/fan`,
+    {
+      confirm: true,
+      mode,
+      rpm: mode === 'fixed' ? rpm : undefined,
+    },
+  );
+  return data;
+}
+
 // --- Chiave SSH --------------------------------------------------------------
 
 export async function generateSSHKey(

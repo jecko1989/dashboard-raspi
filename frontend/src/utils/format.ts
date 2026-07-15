@@ -22,6 +22,21 @@ export function formatUptime(seconds: number | null | undefined): string {
   return `${m}m`;
 }
 
+export function formatFanMode(mode: string | null | undefined): string | null {
+  if (!mode) return null;
+  if (mode === 'auto') return 'PWM';
+  if (mode === 'fixed') return 'Fixed';
+  if (mode === 'off') return 'Disattivata';
+  return null;
+}
+
+export function formatFanRpm(
+  rpm: number | null | undefined,
+): string {
+  if (rpm == null) return 'N/A';
+  return `${Math.round(rpm)} rpm`;
+}
+
 export function formatLatency(ms: number | null | undefined): string {
   return ms == null ? '—' : `${ms.toFixed(0)} ms`;
 }

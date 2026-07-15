@@ -25,10 +25,11 @@ import { DeviceSSHKey } from '../components/DeviceSSHKey';
 import { DeviceFormModal } from '../components/DeviceFormModal';
 import { CommandModal } from '../components/CommandModal';
 import {
+  formatFanMode,
+  formatFanRpm,
   formatLoad,
   formatPercent,
   formatTemp,
-  formatUptime,
 } from '../utils/format';
 
 const metricTrends = [
@@ -67,11 +68,11 @@ const metricTrends = [
     color: '#0f766e',
   },
   {
-    label: 'Uptime',
-    value: (metric: Metric | null) => formatUptime(metric?.uptime_seconds),
-    dataKey: 'uptime_seconds' as const,
+    label: 'Ventola CPU',
+    value: (metric: Metric | null) => formatFanRpm(metric?.fan_rpm),
+    dataKey: 'fan_rpm' as const,
     color: '#7c3aed',
-    unit: 's',
+    unit: ' rpm',
   },
 ];
 
@@ -202,7 +203,7 @@ export function DeviceDetailPage() {
       </div>
 
       <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 xl:grid-cols-2">
-        <DeviceDetails device={device} />
+        <DeviceDetails device={device} metric={metric} />
 
         <section className="flex h-full flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -221,9 +222,15 @@ export function DeviceDetailPage() {
           </div>
           <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             {metricTrends.map((item) => (
+              (() => {
+                const fanModeLabel = item.dataKey === 'fan_rpm'
+                  ? formatFanMode(metric?.fan_mode)
+                  : null;
+                const cardLabel = fanModeLabel ? `${item.label} (${fanModeLabel})` : item.label;
+                return (
               <MetricCard
                 key={item.label}
-                label={item.label}
+                label={cardLabel}
                 value={item.value(metric)}
                 trend={
                   <MetricChart
@@ -232,10 +239,12 @@ export function DeviceDetailPage() {
                     color={item.color}
                     unit={item.unit}
                     compact
-                    title={item.label}
+                    title={cardLabel}
                   />
                 }
               />
+                );
+              })()
             ))}
           </div>
           {metric ? (
@@ -253,7 +262,12 @@ export function DeviceDetailPage() {
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <div>
           <h3 className="mb-3 text-lg font-semibold">Comandi remoti</h3>
-          <DeviceCommands deviceId={device.id} deviceName={device.name} onChanged={load} />
+          <DeviceCommands
+            deviceId={device.id}
+            deviceName={device.name}
+            metric={metric}
+            onChanged={load}
+          />
         </div>
         <div>
           <DeviceServicesPanel deviceId={device.id} />
