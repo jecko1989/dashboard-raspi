@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { DashboardEvent, Device, Metric } from '../types';
+import { useAuth } from '../context/AuthContext';
 import {
+  clearEvents,
   getDevice,
+  getEvents,
+  getEventsCount,
   getLatestMetric,
   getMetricHistory,
-  getEvents,
   checkDevice,
-  muteDeviceAlerts,
-  unmuteDeviceAlerts,
   deleteDevice,
   downloadMetricsCsv,
+  muteDeviceAlerts,
+  unmuteDeviceAlerts,
 } from '../services/api';
 import { DeviceDetails } from '../components/DeviceDetails';
 import { MetricCard } from '../components/MetricCard';
@@ -76,11 +79,13 @@ const metricTrends = [
 // FASE 4: metriche + storico + eventi + comandi remoti sicuri (con conferma e audit).
 export function DeviceDetailPage() {
   const { deviceId } = useParams<{ deviceId: string }>();
+  const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [device, setDevice] = useState<Device | null>(null);
   const [metric, setMetric] = useState<Metric | null>(null);
   const [history, setHistory] = useState<Metric[]>([]);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
+  const [eventsLast24hCount, setEventsLast24hCount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -94,16 +99,25 @@ export function DeviceDetailPage() {
         getDevice(deviceId),
         getLatestMetric(deviceId),
         getMetricHistory(deviceId, 100),
-        getEvents(30),
+        getEvents(200, { deviceId }),
       ]);
       setDevice(dev);
       setMetric(met);
       setHistory(hist);
-      setEvents(evs.filter((e) => e.device_id === deviceId));
+      setEvents(evs);
+      const count = await getEventsCount({ deviceId, sinceHours: 24 });
+      setEventsLast24hCount(count);
     } catch (err) {
       setError((err as Error)?.message ?? 'Errore');
     }
   }, [deviceId]);
+
+  const handleClearEvents = async () => {
+    if (!deviceId) return;
+    await clearEvents({ deviceId });
+    setEvents([]);
+    setEventsLast24hCount(0);
+  };
 
   useEffect(() => {
     void load();
@@ -156,6 +170,8 @@ export function DeviceDetailPage() {
             events={events}
             scope={{ kind: 'device', deviceId: device.id, deviceName: device.name }}
             title="Eventi"
+            badgeCount={eventsLast24hCount}
+            onClearEvents={isAdmin ? handleClearEvents : undefined}
           />
           <button
             onClick={handleToggleMute}

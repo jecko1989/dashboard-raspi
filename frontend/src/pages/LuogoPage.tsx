@@ -1,28 +1,46 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { DashboardEvent } from '../types';
+import { useAuth } from '../context/AuthContext';
 import { useLuoghi } from '../hooks/useLuoghi';
 import { useDevices } from '../hooks/useDevices';
 import { LuogoSection } from '../components/LuogoSection';
 import { DeviceCreateModal } from '../components/DeviceCreateModal';
 import { EventsPanel } from '../components/EventsPanel';
-import { getEvents } from '../services/api';
+import { clearEvents, getEvents, getEventsCount } from '../services/api';
 
 // Pagina di un singolo luogo.
 export function LuogoPage() {
   const { luogoId } = useParams<{ luogoId: string }>();
+  const { isAdmin } = useAuth();
   const { luoghi } = useLuoghi();
   const { devices, loading, error } = useDevices(luogoId);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
+  const [eventsLast24hCount, setEventsLast24hCount] = useState<number>(0);
   const [creatingDevice, setCreatingDevice] = useState(false);
 
   const luogo = luoghi.find((lg) => lg.id === luogoId);
 
   useEffect(() => {
-    getEvents(30)
+    if (!luogoId) {
+      setEvents([]);
+      setEventsLast24hCount(0);
+      return;
+    }
+    getEvents(200, { luogoId })
       .then(setEvents)
       .catch(() => setEvents([]));
-  }, []);
+    getEventsCount({ luogoId, sinceHours: 24 })
+      .then(setEventsLast24hCount)
+      .catch(() => setEventsLast24hCount(0));
+  }, [luogoId]);
+
+  const handleClearEvents = async () => {
+    if (!luogoId) return;
+    await clearEvents({ luogoId });
+    setEvents([]);
+    setEventsLast24hCount(0);
+  };
 
   if (loading) return <p className="text-gray-500">Caricamento…</p>;
   if (error) return <p className="text-red-600">Errore: {error}</p>;
@@ -48,6 +66,8 @@ export function LuogoPage() {
               deviceIds: devices.map((device) => device.id),
             }}
             title="Eventi"
+            badgeCount={eventsLast24hCount}
+            onClearEvents={isAdmin ? handleClearEvents : undefined}
           />
           <button
             onClick={() => setCreatingDevice(true)}

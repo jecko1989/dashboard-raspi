@@ -103,6 +103,12 @@ export interface DashboardEvent {
   created_at: string;
 }
 
+export interface EventFilters {
+  deviceId?: string;
+  luogoId?: string;
+  sinceHours?: number;
+}
+
 export interface Thresholds {
   temperature_celsius: number;
   disk_percent: number;

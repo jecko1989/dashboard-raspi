@@ -8,6 +8,7 @@ import type {
   LuogoUpdatePayload,
   Alert,
   DashboardEvent,
+  EventFilters,
   Metric,
   Thresholds,
   ThresholdsUpdatePayload,
@@ -166,9 +167,40 @@ export async function getAlerts(activeOnly = true): Promise<Alert[]> {
   return data;
 }
 
-export async function getEvents(limit = 50): Promise<DashboardEvent[]> {
-  const { data } = await api.get<DashboardEvent[]>('/events', { params: { limit } });
+export async function getEvents(
+  limit = 50,
+  filters?: EventFilters,
+): Promise<DashboardEvent[]> {
+  const { data } = await api.get<DashboardEvent[]>('/events', {
+    params: {
+      limit,
+      device_id: filters?.deviceId,
+      luogo_id: filters?.luogoId,
+      since_hours: filters?.sinceHours,
+    },
+  });
   return data;
+}
+
+export async function getEventsCount(filters?: EventFilters): Promise<number> {
+  const { data } = await api.get<{ count: number }>('/events/count', {
+    params: {
+      device_id: filters?.deviceId,
+      luogo_id: filters?.luogoId,
+      since_hours: filters?.sinceHours,
+    },
+  });
+  return data.count;
+}
+
+export async function clearEvents(filters?: EventFilters): Promise<number> {
+  const { data } = await api.delete<{ deleted: number }>('/events', {
+    params: {
+      device_id: filters?.deviceId,
+      luogo_id: filters?.luogoId,
+    },
+  });
+  return data.deleted;
 }
 
 export async function getThresholds(): Promise<Thresholds> {
