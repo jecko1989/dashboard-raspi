@@ -40,7 +40,7 @@ export function DeviceDetails({ device, metric }: DeviceDetailsProps) {
 
       <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
         <div>
-          <dt className="text-gray-500">IP VPN</dt>
+          <dt className="text-gray-500">Indirizzo IP</dt>
           <dd className="font-mono">{device.ip_vpn}</dd>
         </div>
         <div>

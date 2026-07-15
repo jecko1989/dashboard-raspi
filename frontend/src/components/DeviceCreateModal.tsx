@@ -210,15 +210,16 @@ export function DeviceCreateModal({
             </label>
 
             <label className="block text-sm">
-              <span className="text-gray-600 dark:text-gray-300">
-                Indirizzo VPN / Tailscale *
-              </span>
+              <span className="text-gray-600 dark:text-gray-300">Indirizzo IP *</span>
               <input
                 value={form.ip_vpn}
                 onChange={update('ip_vpn')}
                 placeholder="rpi-casa-mia oppure 100.x.y.z"
                 className={inputClass}
               />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Puoi inserire IP LAN, IP Tailscale o nome MagicDNS Tailscale.
+              </p>
               {errors.ip_vpn && (
                 <p className="mt-1 text-xs text-red-600">{errors.ip_vpn}</p>
               )}

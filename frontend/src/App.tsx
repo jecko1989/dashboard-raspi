@@ -9,9 +9,6 @@ const LuogoPage = lazy(() => import('./pages/LuogoPage').then((m) => ({ default:
 const DeviceDetailPage = lazy(() =>
   import('./pages/DeviceDetailPage').then((m) => ({ default: m.DeviceDetailPage })),
 );
-const DeviceCreatePage = lazy(() =>
-  import('./pages/DeviceCreatePage').then((m) => ({ default: m.DeviceCreatePage })),
-);
 const AlertsPage = lazy(() => import('./pages/AlertsPage').then((m) => ({ default: m.AlertsPage })));
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 
@@ -29,7 +26,6 @@ function AuthenticatedApp() {
             <Route path="/" element={<Overview />} />
             <Route path="/alerts" element={<AlertsPage />} />
             <Route path="/luoghi/:luogoId" element={<LuogoPage />} />
-            <Route path="/devices/new" element={<DeviceCreatePage />} />
             <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
