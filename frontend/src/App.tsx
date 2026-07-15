@@ -1,13 +1,19 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/Layout';
-import { Overview } from './pages/Overview';
-import { LuogoPage } from './pages/LuogoPage';
-import { DeviceDetailPage } from './pages/DeviceDetailPage';
-import { DeviceCreatePage } from './pages/DeviceCreatePage';
-import { AlertsPage } from './pages/AlertsPage';
-import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
+
+const Overview = lazy(() => import('./pages/Overview').then((m) => ({ default: m.Overview })));
+const LuogoPage = lazy(() => import('./pages/LuogoPage').then((m) => ({ default: m.LuogoPage })));
+const DeviceDetailPage = lazy(() =>
+  import('./pages/DeviceDetailPage').then((m) => ({ default: m.DeviceDetailPage })),
+);
+const DeviceCreatePage = lazy(() =>
+  import('./pages/DeviceCreatePage').then((m) => ({ default: m.DeviceCreatePage })),
+);
+const AlertsPage = lazy(() => import('./pages/AlertsPage').then((m) => ({ default: m.AlertsPage })));
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 
 function AuthenticatedApp() {
   return (
@@ -18,14 +24,16 @@ function AuthenticatedApp() {
       }}
     >
       <Layout>
-        <Routes>
-          <Route path="/" element={<Overview />} />
-          <Route path="/alerts" element={<AlertsPage />} />
-          <Route path="/luoghi/:luogoId" element={<LuogoPage />} />
-          <Route path="/devices/new" element={<DeviceCreatePage />} />
-          <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
+        <Suspense fallback={<p className="text-sm text-gray-500">Caricamento…</p>}>
+          <Routes>
+            <Route path="/" element={<Overview />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/luoghi/:luogoId" element={<LuogoPage />} />
+            <Route path="/devices/new" element={<DeviceCreatePage />} />
+            <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </Suspense>
       </Layout>
     </BrowserRouter>
   );
