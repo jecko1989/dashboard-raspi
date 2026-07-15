@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Luogo } from '../types';
 import { createLuogo, updateLuogo } from '../services/api';
 
@@ -25,6 +25,15 @@ export function LuogoFormModal({ open, luogo, onClose, onSaved }: LuogoFormModal
   const [errors, setErrors] = useState<{ id?: string; name?: string }>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setId(luogo?.id ?? '');
+    setName(luogo?.name ?? '');
+    setOrder(String(luogo?.display_order ?? 0));
+    setErrors({});
+    setServerError(null);
+  }, [open, luogo]);
 
   if (!open) return null;
 
