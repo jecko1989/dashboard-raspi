@@ -118,6 +118,14 @@ Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`
 
 ## Unreleased
 
+- **ventola CPU (backend + frontend + deploy)**
+  - Nuova raccolta metrica ventola: `fan_rpm` e `fan_mode` persistite nel DB ed esposte via API/CSV.
+  - Sezione `Prestazioni` aggiornata: la card `Uptime` e' sostituita da `Ventola CPU` con trend RPM e stato modalita'.
+  - Box dettaglio device aggiornato: `Ultima metrica` sostituito da `Uptime` testuale.
+  - Nuovo comando operativo: `POST /api/devices/{id}/commands/fan` con modalita' `pwm|fixed` e conferma obbligatoria.
+  - Nuova sezione `Ventola CPU` in `Comandi remoti` con selettore modalita', input RPM in fixed e conferma.
+  - Nuovo helper runtime su Raspberry: `deploy/scripts/dashboard-fan-control.sh` + regole sudoers NOPASSWD dedicate.
+
 - **eventi (backend + frontend)**
   - Nuovi filtri eventi lato API: `GET /api/events` ora supporta `device_id`, `luogo_id`, `since_hours` e `limit`.
   - Nuovo conteggio eventi per finestra temporale: `GET /api/events/count` (default ultime 24h).

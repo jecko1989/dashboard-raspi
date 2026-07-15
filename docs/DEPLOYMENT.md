@@ -196,6 +196,22 @@ di `sudoers` puo' essere simile a questa:
 Installa la regola in modo sicuro con `visudo` oppure creando un file dedicato in
 `/etc/sudoers.d/` con permessi `0440`.
 
+Nota: queste regole coprono il **deploy nativo**. Per i comandi operativi della
+dashboard (reboot/update/myst/tailscale/ventola) servono anche le regole runtime
+documentate in [README.md](../README.md). In particolare, per il controllo
+ventola installa l'helper dedicato:
+
+```bash
+sudo install -m 0755 deploy/scripts/dashboard-fan-control.sh /usr/local/sbin/dashboard-fan-control
+```
+
+e aggiungi in sudoers:
+
+```sudoers
+<utente-ssh-dashboard> ALL=(root) NOPASSWD: /usr/local/sbin/dashboard-fan-control pwm
+<utente-ssh-dashboard> ALL=(root) NOPASSWD: /usr/local/sbin/dashboard-fan-control fixed *
+```
+
 ---
 
 ## 7. Binding: `0.0.0.0` vs `127.0.0.1`

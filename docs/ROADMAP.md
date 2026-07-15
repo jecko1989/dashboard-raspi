@@ -1,9 +1,9 @@
 # Roadmap - Prossimi miglioramenti
 
 Stato: attiva (pianificazione)
-Data ultimo aggiornamento: 2026-07-14
-Baseline corrente: release v0.1.0 (monitoraggio + comandi + deploy + shell web)
-Prossimo target: milestone v0.9.0 (milestone v0.8.0 completata)
+Data ultimo aggiornamento: 2026-07-15
+Baseline corrente: release v0.8.0 (eventi contestuali + redesign)
+Prossimo target: milestone v0.9.0 (servizi operativi unificati)
 
 ## Priorita' immediata - UX mobile dashboard [COMPLETATA]
 
@@ -120,16 +120,22 @@ card ridondante.
 - Sidebar: rimossa la voce ridondante "Aggiungi device".
 - Device detail: sezione servizi separata nella colonna destra, senza box/card dedicata, con sfondo coerente alla sezione comandi.
 
-## Milestone v0.9.0 - Servizi operativi unificati
+## Milestone v0.9.0 - Servizi operativi unificati [IN CORSO]
 
 ### Ambito
-- Aggiunta servizi da UI.
-- Integrazione comandi Mysterium Node (avvio, stop, backup, restore) nel menu servizi.
-- Integrazione comandi Tailscale nel menu servizi con lo stesso pattern.
+- [ ] Aggiunta servizi da UI.
+- [ ] Integrazione comandi Mysterium Node (avvio, stop, backup, restore) nel menu servizi (parziale: presenti in "Comandi remoti", non nel menu servizi).
+- [ ] Integrazione comandi Tailscale nel menu servizi con lo stesso pattern (parziale: presenti in "Comandi remoti", non nel menu servizi).
+- [x] Controllo ventola CPU da UI (PWM/FIXED + RPM) con endpoint protetto e audit.
 
 ### Criteri di accettazione
 - Tutte le azioni passano da endpoint protetti e auditati.
 - Le azioni sensibili mantengono vincolo admin e conferma obbligatoria.
+
+### Note di implementazione (stato attuale)
+- Endpoint ventola: `POST /api/devices/{id}/commands/fan` con `mode` (`pwm|fixed`) e `rpm` opzionale in fixed.
+- Raccolta metriche estesa con `fan_rpm` e `fan_mode`; UI `Prestazioni` aggiornata con card `Ventola CPU`.
+- Per il runtime e' richiesto helper sul Raspberry: `/usr/local/sbin/dashboard-fan-control` con regole sudoers NOPASSWD dedicate.
 
 ## Milestone v0.9.5 - Wiki e documentazione UI
 

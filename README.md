@@ -4,16 +4,18 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 
 > Il progetto è pensato per gestire più luoghi (es. appartamenti), ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
 
-## Stato attuale del progetto (2026-07-14)
+## Stato attuale del progetto (2026-07-15)
 
 - Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
 - Milestone v0.8.0 completata: eventi accessibili da pulsante campanella contestuale (overview/luogo/device) con modale dedicata.
+- Milestone v0.9.0 in avanzamento: controllo ventola CPU da UI (PWM/FIXED) con endpoint dedicato e audit.
 - Badge eventi in testata allineato alle ultime 24h; la modale mostra anche storico piu' ampio.
 - Svuotamento eventi contestuale (overview/luogo/device) riservato agli admin, con feedback toast auto-dismiss.
 - Sidebar aggiornata: `Impostazioni` sotto `Alert`, sezioni `Luoghi` e `Azioni` collassabili (default aperte).
 - Azioni di creazione coerenti in tutta la UI: `Aggiungi luogo` e `Aggiungi device` aprono modali con chiusura anche da click esterno.
 - Dettaglio device semplificato: sezione `Prestazioni` con valori correnti, trend recente per card e pulsante CSV nello stesso box.
 - Layout dettaglio device riallineato: box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` senza card separata.
+- Dettaglio device esteso: `Uptime` nel box dettagli e card `Ventola CPU` in `Prestazioni` (RPM + modalita').
 - Deploy operativo in modalità Docker e nativa (systemd) con script dedicati.
 - Gestione CORS documentata con troubleshooting pratico in produzione.
 - Roadmap funzionale disponibile in `docs/ROADMAP.md`.
@@ -34,10 +36,10 @@ Documenti di riferimento rapido:
 ## Funzionalità
 
 - Stato online/offline in tempo reale con check TCP e latenza
-- Raccolta metriche SSH: CPU, RAM, disco, temperatura, uptime, load average
+- Raccolta metriche SSH: CPU, RAM, disco, temperatura, uptime, load average, ventola CPU (RPM/modalita')
 - Trend recente delle metriche integrato nelle card `Prestazioni` del dettaglio device
 - Alert configurabili (temperatura, disco, RAM, CPU, offline, riavvio) con auto-risoluzione
-- Comandi remoti sicuri: reboot, shutdown, aggiornamenti, restart servizi
+- Comandi remoti sicuri: reboot, shutdown, aggiornamenti, restart servizi, cambio modalita' ventola (PWM/FIXED)
 - Stato e log dei servizi systemd (read-only)
 - Audit log completo di ogni comando eseguito
 - Autenticazione JWT con login locale (bcrypt)
@@ -338,6 +340,12 @@ Campi principali per ogni device:
 
 I comandi privilegiati assumono una configurazione **sudo NOPASSWD ristretta**. Crea `/etc/sudoers.d/dashboard-raspi` sul Raspberry (con `sudo visudo -f /etc/sudoers.d/dashboard-raspi`), sostituendo `pi` con l'utente SSH effettivo:
 
+Prima installa l'helper per il controllo ventola (una sola volta):
+
+```bash
+sudo install -m 0755 deploy/scripts/dashboard-fan-control.sh /usr/local/sbin/dashboard-fan-control
+```
+
 ```sudoers
 # Alimentazione
 pi ALL=(root) NOPASSWD: /sbin/reboot
@@ -364,9 +372,26 @@ pi ALL=(root) NOPASSWD: /bin/systemctl restart mysterium-node
 pi ALL=(root) NOPASSWD: /usr/bin/tar -czf - -C /var/lib/mysterium-node .
 pi ALL=(root) NOPASSWD: /usr/bin/tar -xzf - -C /var/lib/mysterium-node
 pi ALL=(root) NOPASSWD: /usr/bin/chown -R mysterium-node /var/lib/mysterium-node
+
+# Ventola CPU (helper dedicato)
+pi ALL=(root) NOPASSWD: /usr/local/sbin/dashboard-fan-control pwm
+pi ALL=(root) NOPASSWD: /usr/local/sbin/dashboard-fan-control fixed *
 ```
 
 `systemctl is-active` e `journalctl` **non** richiedono sudo. Valida con `sudo visudo -c`.
+
+Se compare l'errore:
+
+```text
+sudo: a terminal is required to read the password
+sudo: a password is required
+```
+
+significa che manca la regola NOPASSWD per il comando richiesto. Verifica con:
+
+```bash
+sudo -n -l -U pi | grep dashboard-fan-control
+```
 
 > I percorsi assoluti nelle regole sudoers devono corrispondere esattamente a quelli in `backend/app/ssh/allowlist.py`. Su Ubuntu recente `/bin` e `/sbin` sono symlink verso `/usr/bin`/`/usr/sbin`: verifica con `sudo -n -l`.
 
