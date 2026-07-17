@@ -60,16 +60,14 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
   const actionButtonClass =
     'block w-full rounded-md px-3 py-2 text-left text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700';
 
-  const sectionToggleClass = (expanded: boolean) =>
-    `mt-4 flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 transition hover:bg-gray-100 dark:hover:bg-gray-700 ${
-      expanded ? '' : 'mb-5'
-    }`;
+  const sectionToggleClass =
+    'mt-4 flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 transition hover:bg-gray-100 dark:hover:bg-gray-700';
 
   return (
     <aside
-      className={`flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 ${className}`}
+      className={`flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 h-screen sticky top-0 ${className}`}
     >
-      <div className="overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 min-h-0">
         <h1 className="mb-6 px-3 text-lg font-bold text-gray-900 dark:text-gray-100">
           🖥️ RPi Dashboard
         </h1>
@@ -99,14 +97,21 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
             e.stopPropagation();
             setLuoghiExpanded((v) => !v);
           }}
-          className={sectionToggleClass(luoghiExpanded)}
+          className={sectionToggleClass}
           aria-expanded={luoghiExpanded}
         >
           <span>Luoghi</span>
-          <span aria-hidden="true">{luoghiExpanded ? '▾' : '▸'}</span>
+          <span
+            aria-hidden="true"
+            className="transition-transform duration-300"
+            style={{ display: 'inline-block', transform: luoghiExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          >▾</span>
         </button>
-        {luoghiExpanded && (
-          <>
+        <div
+          className="grid transition-all duration-300 ease-in-out"
+          style={{ gridTemplateRows: luoghiExpanded ? '1fr' : '0fr' }}
+        >
+          <div className="overflow-hidden">
             {error && (
               <p className="px-3 py-1 text-xs text-red-600 dark:text-red-400">{error}</p>
             )}
@@ -144,8 +149,8 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
                 />
               </div>
             ))}
-          </>
-        )}
+          </div>
+        </div>
 
         <button
           type="button"
@@ -153,14 +158,21 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
             e.stopPropagation();
             setAzioniExpanded((v) => !v);
           }}
-          className={sectionToggleClass(azioniExpanded)}
+          className={sectionToggleClass}
           aria-expanded={azioniExpanded}
         >
           <span>Azioni</span>
-          <span aria-hidden="true">{azioniExpanded ? '▾' : '▸'}</span>
+          <span
+            aria-hidden="true"
+            className="transition-transform duration-300"
+            style={{ display: 'inline-block', transform: azioniExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          >▾</span>
         </button>
-        {azioniExpanded && (
-          <>
+        <div
+          className="grid transition-all duration-300 ease-in-out"
+          style={{ gridTemplateRows: azioniExpanded ? '1fr' : '0fr' }}
+        >
+          <div className="overflow-hidden">
             <button
               type="button"
               onClick={(e) => {
@@ -187,16 +199,13 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
               </span>
               Aggiungi device
             </button>
-          </>
-        )}
+          </div>
+        </div>
       </nav>
       </div>
 
-      {/* Spacer per spingere il tema in basso */}
-      <div className="flex-1" />
-
       {/* Tema selector in fondo a sinistra */}
-      <div className="border-t border-gray-200 py-4 px-4 dark:border-gray-700">
+      <div className="py-4 px-4">
         <button
           onClick={() => onDarkChange(!dark)}
           className="flex w-full cursor-pointer items-center justify-start"

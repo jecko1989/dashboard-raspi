@@ -44,7 +44,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       {/* Rail fisso su desktop */}
-      <Sidebar luoghi={luoghi} className="hidden lg:block" dark={dark} onDarkChange={setDark} />
+      <Sidebar luoghi={luoghi} className="hidden lg:flex" dark={dark} onDarkChange={setDark} />
 
       {/* Drawer di navigazione su mobile */}
       {menuOpen && (
