@@ -79,8 +79,8 @@ export function DeviceSSHKey({ deviceId }: DeviceSSHKeyProps) {
 
       <p className="text-xs text-gray-500">
         Genera una coppia Ed25519 e (se possibile) salva la privata nel percorso
-        del device. La pubblica va installata sul Raspberry con il comando
-        mostrato.
+        del device. Poi installa la chiave pubblica sul Raspberry scegliendo uno
+        dei due metodi mostrati qui sotto.
       </p>
 
       {running && <p className="text-sm text-gray-500">Generazione in corso…</p>}
@@ -98,7 +98,7 @@ export function DeviceSSHKey({ deviceId }: DeviceSSHKeyProps) {
           <div>
             <div className="mb-1 flex items-center justify-between">
               <span className="font-medium">Chiave pubblica</span>
-              <CopyButton text={result.public_key} />
+              <CopyButton text={result.public_key} label="Copia chiave pubblica" />
             </div>
             <pre className="max-h-24 overflow-auto whitespace-pre-wrap break-all rounded bg-gray-100 p-2 text-xs dark:bg-gray-900">
               {result.public_key}
@@ -106,14 +106,41 @@ export function DeviceSSHKey({ deviceId }: DeviceSSHKeyProps) {
           </div>
 
           <div>
+            <div className="mb-1 font-medium">
+              Metodo 1 (consigliato): esegui dal server dove gira la dashboard
+            </div>
+            <p className="mb-1 text-xs text-gray-600 dark:text-gray-300">
+              Questo comando va eseguito sul computer/server che ospita la
+              dashboard (dove esiste il file <code>.pub</code>). Non eseguirlo
+              nel terminale del Raspberry.
+            </p>
             <div className="mb-1 flex items-center justify-between">
-              <span className="font-medium">Installa la chiave sul Raspberry</span>
-              <CopyButton text={result.install_command} />
+              <span className="font-medium">Comando installazione</span>
+              <CopyButton text={result.install_command} label="Copia comando Metodo 1" />
             </div>
             <pre className="overflow-auto whitespace-pre-wrap break-all rounded bg-gray-100 p-2 text-xs dark:bg-gray-900">
               {result.install_command}
             </pre>
-            <p className="mt-1 text-xs text-gray-500">{result.manual_hint}</p>
+          </div>
+
+          <div>
+            <div className="mb-1 font-medium">Metodo 2: esegui direttamente sul Raspberry</div>
+            <p className="mb-1 text-xs text-gray-600 dark:text-gray-300">
+              Se non puoi usare il Metodo 1, apri una sessione SSH sul Raspberry e
+              aggiungi la chiave pubblica a <code>~/.ssh/authorized_keys</code>.
+            </p>
+            <pre className="overflow-auto whitespace-pre-wrap break-all rounded bg-gray-100 p-2 text-xs dark:bg-gray-900">
+              {result.manual_hint}
+            </pre>
+          </div>
+
+          <div>
+            <p className="font-medium">Checklist rapida</p>
+            <ol className="ml-5 list-decimal text-xs text-gray-600 dark:text-gray-300">
+              <li>Copia la chiave pubblica.</li>
+              <li>Esegui Metodo 1 (consigliato) oppure Metodo 2.</li>
+              <li>Verifica che il device sia raggiungibile via SSH dalla dashboard.</li>
+            </ol>
           </div>
 
           {result.private_key && (
@@ -141,7 +168,7 @@ export function DeviceSSHKey({ deviceId }: DeviceSSHKeyProps) {
         title={confirmForce ? 'Sovrascrivere la chiave esistente?' : 'Generare una chiave SSH?'}
         description={
           confirmForce
-            ? 'Attenzione: sovrascrivere la chiave romperà l’accesso SSH finché non installi la nuova chiave pubblica sul Raspberry.'
+            ? 'Attenzione: sovrascrivere la chiave romperà l’accesso SSH finché non installi la nuova chiave pubblica sul Raspberry. Dopo la sovrascrittura reinstallala subito per evitare errori di monitoraggio.'
             : 'Verrà generata una nuova coppia di chiavi Ed25519 per questo device.'
         }
         destructive={Boolean(confirmForce)}
