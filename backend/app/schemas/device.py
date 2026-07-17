@@ -68,3 +68,17 @@ class DeviceRead(DeviceBase):
     display_order: int = 0
     # Comando SSH pronto da copiare (path chiave incluso, ma nessun segreto).
     ssh_command: str | None = None
+
+
+class DeviceServiceUpdateRequest(BaseModel):
+    """Payload per aggiungere un servizio monitorato al device."""
+
+    name: str
+    confirm: bool = False
+
+
+class DeviceServicesRead(BaseModel):
+    """Lista servizi monitorati configurati per un device."""
+
+    device_id: str
+    services: list[str]

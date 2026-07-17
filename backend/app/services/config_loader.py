@@ -256,6 +256,72 @@ def remove_device_from_config(device_id: str, path: str | None = None) -> None:
     raise KeyError(device_id)
 
 
+def add_service_to_device_in_config(
+    device_id: str, service_name: str, path: str | None = None
+) -> list[str]:
+    """Aggiunge un servizio monitorato a un device nella config YAML.
+
+    Ritorna la lista aggiornata dei servizi del device.
+    Solleva `KeyError` se il device non esiste.
+    """
+    config_path, data = _read_raw(path)
+    luoghi = _luoghi(data)
+
+    for luogo in luoghi:
+        devices = luogo.get("devices") or []
+        for device in devices:
+            if device.get("id") != device_id:
+                continue
+            services = device.get("services")
+            if not isinstance(services, list):
+                services = []
+                device["services"] = services
+            if service_name not in services:
+                services.append(service_name)
+            _write_raw(config_path, data)
+            logger.info(
+                "Servizio '%s' aggiunto al device '%s' in config.",
+                service_name,
+                device_id,
+            )
+            return [str(s) for s in services]
+
+    raise KeyError(device_id)
+
+
+def remove_service_from_device_in_config(
+    device_id: str, service_name: str, path: str | None = None
+) -> list[str]:
+    """Rimuove un servizio monitorato da un device nella config YAML.
+
+    Ritorna la lista aggiornata dei servizi del device.
+    Solleva `KeyError` se il device non esiste.
+    """
+    config_path, data = _read_raw(path)
+    luoghi = _luoghi(data)
+
+    for luogo in luoghi:
+        devices = luogo.get("devices") or []
+        for device in devices:
+            if device.get("id") != device_id:
+                continue
+            services = device.get("services")
+            if not isinstance(services, list):
+                services = []
+                device["services"] = services
+            services = [str(s) for s in services if str(s) != service_name]
+            device["services"] = services
+            _write_raw(config_path, data)
+            logger.info(
+                "Servizio '%s' rimosso dal device '%s' in config.",
+                service_name,
+                device_id,
+            )
+            return services
+
+    raise KeyError(device_id)
+
+
 def add_luogo_to_config(luogo: dict, path: str | None = None) -> None:
     """Aggiunge un nuovo luogo alla config."""
     config_path, data = _read_raw(path)

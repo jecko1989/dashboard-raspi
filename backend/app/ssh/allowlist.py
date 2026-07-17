@@ -29,6 +29,7 @@ READONLY_COMMANDS: dict[str, str] = {
     # Rilevamento rete per l'annuncio delle subnet route Tailscale.
     "default_iface": "ip -o -4 route show default",
     "lan_routes": "ip -o -4 route show scope link",
+    "service_list": "/bin/systemctl list-unit-files --type=service --no-legend --no-pager",
 }
 
 # Comandi privilegiati consentiti. Richiedono sudoers NOPASSWD ristretto.

@@ -20,6 +20,7 @@ from app.models.luogo import Luogo
 from app.models.metric import Metric
 from app.services import config_loader
 from app.services.config_loader import DevicesConfig, load_devices_config
+from app.ssh import allowlist
 
 logger = get_logger(__name__)
 
@@ -75,6 +76,22 @@ class DuplicateDevice(DeviceCreateError):
         self.field = field
         self.value = value
         super().__init__(f"{field} gia' in uso: {value}")
+
+
+class ServiceConfigError(DeviceCreateError):
+    """Errore base nella gestione dei servizi monitorati da config."""
+
+
+class InvalidServiceName(ServiceConfigError):
+    """Nome servizio non valido per i vincoli allowlist."""
+
+
+class DuplicateService(ServiceConfigError):
+    """Servizio gia' presente nella lista monitorata del device."""
+
+
+class ServiceNotConfigured(ServiceConfigError):
+    """Servizio non presente nella lista monitorata del device."""
 
 
 def is_valid_device_id(value: str) -> bool:
@@ -404,6 +421,68 @@ def delete_device(db: Session, device_id: str) -> None:
     # Il prune in sync elimina device e righe dipendenti non piu' in config.
     sync_config_to_db(db)
     logger.info("Device eliminato: %s.", device_id)
+
+
+def add_monitored_service(db: Session, device_id: str, service_name: str) -> list[str]:
+    """Aggiunge un servizio monitorato al device (config YAML + sync DB)."""
+    device_id = (device_id or "").strip()
+    service = (service_name or "").strip()
+
+    if not allowlist.is_valid_service_name(service):
+        raise InvalidServiceName("Nome servizio non valido")
+
+    config = load_devices_config()
+    dev_cfg = config_loader.get_device_config(config, device_id)
+    if dev_cfg is None:
+        raise DeviceNotFound(device_id)
+    if service in dev_cfg.services:
+        raise DuplicateService(f"Servizio gia' presente: {service}")
+
+    config_loader.add_service_to_device_in_config(device_id, service)
+    sync_config_to_db(db)
+
+    db.add(
+        Event(
+            device_id=device_id,
+            type="config",
+            message=f"Servizio monitorato aggiunto: {service}",
+        )
+    )
+    db.commit()
+
+    refreshed = config_loader.get_device_config(load_devices_config(), device_id)
+    return list(refreshed.services if refreshed else [])
+
+
+def remove_monitored_service(
+    db: Session, device_id: str, service_name: str
+) -> list[str]:
+    """Rimuove un servizio monitorato dal device (config YAML + sync DB)."""
+    device_id = (device_id or "").strip()
+    service = (service_name or "").strip()
+
+    if not allowlist.is_valid_service_name(service):
+        raise InvalidServiceName("Nome servizio non valido")
+
+    config = load_devices_config()
+    dev_cfg = config_loader.get_device_config(config, device_id)
+    if dev_cfg is None:
+        raise DeviceNotFound(device_id)
+    if service not in dev_cfg.services:
+        raise ServiceNotConfigured(f"Servizio non configurato: {service}")
+
+    services = config_loader.remove_service_from_device_in_config(device_id, service)
+    sync_config_to_db(db)
+
+    db.add(
+        Event(
+            device_id=device_id,
+            type="config",
+            message=f"Servizio monitorato rimosso: {service}",
+        )
+    )
+    db.commit()
+    return services
 
 
 def create_luogo(db: Session, payload) -> Luogo:

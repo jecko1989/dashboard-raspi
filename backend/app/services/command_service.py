@@ -337,9 +337,12 @@ def run_readonly(
     Non registra audit (nessun effetto sul device). Solleva SSHError se la
     connessione fallisce.
     """
-    if command_key not in allowlist.PRIVILEGED_COMMANDS:
+    if command_key in allowlist.READONLY_COMMANDS:
+        template = allowlist.READONLY_COMMANDS[command_key]
+    elif command_key in allowlist.PRIVILEGED_COMMANDS:
+        template = allowlist.PRIVILEGED_COMMANDS[command_key]
+    else:
         raise CommandError(f"Comando non consentito: {command_key}")
-    template = allowlist.PRIVILEGED_COMMANDS[command_key]
     if service is not None:
         if not allowlist.is_valid_service_name(service):
             raise CommandError("Nome servizio non valido")

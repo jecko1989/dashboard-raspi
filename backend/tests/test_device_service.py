@@ -237,6 +237,45 @@ def test_delete_device_not_found(db, config_file) -> None:
         device_service.delete_device(db, "inesistente")
 
 
+# --- servizi monitorati (CRUD da UI) ----------------------------------------
+
+
+def test_add_monitored_service_success(db, config_file) -> None:
+    device_service.sync_config_to_db(db)
+    services = device_service.add_monitored_service(db, "rpi-esistente-01", "docker")
+    assert "docker" in services
+
+    config = load_devices_config()
+    dev = next(
+        d for lg in config.luoghi for d in lg.devices if d.id == "rpi-esistente-01"
+    )
+    assert "docker" in dev.services
+
+
+def test_add_monitored_service_duplicate(db, config_file) -> None:
+    device_service.sync_config_to_db(db)
+    device_service.add_monitored_service(db, "rpi-esistente-01", "ssh")
+    with pytest.raises(device_service.DuplicateService):
+        device_service.add_monitored_service(db, "rpi-esistente-01", "ssh")
+
+
+def test_add_monitored_service_invalid_name(db, config_file) -> None:
+    with pytest.raises(device_service.InvalidServiceName):
+        device_service.add_monitored_service(db, "rpi-esistente-01", "ssh; reboot")
+
+
+def test_remove_monitored_service_success(db, config_file) -> None:
+    device_service.sync_config_to_db(db)
+    device_service.add_monitored_service(db, "rpi-esistente-01", "docker")
+    services = device_service.remove_monitored_service(db, "rpi-esistente-01", "docker")
+    assert "docker" not in services
+
+
+def test_remove_monitored_service_not_configured(db, config_file) -> None:
+    with pytest.raises(device_service.ServiceNotConfigured):
+        device_service.remove_monitored_service(db, "rpi-esistente-01", "docker")
+
+
 # --- CRUD luoghi -------------------------------------------------------------
 
 

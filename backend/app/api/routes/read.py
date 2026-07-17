@@ -204,6 +204,37 @@ def service_logs(
     return ServiceLogs(service=service_name, logs=logs)
 
 
+@router.get("/devices/{device_id}/services/available", response_model=list[str])
+def available_services(device_id: str, db: Session = Depends(get_db)) -> list[str]:
+    """Ritorna i servizi systemd disponibili sul device (unit-file *.service)."""
+    from app.services import command_service
+    from app.services.command_service import CommandError
+    from app.ssh.client import SSHError
+
+    device = device_service.get_device(db, device_id)
+    if device is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Device non trovato")
+
+    try:
+        ssh_result = command_service.run_readonly(db, device, "service_list")
+    except CommandError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except SSHError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+    names: list[str] = []
+    for line in (ssh_result.stdout or "").splitlines():
+        value = line.strip()
+        if not value:
+            continue
+        unit = value.split()[0]
+        if unit.endswith(".service"):
+            names.append(unit)
+
+    # Rimuove duplicati mantenendo ordine stabile.
+    return list(dict.fromkeys(names))
+
+
 @router.get("/alerts", response_model=list[AlertRead])
 def list_alerts(
     active_only: bool = True, db: Session = Depends(get_db)

@@ -10,11 +10,27 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.schemas.device import DeviceCreate, DeviceRead, DeviceUpdate
+from app.models.user import User
+from app.schemas.device import (
+    DeviceCreate,
+    DeviceRead,
+    DeviceServicesRead,
+    DeviceServiceUpdateRequest,
+    DeviceUpdate,
+)
 from app.services import device_service
 
 router = APIRouter(tags=["devices"])
+
+
+def _require_admin(current_user: User) -> None:
+    if not current_user.is_admin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Operazione riservata agli amministratori",
+        )
 
 
 def _to_device_read(device) -> DeviceRead:
@@ -77,3 +93,54 @@ def delete_device(device_id: str, db: Session = Depends(get_db)):
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, detail="Device non trovato"
         ) from exc
+
+
+@router.post("/devices/{device_id}/services", response_model=DeviceServicesRead)
+def add_device_service(
+    device_id: str,
+    payload: DeviceServiceUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DeviceServicesRead:
+    """Aggiunge un servizio monitorato a un device (config YAML + DB)."""
+    _require_admin(current_user)
+    if not payload.confirm:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Conferma richiesta: impostare confirm=true",
+        )
+    try:
+        services = device_service.add_monitored_service(db, device_id, payload.name)
+    except device_service.DeviceNotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Device non trovato") from exc
+    except device_service.DuplicateService as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except device_service.InvalidServiceName as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return DeviceServicesRead(device_id=device_id, services=services)
+
+
+@router.delete("/devices/{device_id}/services/{service_name}", response_model=DeviceServicesRead)
+def remove_device_service(
+    device_id: str,
+    service_name: str,
+    confirm: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DeviceServicesRead:
+    """Rimuove un servizio monitorato da un device (config YAML + DB)."""
+    _require_admin(current_user)
+    if not confirm:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Conferma richiesta: impostare confirm=true",
+        )
+    try:
+        services = device_service.remove_monitored_service(db, device_id, service_name)
+    except device_service.DeviceNotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Device non trovato") from exc
+    except device_service.ServiceNotConfigured as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except device_service.InvalidServiceName as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return DeviceServicesRead(device_id=device_id, services=services)
