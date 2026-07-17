@@ -15,9 +15,12 @@ interface SidebarProps {
   className?: string;
   // Callback invocata dopo la navigazione (chiude il drawer su mobile).
   onNavigate?: () => void;
+  // Theme control
+  dark: boolean;
+  onDarkChange: (dark: boolean) => void;
 }
 
-export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
+export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange }: SidebarProps) {
   const [luoghiExpanded, setLuoghiExpanded] = useState(true);
   const [azioniExpanded, setAzioniExpanded] = useState(true);
   const [creatingDevice, setCreatingDevice] = useState(false);
@@ -64,12 +67,13 @@ export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
 
   return (
     <aside
-      className={`w-64 shrink-0 overflow-y-auto border-r border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 ${className}`}
+      className={`flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 ${className}`}
     >
-      <h1 className="mb-6 px-3 text-lg font-bold text-gray-900 dark:text-gray-100">
-        🖥️ RPi Dashboard
-      </h1>
-      <nav className="space-y-1" onClick={onNavigate}>
+      <div className="overflow-y-auto p-4">
+        <h1 className="mb-6 px-3 text-lg font-bold text-gray-900 dark:text-gray-100">
+          🖥️ RPi Dashboard
+        </h1>
+        <nav className="space-y-1" onClick={onNavigate}>
         <NavLink to="/" end className={linkClass}>
           <span aria-hidden="true" className="mr-2">
             📊
@@ -186,6 +190,47 @@ export function Sidebar({ luoghi, className = '', onNavigate }: SidebarProps) {
           </>
         )}
       </nav>
+      </div>
+
+      {/* Spacer per spingere il tema in basso */}
+      <div className="flex-1" />
+
+      {/* Tema selector in fondo a sinistra */}
+      <div className="border-t border-gray-200 py-4 px-4 dark:border-gray-700">
+        <button
+          onClick={() => onDarkChange(!dark)}
+          className="flex w-full cursor-pointer items-center justify-start"
+          aria-label="Cambia tema"
+        >
+          {/* Toggle switch */}
+          <div 
+            className="relative inline-flex h-8 w-16 items-center rounded-full transition-colors"
+            style={{ backgroundColor: dark ? '#2563eb' : '#e5e7eb' }}
+          >
+            {/* Sfondo del toggle */}
+            <span 
+              className="absolute h-7 w-7 rounded-full bg-white shadow transition-all"
+              style={{
+                left: dark ? '2.125rem' : '1px',
+                transitionDuration: '300ms',
+              }}
+            />
+            {/* Icone */}
+            <span 
+              className="absolute left-1.5 text-sm transition-opacity"
+              style={{ opacity: dark ? 0.3 : 1, transitionDuration: '300ms' }}
+            >
+              ☀️
+            </span>
+            <span 
+              className="absolute right-1.5 text-sm transition-opacity"
+              style={{ opacity: dark ? 1 : 0.3, transitionDuration: '300ms' }}
+            >
+              🌙
+            </span>
+          </div>
+        </button>
+      </div>
 
       <DeviceCreateModal open={creatingDevice} onClose={() => setCreatingDevice(false)} />
 

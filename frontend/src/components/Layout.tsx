@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import { ChangePasswordModal } from './ChangePasswordModal';
 import { useLuoghi } from '../hooks/useLuoghi';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +20,10 @@ export function Layout({ children }: LayoutProps) {
   );
   // Stato del drawer di navigazione mobile.
   const [menuOpen, setMenuOpen] = useState(false);
+  // Stato del dropdown utente
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  // Stato della modale cambio password
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -39,7 +44,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       {/* Rail fisso su desktop */}
-      <Sidebar luoghi={luoghi} className="hidden lg:block" />
+      <Sidebar luoghi={luoghi} className="hidden lg:block" dark={dark} onDarkChange={setDark} />
 
       {/* Drawer di navigazione su mobile */}
       {menuOpen && (
@@ -53,12 +58,14 @@ export function Layout({ children }: LayoutProps) {
             luoghi={luoghi}
             className="absolute inset-y-0 left-0 z-50 max-w-[85%] shadow-xl"
             onNavigate={() => setMenuOpen(false)}
+            dark={dark}
+            onDarkChange={setDark}
           />
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
+        <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
           <button
             onClick={() => setMenuOpen(true)}
             className="rounded-md border border-gray-300 p-2 text-lg leading-none lg:hidden dark:border-gray-600"
@@ -66,29 +73,51 @@ export function Layout({ children }: LayoutProps) {
           >
             ☰
           </button>
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            {username && (
-              <span className="hidden text-sm text-gray-500 dark:text-gray-400 sm:inline">
-                👤 {username}
-              </span>
+          
+          {/* Dropdown utente a destra */}
+          <div className="relative ml-auto">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <span className="text-lg">👤</span>
+            </button>
+
+            {/* Dropdown menu */}
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                {/* Nome utente in alto */}
+                <div className="border-b border-gray-200 px-4 py-2 dark:border-gray-700">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {username}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setChangePasswordOpen(true);
+                    setUserMenuOpen(false);
+                  }}
+                  className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  🔑 Cambia password
+                </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    setUserMenuOpen(false);
+                  }}
+                  className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  🚪 Logout
+                </button>
+              </div>
             )}
-            <button
-              onClick={() => setDark((d) => !d)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600"
-            >
-              {dark ? '☀️' : '🌙'}
-              <span className="ml-1 hidden sm:inline">{dark ? 'Light' : 'Dark'}</span>
-            </button>
-            <button
-              onClick={logout}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-            >
-              Logout
-            </button>
           </div>
         </header>
         <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
       </div>
+
+      <ChangePasswordModal open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
     </div>
   );
 }

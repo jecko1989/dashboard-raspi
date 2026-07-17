@@ -64,6 +64,13 @@ export async function getMe(): Promise<{ username: string; is_admin: boolean }> 
   return data;
 }
 
+export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
+  await api.post('/auth/change-password', {
+    old_password: oldPassword,
+    new_password: newPassword,
+  });
+}
+
 export async function getLuoghi(): Promise<Luogo[]> {
   const { data } = await api.get<Luogo[]>('/luoghi');
   return data;

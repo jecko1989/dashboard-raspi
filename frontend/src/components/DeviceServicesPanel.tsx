@@ -282,18 +282,10 @@ export function DeviceServicesPanel({
       </div>
 
       <div className="mb-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-          Servizi monitorati
-        </p>
+      
         {isAdmin ? (
           <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="w-full">
-              <label
-                htmlFor={`available-services-${deviceId}`}
-                className="mb-1 block text-xs text-gray-500 dark:text-gray-400"
-              >
-                Seleziona servizio systemd
-              </label>
               <select
                 id={`available-services-${deviceId}`}
                 value={selectedService}

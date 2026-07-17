@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { CommandResult, Metric } from '../types';
+import { createPortal } from 'react-dom';
+import type { CommandResult } from '../types';
 import {
   commandFanControl,
+  getAvailableServices,
   commandReboot,
   commandShutdown,
   commandUpdate,
   commandRestartService,
   commandTailscale,
-  commandMyst,
   downloadMystBackup,
   restoreMystBackup,
 } from '../services/api';
 import { CommandModal } from './CommandModal';
 import { ShellModal } from './ShellModal';
 import { useAuth } from '../context/AuthContext';
-import { formatDurationShort, formatFanMode, formatFanRpm } from '../utils/format';
+import { formatDurationShort } from '../utils/format';
 
 type Pending =
   | { kind: 'reboot' }
@@ -24,7 +25,6 @@ type Pending =
   | { kind: 'restart'; service: string }
   | { kind: 'tailscale'; exitNode: boolean; routes: boolean }
   | { kind: 'fan'; mode: 'pwm' | 'fixed'; rpm?: number }
-  | { kind: 'myst'; action: 'start' | 'stop' }
   | { kind: 'myst-restore'; file: File }
   | null;
 
@@ -32,7 +32,6 @@ interface DeviceCommandsProps {
   deviceId: string;
   deviceName?: string;
   deviceLanAddress?: string;
-  metric?: Metric | null;
   onChanged?: () => void;
   leadingActions?: ReactNode;
   afterMystSection?: ReactNode;
@@ -46,8 +45,26 @@ const RUNNING_LABELS: Record<NonNullable<Pending>['kind'], string> = {
   restart: 'Riavvio servizio in corso',
   tailscale: 'Configurazione Tailscale in corso',
   fan: 'Configurazione ventola in corso',
-  myst: 'Comando myst in corso',
   'myst-restore': 'Ripristino backup myst in corso',
+};
+
+const TOAST_DURATION_MS = 3200;
+
+type ToastState = {
+  message: string;
+  type: 'success' | 'error';
+} | null;
+
+const TOAST_KINDS: NonNullable<Pending>['kind'][] = ['reboot', 'shutdown', 'tailscale', 'fan'];
+
+const COMMAND_LABEL_BY_KIND: Record<NonNullable<Pending>['kind'], string> = {
+  reboot: 'reboot',
+  shutdown: 'shutdown',
+  update: 'update',
+  restart: 'restart_service',
+  tailscale: 'tailscale',
+  fan: 'fan_control',
+  'myst-restore': 'myst_restore',
 };
 
 // Piccolo spinner animato riutilizzabile.
@@ -65,7 +82,6 @@ export function DeviceCommands({
   deviceId,
   deviceName,
   deviceLanAddress,
-  metric,
   onChanged,
   leadingActions,
   afterMystSection,
@@ -79,10 +95,18 @@ export function DeviceCommands({
   const [runningKind, setRunningKind] = useState<NonNullable<Pending>['kind'] | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<CommandResult | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
+  const [toastProgress, setToastProgress] = useState(100);
   const [backupRunning, setBackupRunning] = useState(false);
   const [mystError, setMystError] = useState<string | null>(null);
   const [shellOpen, setShellOpen] = useState(false);
+  const [runningTailscaleAction, setRunningTailscaleAction] = useState<{
+    exitNode: boolean;
+    routes: boolean;
+  } | null>(null);
+  const [installedServices, setInstalledServices] = useState<Set<string>>(new Set());
   const restoreInputRef = useRef<HTMLInputElement>(null);
+  const lanAddressForLinks = (deviceLanAddress || '').trim() || 'ip_raspberry';
 
   useEffect(() => {
     if (!running) return;
@@ -94,14 +118,68 @@ export function DeviceCommands({
     return () => window.clearInterval(id);
   }, [running]);
 
+  useEffect(() => {
+    let mounted = true;
+    const loadInstalledServices = async () => {
+      try {
+        const names = await getAvailableServices(deviceId);
+        if (!mounted) return;
+        setInstalledServices(
+          new Set(names.map((name) => name.trim().toLowerCase())),
+        );
+      } catch {
+        if (mounted) setInstalledServices(new Set());
+      }
+    };
+    void loadInstalledServices();
+    return () => {
+      mounted = false;
+    };
+  }, [deviceId]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const startedAt = Date.now();
+    setToastProgress(100);
+    const intervalId = window.setInterval(() => {
+      const elapsedMs = Date.now() - startedAt;
+      const remaining = Math.max(0, TOAST_DURATION_MS - elapsedMs);
+      setToastProgress((remaining / TOAST_DURATION_MS) * 100);
+    }, 33);
+    const timeoutId = window.setTimeout(() => {
+      setToast(null);
+      setToastProgress(100);
+      window.clearInterval(intervalId);
+    }, TOAST_DURATION_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [toast]);
+
+  const shouldShowToastForKind = (kind: NonNullable<Pending>['kind']): boolean =>
+    TOAST_KINDS.includes(kind);
+
+  const buildToastMessage = (command: string, status: string, detail?: string | null): string => {
+    const normalizedDetail = detail ? detail.replace(/<ip_lan>/g, lanAddressForLinks) : '';
+    return normalizedDetail ? `${command} -> ${status}\n${normalizedDetail}` : `${command} -> ${status}`;
+  };
+
   const execute = async () => {
     if (!pending) return;
     const current = pending;
     // Chiudi subito il modale per evitare una seconda esecuzione con doppio click.
     setPending(null);
     setRunningKind(current.kind);
+    setRunningTailscaleAction(
+      current.kind === 'tailscale'
+        ? { exitNode: current.exitNode, routes: current.routes }
+        : null,
+    );
     setRunning(true);
     setResult(null);
+    setToast(null);
     try {
       let res: CommandResult;
       switch (current.kind) {
@@ -126,27 +204,40 @@ export function DeviceCommands({
         case 'fan':
           res = await commandFanControl(deviceId, current.mode, current.rpm);
           break;
-        case 'myst':
-          res = await commandMyst(deviceId, current.action);
-          break;
         case 'myst-restore':
           res = await restoreMystBackup(deviceId, current.file);
           break;
       }
-      setResult(res);
+      if (shouldShowToastForKind(current.kind)) {
+        setToast({
+          type: res.status === 'success' ? 'success' : 'error',
+          message: buildToastMessage(res.command, res.status, res.detail),
+        });
+      } else {
+        setResult(res);
+      }
       onChanged?.();
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: string } } }).response?.data
         ?.detail;
-      setResult({
-        device_id: deviceId,
-        command: current.kind,
-        status: 'error',
-        detail: detail ?? (err as Error)?.message ?? 'Errore',
-      });
+      const errorDetail = detail ?? (err as Error)?.message ?? 'Errore';
+      if (shouldShowToastForKind(current.kind)) {
+        setToast({
+          type: 'error',
+          message: buildToastMessage(COMMAND_LABEL_BY_KIND[current.kind], 'error', errorDetail),
+        });
+      } else {
+        setResult({
+          device_id: deviceId,
+          command: current.kind,
+          status: 'error',
+          detail: errorDetail,
+        });
+      }
     } finally {
       setRunning(false);
       setRunningKind(null);
+      setRunningTailscaleAction(null);
     }
   };
 
@@ -170,7 +261,6 @@ export function DeviceCommands({
     if (file) setPending({ kind: 'myst-restore', file });
   };
 
-  const lanAddressForLinks = (deviceLanAddress || '').trim() || 'ip_raspberry';
   const mystSettingsUrl = `http://${lanAddressForLinks}:4449#settings`;
 
   const modalConfig = (): {
@@ -249,16 +339,6 @@ export function DeviceCommands({
           confirmLabel: 'Annuncia',
         };
       }
-      case 'myst':
-        return {
-          title: pending.action === 'stop' ? 'Fermare il nodo myst?' : 'Avviare il nodo myst?',
-          description:
-            pending.action === 'stop'
-              ? 'Arresta il servizio Mysterium (consigliato sul nodo exit prima di streammare).'
-              : 'Avvia il servizio Mysterium sul device.',
-          destructive: pending.action === 'stop',
-          confirmLabel: pending.action === 'stop' ? 'Ferma myst' : 'Avvia myst',
-        };
       case 'fan':
         return {
           title:
@@ -327,10 +407,19 @@ export function DeviceCommands({
       return <span key={`txt-${idx}`}>{part}</span>;
     });
   };
-  const currentFanMode = formatFanMode(metric?.fan_mode) ?? 'N/A';
-  const currentFanRpm = formatFanRpm(metric?.fan_rpm);
   const parsedFanRpm = Number.parseInt(fanRpm, 10);
   const canApplyFan = fanMode === 'pwm' || (Number.isFinite(parsedFanRpm) && parsedFanRpm >= 300 && parsedFanRpm <= 9000);
+  const hasTailscale = installedServices.has('tailscaled.service');
+  const hasMyst =
+    installedServices.has('mysterium-node.service') ||
+    installedServices.has('myst.service');
+  const isRunningTailscale = (
+    exitNode: boolean,
+    routes: boolean,
+  ): boolean =>
+    runningKind === 'tailscale' &&
+    runningTailscaleAction?.exitNode === exitNode &&
+    runningTailscaleAction?.routes === routes;
 
   return (
     <div className="space-y-4">
@@ -374,14 +463,6 @@ export function DeviceCommands({
         <h3 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
           Ventola CPU
         </h3>
-        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <span className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-gray-700">
-            Stato: {currentFanMode}
-          </span>
-          <span className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-gray-700">
-            Velocità: {currentFanRpm}
-          </span>
-        </div>
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex items-center gap-2 text-sm">
             <span className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">Modalità</span>
@@ -433,6 +514,7 @@ export function DeviceCommands({
         )}
       </div>
 
+      {hasTailscale && (
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
           Tailscale
@@ -441,60 +523,54 @@ export function DeviceCommands({
           <button
             onClick={() => setPending({ kind: 'tailscale', exitNode: true, routes: false })}
             disabled={running}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Exit node
+            {isRunningTailscale(true, false) && <Spinner />}
+            {isRunningTailscale(true, false) ? 'Applicazione…' : 'Exit node'}
           </button>
           <button
             onClick={() => setPending({ kind: 'tailscale', exitNode: false, routes: true })}
             disabled={running}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Subnet routes
+            {isRunningTailscale(false, true) && <Spinner />}
+            {isRunningTailscale(false, true) ? 'Applicazione…' : 'Subnet routes'}
           </button>
           <button
             onClick={() => setPending({ kind: 'tailscale', exitNode: true, routes: true })}
             disabled={running}
-            className="rounded-md bg-indigo-700 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-md bg-indigo-700 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Exit node + routes
+            {isRunningTailscale(true, true) && <Spinner />}
+            {isRunningTailscale(true, true) ? 'Applicazione…' : 'Exit node + routes'}
           </button>
         </div>
       </div>
+      )}
 
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
           Nodo Mysterium (myst)
         </h3>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setPending({ kind: 'myst', action: 'start' })}
-            disabled={running}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Avvia myst
-          </button>
-          <button
-            onClick={() => setPending({ kind: 'myst', action: 'stop' })}
-            disabled={running}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Ferma myst
-          </button>
-          <button
-            onClick={handleBackup}
-            disabled={backupRunning || running}
-            className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {backupRunning ? 'Backup…' : '⬇️ Backup nodo'}
-          </button>
-          <button
-            onClick={() => restoreInputRef.current?.click()}
-            disabled={running}
-            className="rounded-md border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-cyan-400 dark:hover:bg-cyan-900/20"
-          >
-            ⬆️ Ripristina backup
-          </button>
+          {hasMyst && (
+            <>
+              <button
+                onClick={handleBackup}
+                disabled={backupRunning || running}
+                className="rounded-md bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {backupRunning ? 'Backup…' : '⬇️ Backup nodo'}
+              </button>
+              <button
+                onClick={() => restoreInputRef.current?.click()}
+                disabled={running}
+                className="rounded-md border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-cyan-400 dark:hover:bg-cyan-900/20"
+              >
+                ⬆️ Ripristina backup
+              </button>
+            </>
+          )}
           <input
             ref={restoreInputRef}
             type="file"
@@ -503,11 +579,13 @@ export function DeviceCommands({
             onChange={onRestoreFile}
           />
         </div>
-        <p className="mt-2 text-xs text-gray-500">
-          Il backup salva la data-dir del nodo (identità in <code>keystore/</code>)
-          in uno .zip scaricato dal browser. Il ripristino richiede che il nodo
-          myst sia già installato sul device.
-        </p>
+        {hasMyst && (
+          <p className="mt-2 text-xs text-gray-500">
+            Il backup salva la data-dir del nodo (identità in <code>keystore/</code>)
+            in uno .zip scaricato dal browser. Il ripristino richiede che il nodo
+            myst sia già installato sul device.
+          </p>
+        )}
         {mystError && (
           <div className="mt-2 rounded-md border-l-4 border-amber-400 bg-amber-50 p-2 text-sm dark:bg-amber-900/20">
             {mystError}
@@ -555,6 +633,22 @@ export function DeviceCommands({
           )}
         </div>
       )}
+
+      {toast &&
+        createPortal(
+          <div className="pointer-events-none fixed right-4 top-4 z-[9999] overflow-hidden rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-xl dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+            <p className="whitespace-pre-line">{toast.message}</p>
+            <div className="mt-2 h-1 w-full rounded bg-gray-200/80 dark:bg-gray-700/80">
+              <div
+                className={`h-full rounded transition-[width] duration-75 ease-linear ${
+                  toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                } ml-auto`}
+                style={{ width: `${toastProgress}%` }}
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
 
       <CommandModal
         open={Boolean(cfg)}

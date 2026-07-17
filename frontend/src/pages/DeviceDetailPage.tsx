@@ -272,7 +272,6 @@ export function DeviceDetailPage() {
             deviceId={device.id}
             deviceName={device.name}
             deviceLanAddress={device.ip_vpn}
-            metric={metric}
             onChanged={load}
             leadingActions={<DeviceSSHKeyActions controller={sshKeyController} />}
             afterMystSection={<DeviceSSHKeyDetails controller={sshKeyController} />}
