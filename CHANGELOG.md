@@ -118,6 +118,14 @@ Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`
 
 ## Unreleased
 
+- **servizi monitorati (backend + frontend + UX mobile)**
+  - Backend: nuovi endpoint admin per gestione servizi monitorati su device (`POST /api/devices/{id}/services`, `DELETE /api/devices/{id}/services/{service}`) con persistenza config-driven su `config/devices.yaml`.
+  - Backend: nuovo endpoint read-only `GET /api/devices/{id}/services/available` per ottenere i servizi systemd disponibili dal device remoto.
+  - Backend: validazione e test dedicati per add/remove servizi monitorati e aggiornamento allowlist read-only.
+  - Frontend: pannello `Servizi` aggiornato con select servizi disponibile, conferme tramite modale per add/remove e feedback unificato via toast auto-dismiss.
+  - Frontend: tabella servizi ottimizzata per mobile con azioni a icona (log/start/stop/restart/rimozione), visibilita' condizionale start/restart e stato mostrato con solo pallino.
+  - Frontend: normalizzazione visuale nomi servizi (rimozione suffisso `.service` in select, modali, lista e messaggi utente).
+
 - **ventola CPU (backend + frontend + deploy)**
   - Nuova raccolta metrica ventola: `fan_rpm` e `fan_mode` persistite nel DB ed esposte via API/CSV.
   - Sezione `Prestazioni` aggiornata: la card `Uptime` e' sostituita da `Ventola CPU` con trend RPM e stato modalita'.

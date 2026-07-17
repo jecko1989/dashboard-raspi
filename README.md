@@ -4,11 +4,11 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 
 > Il progetto è pensato per gestire più luoghi (es. appartamenti), ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
 
-## Stato attuale del progetto (2026-07-15)
+## Stato attuale del progetto (2026-07-17)
 
 - Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
 - Milestone v0.8.0 completata: eventi accessibili da pulsante campanella contestuale (overview/luogo/device) con modale dedicata.
-- Milestone v0.9.0 in avanzamento: controllo ventola CPU da UI (PWM/FIXED) con endpoint dedicato e audit.
+- Milestone v0.9.0 in avanzamento: servizi monitorati gestibili da UI (add/remove), controllo ventola CPU e rifiniture UX mobile nel dettaglio device.
 - Badge eventi in testata allineato alle ultime 24h; la modale mostra anche storico piu' ampio.
 - Svuotamento eventi contestuale (overview/luogo/device) riservato agli admin, con feedback toast auto-dismiss.
 - Sidebar aggiornata: `Impostazioni` sotto `Alert`, sezioni `Luoghi` e `Azioni` collassabili (default aperte).
@@ -40,7 +40,9 @@ Documenti di riferimento rapido:
 - Trend recente delle metriche integrato nelle card `Prestazioni` del dettaglio device
 - Alert configurabili (temperatura, disco, RAM, CPU, offline, riavvio) con auto-risoluzione
 - Comandi remoti sicuri: reboot, shutdown, aggiornamenti, restart servizi, cambio modalita' ventola (PWM/FIXED)
-- Stato e log dei servizi systemd (read-only)
+- Stato e log dei servizi systemd (read-only) con azioni rapide contestuali (log/start/stop/restart/rimozione)
+- Gestione servizi monitorati da UI: aggiunta/rimozione servizi persistita in `config/devices.yaml` (admin-only, conferma modale)
+- Suggestion servizi systemd disponibili da host remoto (`/api/devices/{id}/services/available`)
 - Audit log completo di ogni comando eseguito
 - Autenticazione JWT con login locale (bcrypt)
 - Shell web interattiva admin-only (WebSocket + SSH PTY, xterm.js)
@@ -48,6 +50,7 @@ Documenti di riferimento rapido:
 - Aggiunta di nuovi device dalla dashboard (persistiti in `config/devices.yaml`)
 - Dark mode, timeline attività, badge VPN/latenza
 - Contatore eventi ultime 24h e azione `Svuota eventi` contestuale (solo admin)
+- Feedback operativi con toast auto-dismiss (stesso pattern della sezione eventi)
 - Interfaccia responsive mobile-first: navigazione a drawer, griglie e grafici adattivi, tabelle anti-overflow
 - Deploy con Docker Compose o esecuzione locale (script PowerShell incluso)
 - Script di deploy sul Raspberry (Docker o nativo systemd) via Tailscale o LAN — vedi [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)

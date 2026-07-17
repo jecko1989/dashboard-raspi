@@ -1,7 +1,7 @@
 # Roadmap - Prossimi miglioramenti
 
 Stato: attiva (pianificazione)
-Data ultimo aggiornamento: 2026-07-15
+Data ultimo aggiornamento: 2026-07-17
 Baseline corrente: release v0.8.0 (eventi contestuali + redesign)
 Prossimo target: milestone v0.9.0 (servizi operativi unificati)
 
@@ -123,9 +123,9 @@ card ridondante.
 ## Milestone v0.9.0 - Servizi operativi unificati [IN CORSO]
 
 ### Ambito
-- [ ] Aggiunta servizi da UI.
-- [ ] Integrazione comandi Mysterium Node (avvio, stop, backup, restore) nel menu servizi (parziale: presenti in "Comandi remoti", non nel menu servizi).
-- [ ] Integrazione comandi Tailscale nel menu servizi con lo stesso pattern (parziale: presenti in "Comandi remoti", non nel menu servizi).
+- [x] Aggiunta servizi da UI.
+- [ ] Integrazione comandi Mysterium Node (avvio, stop, backup, restore) nel menu servizi.
+- [ ] Integrazione comandi Tailscale nel menu servizi con lo stesso pattern.
 - [x] Controllo ventola CPU da UI (PWM/FIXED + RPM) con endpoint protetto e audit.
 
 ### Criteri di accettazione
@@ -136,6 +136,10 @@ card ridondante.
 - Endpoint ventola: `POST /api/devices/{id}/commands/fan` con `mode` (`pwm|fixed`) e `rpm` opzionale in fixed.
 - Raccolta metriche estesa con `fan_rpm` e `fan_mode`; UI `Prestazioni` aggiornata con card `Ventola CPU`.
 - Per il runtime e' richiesto helper sul Raspberry: `/usr/local/sbin/dashboard-fan-control` con regole sudoers NOPASSWD dedicate.
+- Nuovi endpoint servizi monitorati: `POST /api/devices/{id}/services` (add) e `DELETE /api/devices/{id}/services/{service}` (remove), admin-only con `confirm=true`, persistenza su `config/devices.yaml` e sync DB.
+- Nuovo endpoint read-only `GET /api/devices/{id}/services/available` per suggerire servizi systemd nella select UI.
+- UI `Servizi` rifinita per mobile: tabella compatta con azioni a icona, stato a pallino, conferme via modale e feedback toast auto-dismiss.
+- Stato corrente UX: il pannello `Servizi` e' focalizzato su monitoraggio e gestione lista servizi; i comandi operativi avanzati restano in `Comandi remoti`.
 
 ## Milestone v0.9.5 - Wiki e documentazione UI
 
