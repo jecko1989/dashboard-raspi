@@ -884,13 +884,28 @@ nome_utente ALL=(root) NOPASSWD: /usr/bin/chown -R mysterium-node /var/lib/myste
 
 ## 7. CUPS — server di stampa
 
-Installiamo CUPS e lo esponiamo **solo sulla mesh Tailscale** (mai su internet).
+Installiamo CUPS e i componenti HP (stampa + scanner), poi condividiamo la
+stampante in LAN/Tailscale (mai su internet).
 
 ### 7a. Installazione
 
 ```bash
-sudo apt install -y cups
-sudo usermod -aG lpadmin nome_utente        # per amministrare le stampanti
+sudo apt update
+sudo apt install -y cups printer-driver-hpcups hplip sane-utils libsane-hpaio avahi-daemon
+sudo usermod -aG lpadmin,scanner nome_utente        # admin stampanti + accesso scanner
+sudo systemctl enable --now cups avahi-daemon
+```
+
+Per le multifunzione HP (es. **HP LaserJet M1120**) usa il setup guidato HPLIP:
+
+```bash
+sudo hp-setup -i
+```
+
+Se richiesto, installa il plugin proprietario HP:
+
+```bash
+sudo hp-plugin -i
 ```
 
 ### 7b. Esposizione sicura (solo LAN + Tailscale)
@@ -969,7 +984,7 @@ sudo systemctl restart cups
 sudo cupsd -t
 ss -lntp | grep ':631'
 curl -I http://localhost:631
-curl -I http://<ip-lan-del-raspberry>:631
+curl -I http://ip_raspberry_CUPS:631
 ```
 
 Se cambi subnet LAN in futuro, aggiorna solo la riga `Allow 192.168.1.0/24`
@@ -983,7 +998,7 @@ sezione §11.
 Dal browser del tuo laptop (connesso a Tailscale):
 
 ```
-https://casa-mia-server:631/admin
+http://ip_raspberry_CUPS:631/admin
 ```
 
 *Add Printer* → seleziona la stampante (USB o di rete) → scegli il driver →
@@ -998,16 +1013,40 @@ sudo cupsenable Casa_Mia && sudo cupsaccept Casa_Mia
 lpstat -p                                   # verifica stato
 ```
 
+Per verificare la parte scanner:
+
+```bash
+scanimage -L
+hp-scan -i
+```
+
+Se `scanimage -L` non mostra device HP, riesegui `sudo hp-plugin -i` e verifica
+che `nome_utente` sia nel gruppo `scanner`.
+
 ### 7d. Stampa dai client via Tailscale
 
-Sui client aggiungi una stampante **IPP** puntando al nome Tailscale:
+Sui client aggiungi una stampante **IPP** puntando al Raspberry:
 
 ```
-ipp://casa-mia-server:631/printers/Casa_Mia
+ipp://ip_raspberry_CUPS:631/printers/Casa_Mia
 ```
 
 > mDNS/AirPrint non attraversa Tailscale in automatico: aggiungi la stampante
 > manualmente con l'URL IPP qui sopra.
+
+### 7e. Verifica rapida end-to-end (HP M1120)
+
+```bash
+lpstat -t
+lpinfo -v
+scanimage -L
+curl -I http://ip_raspberry_CUPS:631
+```
+
+Esito atteso:
+- `lpstat -t` mostra la coda stampante attiva.
+- `scanimage -L` mostra lo scanner HP.
+- `curl -I` restituisce `HTTP/1.1 200 OK`.
 
 ---
 
