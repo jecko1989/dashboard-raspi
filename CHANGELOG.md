@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Refactor
+
+* **backend:** aggiunge endpoint cambio password (`POST /auth/change-password`) con verifica vecchia password e hashing bcrypt; nuovo schema `ChangePasswordRequest` e servizio `change_password` in `user_service`
+* **frontend:** rework layout sidebar e header — toggle tema con icone sole/luna in fondo a sinistra, menu utente a icona in alto a destra con dropdown (nome utente, cambio password, logout), animazioni smooth collapse/expand sezioni sidebar, sidebar fissa all'altezza dello schermo su desktop
+
+---
+
 ## [0.8.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.7.0...v0.8.0) (2026-07-13)
 
 

@@ -11,7 +11,9 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 - Milestone v0.9.0 in avanzamento: servizi monitorati gestibili da UI (add/remove), controllo ventola CPU e rifiniture UX mobile nel dettaglio device.
 - Badge eventi in testata allineato alle ultime 24h; la modale mostra anche storico piu' ampio.
 - Svuotamento eventi contestuale (overview/luogo/device) riservato agli admin, con feedback toast auto-dismiss.
-- Sidebar aggiornata: `Impostazioni` sotto `Alert`, sezioni `Luoghi` e `Azioni` collassabili (default aperte).
+- Sidebar aggiornata: `Impostazioni` sotto `Alert`, sezioni `Luoghi` e `Azioni` collassabili con animazione smooth; toggle tema in fondo a sinistra con icone sole/luna.
+- Menu utente in alto a destra: icona omino con dropdown che mostra nome utente, cambio password e logout.
+- Cambio password disponibile per ogni utente autenticato tramite modale dedicata con validazione lato client e backend.
 - Azioni di creazione coerenti in tutta la UI: `Aggiungi luogo` e `Aggiungi device` aprono modali con chiusura anche da click esterno.
 - Dettaglio device semplificato: sezione `Prestazioni` con valori correnti, trend recente per card e pulsante CSV nello stesso box.
 - Layout dettaglio device riallineato: box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` senza card separata.
@@ -48,7 +50,10 @@ Documenti di riferimento rapido:
 - Shell web interattiva admin-only (WebSocket + SSH PTY, xterm.js)
 - Esportazione CSV delle metriche dal box `Prestazioni`
 - Aggiunta di nuovi device dalla dashboard (persistiti in `config/devices.yaml`)
-- Dark mode, timeline attività, badge VPN/latenza
+- Dark mode con toggle sun/moon in fondo alla sidebar, stato persistito in localStorage
+- Menu utente (dropdown) in alto a destra: cambio password e logout accessibili ad ogni utente
+- Cambio password: `POST /auth/change-password` con verifica vecchia password, hashing bcrypt della nuova
+- Timeline attività, badge VPN/latenza
 - Contatore eventi ultime 24h e azione `Svuota eventi` contestuale (solo admin)
 - Feedback operativi con toast auto-dismiss (stesso pattern della sezione eventi)
 - Interfaccia responsive mobile-first: navigazione a drawer, griglie e grafici adattivi, tabelle anti-overflow
