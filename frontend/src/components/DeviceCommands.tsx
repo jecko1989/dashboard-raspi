@@ -165,6 +165,9 @@ export function DeviceCommands({
     if (file) setPending({ kind: 'myst-restore', file });
   };
 
+  const lanAddressForLinks = (deviceLanAddress || '').trim() || 'ip_raspberry';
+  const mystSettingsUrl = `http://${lanAddressForLinks}:4449#settings`;
+
   const modalConfig = (): {
     title: string;
     description: React.ReactNode;
@@ -295,8 +298,6 @@ export function DeviceCommands({
   };
 
   const cfg = modalConfig();
-  const lanAddressForLinks = (deviceLanAddress || '').trim() || 'ip_raspberry';
-  const mystSettingsUrl = `http://${lanAddressForLinks}:4449#settings`;
   const replaceDetailPlaceholders = (value: string | null | undefined): string => {
     if (!value) return '';
     return value.replace(/<ip_lan>/g, lanAddressForLinks);
