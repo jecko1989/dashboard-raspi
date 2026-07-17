@@ -29,10 +29,25 @@ type ToastState = {
   type: 'success' | 'error';
 } | null;
 
+type PendingServiceAction = {
+  service: string;
+  action: 'start' | 'stop' | 'restart';
+} | null;
+
 function formatServiceLabel(serviceName: string): string {
   return serviceName.endsWith('.service')
     ? serviceName.slice(0, -'.service'.length)
     : serviceName;
+}
+
+function compareServiceNames(a: string, b: string): number {
+  return formatServiceLabel(a).localeCompare(formatServiceLabel(b), 'it', {
+    sensitivity: 'base',
+  });
+}
+
+function replaceServiceInText(text: string, serviceName: string): string {
+  return text.split(serviceName).join(formatServiceLabel(serviceName));
 }
 
 export function DeviceServicesPanel({
@@ -48,13 +63,16 @@ export function DeviceServicesPanel({
   const [logs, setLogs] = useState<{ service: string; content: string } | null>(null);
   const [pendingAddService, setPendingAddService] = useState<string | null>(null);
   const [pendingRemoveService, setPendingRemoveService] = useState<string | null>(null);
+  const [pendingServiceAction, setPendingServiceAction] =
+    useState<PendingServiceAction>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [toastProgress, setToastProgress] = useState(100);
 
   const loadServices = useCallback(async () => {
     setLoadingServices(true);
     try {
-      setServices(await getServices(deviceId));
+      const loaded = await getServices(deviceId);
+      setServices([...loaded].sort((a, b) => compareServiceNames(a.name, b.name)));
     } catch {
       setServices([]);
     } finally {
@@ -116,13 +134,6 @@ export function DeviceServicesPanel({
     service: string,
     action: 'start' | 'stop' | 'restart',
   ) => {
-    const labels = {
-      start: 'Avviare',
-      stop: 'Fermare',
-      restart: 'Riavviare',
-    } as const;
-    const ok = window.confirm(`${labels[action]} il servizio ${service}?`);
-    if (!ok) return;
     setToast(null);
     try {
       const res =
@@ -133,13 +144,22 @@ export function DeviceServicesPanel({
             : await commandRestartService(deviceId, service);
       setToast({
         type: res.status === 'success' ? 'success' : 'error',
-        message: res.detail ?? `${service}: ${res.status}`,
+        message:
+          (res.detail
+            ? replaceServiceInText(res.detail, service)
+            : null) ?? `${formatServiceLabel(service)}: ${res.status}`,
       });
       await loadServices();
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: string } } }).response?.data
         ?.detail;
-      setToast({ type: 'error', message: detail ?? (err as Error)?.message ?? 'Errore' });
+      setToast({
+        type: 'error',
+        message:
+          (detail
+            ? replaceServiceInText(detail, service)
+            : null) ?? (err as Error)?.message ?? 'Errore',
+      });
     }
   };
 
@@ -230,13 +250,27 @@ export function DeviceServicesPanel({
     await removeService(service);
   };
 
+  const requestServiceAction = (
+    service: string,
+    action: 'start' | 'stop' | 'restart',
+  ) => {
+    setPendingServiceAction({ service, action });
+  };
+
+  const confirmServiceAction = async () => {
+    if (!pendingServiceAction) return;
+    const { service, action } = pendingServiceAction;
+    setPendingServiceAction(null);
+    await runServiceAction(service, action);
+  };
+
   const selectableServices = availableServices.filter(
     (name) => !services.some((svc) => svc.name === name),
-  );
+  ).sort(compareServiceNames);
 
-  const startService = (service: string) => runServiceAction(service, 'start');
-  const stopService = (service: string) => runServiceAction(service, 'stop');
-  const restartService = (service: string) => runServiceAction(service, 'restart');
+  const startService = (service: string) => requestServiceAction(service, 'start');
+  const stopService = (service: string) => requestServiceAction(service, 'stop');
+  const restartService = (service: string) => requestServiceAction(service, 'restart');
 
   return (
     <section>
@@ -358,6 +392,44 @@ export function DeviceServicesPanel({
         destructive
         onConfirm={confirmRemoveService}
         onCancel={() => setPendingRemoveService(null)}
+      />
+
+      <CommandModal
+        open={Boolean(pendingServiceAction)}
+        title={
+          pendingServiceAction?.action === 'start'
+            ? 'Avviare servizio'
+            : pendingServiceAction?.action === 'restart'
+              ? 'Riavviare servizio'
+              : 'Fermare servizio'
+        }
+        description={
+          <>
+            Vuoi{' '}
+            {pendingServiceAction?.action === 'start'
+              ? 'avviare'
+              : pendingServiceAction?.action === 'restart'
+                ? 'riavviare'
+                : 'fermare'}{' '}
+            il servizio{' '}
+            <strong>
+              {pendingServiceAction
+                ? formatServiceLabel(pendingServiceAction.service)
+                : ''}
+            </strong>
+            ?
+          </>
+        }
+        confirmLabel={
+          pendingServiceAction?.action === 'start'
+            ? 'Avvia'
+            : pendingServiceAction?.action === 'restart'
+              ? 'Riavvia'
+              : 'Ferma'
+        }
+        destructive={pendingServiceAction?.action === 'stop'}
+        onConfirm={confirmServiceAction}
+        onCancel={() => setPendingServiceAction(null)}
       />
 
       {toast &&
