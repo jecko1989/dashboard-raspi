@@ -915,6 +915,14 @@ sudo cupsctl --remote-any --remote-admin --share-printers
 sudo nano /etc/cups/cupsd.conf
 ```
 
+Verifica subito che i flag CUPS siano corretti:
+
+```bash
+cupsctl | grep -E '^_remote_admin|^_remote_any|^_share_printers|^WebInterface|^ServerAlias'
+```
+
+Valori attesi: `_remote_admin=1`, `_remote_any=1`, `_share_printers=1`.
+
 Configura ascolto e accessi in `/etc/cups/cupsd.conf` (esempio):
 
 ```apache
@@ -998,8 +1006,11 @@ sezione §11.
 Dal browser del tuo laptop (connesso a Tailscale):
 
 ```
-http://ip_raspberry_CUPS:631/admin
+https://hostname_raspberry_CUPS:631/admin
 ```
+
+Se apri la versione HTTP di `/admin`, CUPS risponde con `Upgrade Required`: e
+normale, l'admin richiede HTTPS.
 
 *Add Printer* → seleziona la stampante (USB o di rete) → scegli il driver →
 abilita **Share this printer**.
@@ -1047,6 +1058,222 @@ Esito atteso:
 - `lpstat -t` mostra la coda stampante attiva.
 - `scanimage -L` mostra lo scanner HP.
 - `curl -I` restituisce `HTTP/1.1 200 OK`.
+
+Per la parte admin HTTPS e normale ricevere `401 Unauthorized` finche non
+inserisci credenziali admin:
+
+```bash
+curl -k -I https://hostname_raspberry_CUPS:631/admin
+```
+
+### 7f. TLS su CUPS (eliminare warning browser)
+
+Per non vedere avvisi HTTPS in browser servono due cose:
+1. certificato con SAN coerente con il nome usato nell'URL;
+2. certificato emesso da CA fidata dal client (oppure CA privata installata sul client).
+
+#### Opzione A (preferita): certificato da Tailscale
+
+Se il tuo account tailnet supporta i cert:
+
+```bash
+sudo tailscale cert \
+  --cert-file /etc/cups/ssl/server.crt \
+  --key-file /etc/cups/ssl/server.key \
+  fqdn_magicdns_CUPS
+```
+
+Poi in `/etc/cups/cupsd.conf`:
+
+```apache
+WebInterface Yes
+ServerName hostname_raspberry_CUPS
+ServerAlias * hostname_raspberry_CUPS fqdn_magicdns_CUPS
+```
+
+Riavvio e test:
+
+```bash
+sudo cupsd -t
+sudo systemctl restart cups
+curl -k -I https://fqdn_magicdns_CUPS:631/admin
+```
+
+#### Opzione B (fallback): CA privata locale + CRL + certificato server
+
+Se `tailscale cert` non e disponibile per il tuo account, crea una CA locale,
+pubblica una CRL in HTTP e firma il certificato server CUPS con SAN coerenti.
+Questo evita errori Windows tipo `CRYPT_E_NO_REVOCATION_CHECK`.
+
+```bash
+sudo mkdir -p /etc/cups/ssl/localca/{private,newcerts,crl,public}
+sudo touch /etc/cups/ssl/localca/index.txt
+echo 1000 | sudo tee /etc/cups/ssl/localca/serial >/dev/null
+echo 1000 | sudo tee /etc/cups/ssl/localca/crlnumber >/dev/null
+
+sudo openssl genrsa -out /etc/cups/ssl/localca/localca.key 4096
+sudo openssl req -x509 -new -nodes \
+  -key /etc/cups/ssl/localca/localca.key \
+  -sha256 -days 3650 \
+  -subj '/CN=CUPS Local CA' \
+  -addext 'basicConstraints=critical,CA:TRUE' \
+  -addext 'keyUsage=critical,keyCertSign,cRLSign' \
+  -out /etc/cups/ssl/localca/localca.crt
+
+cat >/tmp/cups-server.cnf <<'EOF'
+[ca]
+default_ca = CA_default
+
+[CA_default]
+dir = /etc/cups/ssl/localca
+certs = $dir
+crl_dir = $dir/crl
+database = $dir/index.txt
+new_certs_dir = $dir/newcerts
+certificate = $dir/localca.crt
+private_key = $dir/localca.key
+serial = $dir/serial
+crlnumber = $dir/crlnumber
+default_md = sha256
+default_days = 825
+default_crl_days = 30
+policy = policy_loose
+copy_extensions = copy
+
+[policy_loose]
+commonName = supplied
+
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+distinguished_name = dn
+req_extensions = v3_req
+
+[dn]
+CN = hostname_raspberry_CUPS
+
+[v3_req]
+subjectAltName = @alt_names
+basicConstraints = critical, CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+crlDistributionPoints = URI:http://hostname_raspberry_CUPS:8085/cups-localca.crl
+
+[alt_names]
+DNS.1 = hostname_raspberry_CUPS
+DNS.2 = fqdn_magicdns_CUPS
+IP.1 = ip_raspberry_CUPS
+EOF
+
+openssl req -new -nodes -newkey rsa:2048 \
+  -keyout /tmp/server.key \
+  -out /tmp/server.csr \
+  -config /tmp/cups-server.cnf
+
+sudo openssl ca -batch -config /tmp/cups-server.cnf \
+  -in /tmp/server.csr \
+  -out /etc/cups/ssl/server.crt \
+  -extensions v3_req
+
+sudo mv /tmp/server.key /etc/cups/ssl/server.key
+
+sudo chown root:lp /etc/cups/ssl/server.key
+sudo chmod 640 /etc/cups/ssl/server.key
+sudo chmod 644 /etc/cups/ssl/server.crt
+
+# Genera e pubblica CRL + certificato CA
+sudo openssl ca -gencrl -config /tmp/cups-server.cnf -out /etc/cups/ssl/localca/crl/cups-localca.crl
+sudo cp /etc/cups/ssl/localca/localca.crt /etc/cups/ssl/localca/public/cups-localca.crt
+sudo cp /etc/cups/ssl/localca/crl/cups-localca.crl /etc/cups/ssl/localca/public/cups-localca.crl
+
+# Static server CRL (porta 8085)
+cat >/tmp/cups-localca-http.service <<'EOF2'
+[Unit]
+Description=Static HTTP server for CUPS Local CA CRL
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/etc/cups/ssl/localca/public
+ExecStart=/usr/bin/python3 -m http.server 8085 --bind 0.0.0.0
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF2
+
+sudo mv /tmp/cups-localca-http.service /etc/systemd/system/cups-localca-http.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now cups-localca-http.service
+curl -I http://hostname_raspberry_CUPS:8085/cups-localca.crl
+```
+
+Con questa opzione l'avviso sparisce solo dopo aver importato
+`/etc/cups/ssl/localca/localca.crt` nello store certificati fidati del client.
+Su Windows conviene importarlo in **Autorita di certificazione radice attendibili
+del Computer locale** (prompt PowerShell/CMD avviato come amministratore).
+
+Import Windows (amministratore):
+
+```powershell
+certutil -addstore Root C:\percorso\cups-localca.crt
+```
+
+#### Rinnovo automatico (consigliato)
+
+Per evitare scadenze/avvisi nel tempo, configura un job giornaliero che:
+1. rinnova il certificato server solo se manca o sta per scadere;
+2. rigenera la CRL;
+3. aggiorna i file pubblicati per i client.
+
+Service e timer (placeholder):
+
+```ini
+# /etc/systemd/system/cups-localca-renew.service
+[Unit]
+Description=Renew CUPS local CA cert and CRL
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cups-localca-renew.sh
+User=root
+Group=root
+```
+
+```ini
+# /etc/systemd/system/cups-localca-renew.timer
+[Unit]
+Description=Daily renewal of CUPS local cert and CRL
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+RandomizedDelaySec=20m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Abilitazione:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now cups-localca-renew.timer
+sudo systemctl start cups-localca-renew.service
+```
+
+Verifica:
+
+```bash
+systemctl status cups-localca-renew.service --no-pager
+systemctl status cups-localca-renew.timer --no-pager
+systemctl list-timers --all | grep cups-localca-renew
+```
 
 ---
 
