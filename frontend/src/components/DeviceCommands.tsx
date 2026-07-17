@@ -377,8 +377,8 @@ export function DeviceCommands({
           </span>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Modalità</span>
+          <label className="flex items-center gap-2 text-sm">
+            <span className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">Modalità</span>
             <select
               value={fanMode}
               onChange={(e) => setFanMode(e.target.value as 'pwm' | 'fixed')}
@@ -391,8 +391,8 @@ export function DeviceCommands({
           </label>
 
           {fanMode === 'fixed' && (
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-xs text-gray-500 dark:text-gray-400">RPM target</span>
+            <label className="flex items-center gap-2 text-sm">
+              <span className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">RPM target</span>
               <input
                 type="number"
                 min={300}
