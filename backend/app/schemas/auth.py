@@ -25,3 +25,8 @@ class UserRead(BaseModel):
     username: str
     is_admin: bool
     is_active: bool
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
