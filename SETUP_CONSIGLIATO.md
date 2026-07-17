@@ -45,6 +45,7 @@ soprattutto **monitorabile da un'unica dashboard**, mantenendo la possibilità d
 8. [Integrazione con la Raspberry Dashboard](#8-integrazione-con-la-raspberry-dashboard)
 9. [Checklist finale](#9-checklist-finale)
 10. [Troubleshooting](#10-troubleshooting)
+11. [Appendice opzionale — UFW](#11-appendice-opzionale--ufw)
 
 ---
 
@@ -175,7 +176,7 @@ myst) e **saltano Docker/dashboard**.
 | Sezione | Nodo dashboard (casa mia) | Nodi "solo nodo" (madre, sorella, suocero) |
 |---|:---:|:---:|
 | §2 Ubuntu Server | ✅ | ✅ |
-| §3 Hardening (SSH, UFW) | ✅ | ✅ |
+| §3 Hardening (SSH) | ✅ | ✅ |
 | §4 Tailscale (mesh) | ✅ | ✅ |
 | §5 Subnet router | ✅ | ✅ (madre, sorella, suocero) |
 | §6 Exit node | — | ✅ solo casa suocero |
@@ -290,20 +291,15 @@ sudo systemctl restart ssh
 > Fai questo **dopo** aver verificato che il login a chiave funziona, altrimenti
 > rischi di chiuderti fuori.
 
-### 3b. Firewall (UFW)
+### 3b. Esposizione rete (senza firewall locale)
 
 ```bash
-sudo apt install -y ufw
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow in on tailscale0        # tutto ciò che arriva dalla mesh
-sudo ufw allow OpenSSH                 # SSH sulla LAN (opzionale, per gestione locale)
-sudo ufw enable
-sudo ufw status verbose
+# Sul router: NON aprire port-forward verso Raspberry (22/631/8000/8080/4449).
+# Sul Raspberry: accesso remoto solo via Tailscale + SSH a chiave.
 ```
 
-Con questa regola i servizi (SSH, CUPS, ecc.) sono raggiungibili **solo** dalla
-LAN locale e dalla mesh Tailscale, **non** da internet.
+Con questa impostazione (niente port-forward dal router), i servizi restano
+raggiungibili da LAN/Tailscale ma non da internet pubblico.
 
 ### 3c. Aggiornamenti automatici di sicurezza
 
@@ -806,12 +802,8 @@ Conseguenze possibili:
 - Sugli altri nodi (casa mia, sorella, madre), usati **solo** per accesso LAN e
   monitoraggio, Myst può restare attivo senza impatti sull'exit node.
 - **Chiudi l'UI di Myst all'esterno.** L'API/UI su `4449` non va mai esposta a
-  internet: con UFW (§3b) è già così, ma se vuoi consultarla da remoto passa
-  dalla mesh Tailscale, non dal FritzBox:
-
-  ```bash
-  sudo ufw allow in on tailscale0 to any port 4449 proto tcp   # UI myst solo via mesh
-  ```
+  internet: senza port-forward sul router sei già coperto. Per consultarla da
+  remoto passa dalla mesh Tailscale, non dal FritzBox.
 
 - **Disco/SSD.** Myst è leggero, ma logga e usa un po' di spazio: se l'SSD è
   piccolo, tienilo d'occhio insieme alle immagini Docker della dashboard (§8b).
@@ -904,16 +896,20 @@ sudo usermod -aG lpadmin nome_utente        # per amministrare le stampanti
 ### 7b. Esposizione sicura (solo LAN + Tailscale)
 
 ```bash
-sudo cupsctl --share-printers --remote-admin
+sudo cupsctl --remote-any --remote-admin --share-printers
 sudo nano /etc/cups/cupsd.conf
 ```
 
-Configura l'ascolto e gli accessi (esempio):
+Configura ascolto e accessi in `/etc/cups/cupsd.conf` (esempio):
 
 ```apache
 # Ascolta su localhost, sulla LAN e sull'interfaccia Tailscale
 Listen localhost:631
 Listen 631
+Listen /run/cups/cups.sock
+
+# Evita 403 dovuti al controllo Host header quando accedi via IP/nome
+ServerAlias *
 
 <Location />
   Order allow,deny
@@ -923,24 +919,64 @@ Listen 631
 </Location>
 
 <Location /admin>
+  AuthType Default
+  Require user @SYSTEM
   Order allow,deny
   Allow localhost
   Allow 100.64.0.0/10         # amministrazione solo dalla mesh
 </Location>
+
+<Location /admin/conf>
+  AuthType Default
+  Require user @SYSTEM
+  Order allow,deny
+  Allow localhost
+  Allow 100.64.0.0/10
+</Location>
+
+<Location /admin/log>
+  AuthType Default
+  Require user @SYSTEM
+  Order allow,deny
+  Allow localhost
+  Allow 100.64.0.0/10
+</Location>
 ```
 
-Riavvia:
+Su Ubuntu con systemd socket activation, CUPS puo ascoltare solo in locale
+anche con `Listen 631`. In quel caso aggiungi un override per il socket:
 
 ```bash
+sudo mkdir -p /etc/systemd/system/cups.socket.d
+sudo nano /etc/systemd/system/cups.socket.d/override.conf
+```
+
+Contenuto del file:
+
+```ini
+[Socket]
+ListenStream=
+ListenStream=/run/cups/cups.sock
+ListenStream=631
+```
+
+Applica modifiche e verifica:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart cups.socket
 sudo systemctl restart cups
+sudo cupsd -t
+ss -lntp | grep ':631'
+curl -I http://localhost:631
+curl -I http://<ip-lan-del-raspberry>:631
 ```
 
-Il firewall (passo 3b) già limita la porta 631 alla LAN e alla mesh. Se vuoi
-essere esplicito:
+Se cambi subnet LAN in futuro, aggiorna solo la riga `Allow 192.168.1.0/24`
+con la nuova rete e riavvia CUPS.
 
-```bash
-sudo ufw allow in on tailscale0 to any port 631 proto tcp
-```
+Se in futuro attivi UFW, i comandi relativi sono raccolti in fondo nella
+sezione §11.
 
 ### 7c. Aggiunta della stampante
 
@@ -1036,25 +1072,18 @@ router. Dal PC apri semplicemente:
 http://<IP-LAN-del-raspberry>:8080      # es. http://192.168.1.50:8080
 ```
 
-Servono però tre accortezze **sul Raspberry** (non sul FritzBox):
+Servono però due accortezze **sul Raspberry** (non sul FritzBox):
 
-1. **Firewall UFW** — la config del §3b consente solo `tailscale0` + `OpenSSH`,
-   quindi le porte della dashboard sarebbero bloccate dalla LAN. Aprile per la
-   subnet di casa:
-
-   ```bash
-   sudo ufw allow from 192.168.1.0/24 to any port 8080 proto tcp   # frontend
-   sudo ufw allow from 192.168.1.0/24 to any port 8000 proto tcp   # API backend
-   ```
-
-2. **`VITE_API_BASE_URL`** — il frontend chiama l'API da questo URL. Il default
+1. **`VITE_API_BASE_URL`** — il frontend chiama l'API da questo URL. Il default
    `http://localhost:8000` è sbagliato quando apri la dashboard da un *altro* PC
    (per quel browser "localhost" è il PC stesso). Impostalo all'IP LAN (o al nome
    Tailscale) del Raspberry, come nel §8b (`.env`).
 
-3. **IP fisso al Raspberry** — sul FritzBox imposta una **DHCP reservation**
+2. **IP fisso al Raspberry** — sul FritzBox imposta una **DHCP reservation**
    (Rete → assegna sempre lo stesso IP al MAC del Pi), così l'indirizzo non
    cambia. Questa è l'**unica** cosa da fare sul router: nessuna porta da inoltrare.
+
+Se in futuro attivi UFW, le regole per dashboard LAN sono in §11.
 
 > **Da fuori casa** raggiungi la dashboard con il nome/IP Tailscale del Raspberry
 > (`http://casa-mia:8080`), sempre **senza** toccare il FritzBox. Se vuoi usarla
@@ -1088,7 +1117,7 @@ Una volta che i nodi sono nella mesh:
 Per ogni appartamento:
 
 - [ ] Ubuntu (Server o Desktop) installato, aggiornato, hostname impostato, IP riservato.
-- [ ] SSH a chiave, `PasswordAuthentication no`, UFW attivo.
+- [ ] SSH a chiave, `PasswordAuthentication no`, `PermitRootLogin no`.
 - [ ] Tailscale attivo, MagicDNS on, key expiry disabilitata sul nodo.
 - [ ] Nodo Mysterium (myst) installato e servizio `mysterium-node` attivo.
 - [ ] (Opz.) Subnet router approvato, se ti serve la LAN.
@@ -1097,6 +1126,17 @@ Per ogni appartamento:
 - [ ] **Sudoers NOPASSWD** (`/etc/sudoers.d/dashboard-raspi`) configurato con il blocco completo (§6j), così i bottoni della dashboard non chiedono la password.
 - [ ] `devices.yaml` aggiornato con il nome Tailscale del nodo.
 - [ ] Dashboard: device online + metriche **senza** OpenVPN.
+
+### 9a. Checklist rapida "no-UFW"
+
+Se **non** vuoi usare UFW, verifica almeno questi punti su ogni nodo:
+
+- [ ] Nessun port-forward sul router verso porte dei Raspberry (`22`, `631`, `8000`, `8080`, `4449`).
+- [ ] UPnP disabilitato sul router (consigliato).
+- [ ] Accesso remoto amministrativo solo via Tailscale (`100.x` / MagicDNS).
+- [ ] SSH con sola chiave (password disabilitata) e login root disabilitato.
+- [ ] CUPS amministrabile da localhost + mesh Tailscale; LAN solo se davvero necessaria.
+- [ ] UI Myst (`:4449`) non esposta su internet, uso via LAN/Tailscale.
 
 Quando tutto è validato su tutte le case, puoi valutare di **dismettere i server
 OpenVPN** (e chiudere le porte inoltrate sui router), tenendoli eventualmente solo
@@ -1123,6 +1163,7 @@ per la smart TV chiusa.
 | Subnet LAN in conflitto | due case con la stessa subnet: rinumerane una o usa `4via6` |
 | Non voglio full-tunnel sempre | con Tailscale è già così: l'exit node è **opzionale**, lo accendi solo per lo streaming |
 | DAZN/Netflix mi bloccano dall'exit node | l'IP potrebbe essere in blacklist per il traffico **Mysterium** sullo stesso nodo: spegni myst sul nodo exit (`sudo systemctl stop mysterium-node`) — vedi §6i |
+| Non uso UFW, è un problema? | No, se non fai port-forward sul router, usi Tailscale per accesso remoto e tieni SSH hardening attivo (vedi checklist §9a). |
 
 ---
 
@@ -1134,4 +1175,36 @@ tailscale ip -4                  # IP 100.x del nodo
 sudo tailscale up --reset ...    # riapplica i flag da zero
 sudo tailscale down              # esci dalla mesh (rollback)
 tailscale netcheck               # diagnosi rete/NAT
+```
+
+---
+
+## 11. Appendice opzionale — UFW
+
+Questa sezione è **opzionale**: usala solo se in futuro decidi di attivare UFW.
+
+### 11a. Base UFW
+
+```bash
+sudo apt install -y ufw
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow in on tailscale0
+sudo ufw allow OpenSSH
+sudo ufw enable
+sudo ufw status verbose
+```
+
+### 11b. Regole aggiuntive utili
+
+```bash
+# CUPS via mesh
+sudo ufw allow in on tailscale0 to any port 631 proto tcp
+
+# UI Myst via mesh
+sudo ufw allow in on tailscale0 to any port 4449 proto tcp
+
+# Dashboard da LAN (adatta la subnet)
+sudo ufw allow from 192.168.1.0/24 to any port 8080 proto tcp
+sudo ufw allow from 192.168.1.0/24 to any port 8000 proto tcp
 ```
