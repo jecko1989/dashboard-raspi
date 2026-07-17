@@ -14,6 +14,7 @@ import type {
   ThresholdsUpdatePayload,
   ServiceStatus,
   ServiceLogs,
+  DeviceServicesRead,
   CommandResult,
   CommandAudit,
   SSHKeyResult,
@@ -219,6 +220,37 @@ export async function updateThresholds(
 
 export async function getServices(deviceId: string): Promise<ServiceStatus[]> {
   const { data } = await api.get<ServiceStatus[]>(`/devices/${deviceId}/services`);
+  return data;
+}
+
+export async function getAvailableServices(deviceId: string): Promise<string[]> {
+  const { data } = await api.get<string[]>(`/devices/${deviceId}/services/available`);
+  return data;
+}
+
+export async function addMonitoredService(
+  deviceId: string,
+  serviceName: string,
+): Promise<DeviceServicesRead> {
+  const { data } = await api.post<DeviceServicesRead>(`/devices/${deviceId}/services`, {
+    name: serviceName,
+    confirm: true,
+  });
+  window.dispatchEvent(new Event('devices:changed'));
+  return data;
+}
+
+export async function removeMonitoredService(
+  deviceId: string,
+  serviceName: string,
+): Promise<DeviceServicesRead> {
+  const { data } = await api.delete<DeviceServicesRead>(
+    `/devices/${deviceId}/services/${serviceName}`,
+    {
+      params: { confirm: true },
+    },
+  );
+  window.dispatchEvent(new Event('devices:changed'));
   return data;
 }
 

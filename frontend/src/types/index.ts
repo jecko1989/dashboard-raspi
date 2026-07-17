@@ -150,6 +150,11 @@ export interface ServiceLogs {
   logs: string;
 }
 
+export interface DeviceServicesRead {
+  device_id: string;
+  services: string[];
+}
+
 export interface CommandAudit {
   id: number;
   device_id: string;

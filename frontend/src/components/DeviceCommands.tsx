@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { CommandResult, Metric } from '../types';
 import {
   commandFanControl,
@@ -33,6 +34,8 @@ interface DeviceCommandsProps {
   deviceLanAddress?: string;
   metric?: Metric | null;
   onChanged?: () => void;
+  leadingActions?: ReactNode;
+  afterMystSection?: ReactNode;
 }
 
 // Etichette leggibili per il banner "operazione in corso".
@@ -64,6 +67,8 @@ export function DeviceCommands({
   deviceLanAddress,
   metric,
   onChanged,
+  leadingActions,
+  afterMystSection,
 }: DeviceCommandsProps) {
   const { isAdmin } = useAuth();
   const [pending, setPending] = useState<Pending>(null);
@@ -330,6 +335,7 @@ export function DeviceCommands({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
+        {leadingActions}
         <button
           onClick={() => setPending({ kind: 'update' })}
           disabled={running}
@@ -507,6 +513,7 @@ export function DeviceCommands({
             {mystError}
           </div>
         )}
+        {afterMystSection && <div className="mt-3">{afterMystSection}</div>}
       </div>
 
       {running && runningKind && (

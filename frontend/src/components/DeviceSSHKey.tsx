@@ -3,8 +3,17 @@ import type { SSHKeyResult } from '../types';
 import { generateSSHKey } from '../services/api';
 import { CommandModal } from './CommandModal';
 
-interface DeviceSSHKeyProps {
-  deviceId: string;
+interface DeviceSSHKeyController {
+  confirmForce: boolean | null;
+  running: boolean;
+  result: SSHKeyResult | null;
+  error: string | null;
+  needsForce: boolean;
+  generationHint: string;
+  startGenerate: () => void;
+  startOverwrite: () => void;
+  confirmAction: () => void;
+  cancelAction: () => void;
 }
 
 // Copia testo negli appunti con feedback minimale.
@@ -24,13 +33,15 @@ function CopyButton({ text, label = 'Copia' }: { text: string; label?: string })
   );
 }
 
-// Pannello per generare una chiave SSH per il device (solo admin lato backend).
-export function DeviceSSHKey({ deviceId }: DeviceSSHKeyProps) {
+// Stato condiviso per chiave SSH, riutilizzabile tra pulsante in alto e pannello dettagli in basso.
+export function useDeviceSSHKey(deviceId: string): DeviceSSHKeyController {
   const [confirmForce, setConfirmForce] = useState<boolean | null>(null);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<SSHKeyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [needsForce, setNeedsForce] = useState(false);
+  const generationHint =
+    'Genera una coppia Ed25519 e (se possibile) salva la privata nel percorso del device. Poi installa la chiave pubblica sul Raspberry scegliendo uno dei due metodi mostrati qui sotto.';
 
   const run = async (force: boolean) => {
     setRunning(true);
@@ -56,52 +67,96 @@ export function DeviceSSHKey({ deviceId }: DeviceSSHKeyProps) {
     }
   };
 
+  return {
+    confirmForce,
+    running,
+    result,
+    error,
+    needsForce,
+    generationHint,
+    startGenerate: () => setConfirmForce(false),
+    startOverwrite: () => setConfirmForce(true),
+    confirmAction: () => run(Boolean(confirmForce)),
+    cancelAction: () => setConfirmForce(null),
+  };
+}
+
+interface DeviceSSHKeyActionsProps {
+  controller: DeviceSSHKeyController;
+}
+
+export function DeviceSSHKeyActions({ controller }: DeviceSSHKeyActionsProps) {
+  return (
+    <>
+      <button
+        onClick={controller.startGenerate}
+        disabled={controller.running}
+        title={controller.generationHint}
+        className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
+      >
+        🔑 Genera chiave SSH
+      </button>
+      {controller.needsForce && (
+        <button
+          onClick={controller.startOverwrite}
+          disabled={controller.running}
+          className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+        >
+          Sovrascrivi chiave esistente
+        </button>
+      )}
+
+      <CommandModal
+        open={controller.confirmForce !== null}
+        title={
+          controller.confirmForce
+            ? 'Sovrascrivere la chiave esistente?'
+            : 'Generare una chiave SSH?'
+        }
+        description={
+          controller.confirmForce
+            ? 'Attenzione: sovrascrivere la chiave romperà l’accesso SSH finché non installi la nuova chiave pubblica sul Raspberry. Dopo la sovrascrittura reinstallala subito per evitare errori di monitoraggio.'
+            : 'Verrà generata una nuova coppia di chiavi Ed25519 per questo device.'
+        }
+        destructive={Boolean(controller.confirmForce)}
+        confirmLabel={controller.confirmForce ? 'Sovrascrivi' : 'Genera'}
+        onConfirm={controller.confirmAction}
+        onCancel={controller.cancelAction}
+      />
+    </>
+  );
+}
+
+interface DeviceSSHKeyDetailsProps {
+  controller: DeviceSSHKeyController;
+}
+
+export function DeviceSSHKeyDetails({ controller }: DeviceSSHKeyDetailsProps) {
+  if (!controller.running && !controller.error && !controller.result) {
+    return null;
+  }
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setConfirmForce(false)}
-          disabled={running}
-          className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
-        >
-          🔑 Genera chiave SSH
-        </button>
-        {needsForce && (
-          <button
-            onClick={() => setConfirmForce(true)}
-            disabled={running}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
-          >
-            Sovrascrivi chiave esistente
-          </button>
-        )}
-      </div>
+      {controller.running && <p className="text-sm text-gray-500">Generazione in corso…</p>}
 
-      <p className="text-xs text-gray-500">
-        Genera una coppia Ed25519 e (se possibile) salva la privata nel percorso
-        del device. Poi installa la chiave pubblica sul Raspberry scegliendo uno
-        dei due metodi mostrati qui sotto.
-      </p>
-
-      {running && <p className="text-sm text-gray-500">Generazione in corso…</p>}
-
-      {error && (
+      {controller.error && (
         <div className="rounded-md border-l-4 border-amber-400 bg-amber-50 p-3 text-sm dark:bg-amber-900/20">
-          {error}
+          {controller.error}
         </div>
       )}
 
-      {result && (
+      {controller.result && (
         <div className="space-y-3 rounded-md border-l-4 border-green-400 bg-green-50 p-3 text-sm dark:bg-green-900/20">
-          <p className="font-medium">{result.detail}</p>
+          <p className="font-medium">{controller.result.detail}</p>
 
           <div>
             <div className="mb-1 flex items-center justify-between">
               <span className="font-medium">Chiave pubblica</span>
-              <CopyButton text={result.public_key} label="Copia chiave pubblica" />
+              <CopyButton text={controller.result.public_key} label="Copia chiave pubblica" />
             </div>
             <pre className="max-h-24 overflow-auto whitespace-pre-wrap break-all rounded bg-gray-100 p-2 text-xs dark:bg-gray-900">
-              {result.public_key}
+              {controller.result.public_key}
             </pre>
           </div>
 
@@ -116,10 +171,10 @@ export function DeviceSSHKey({ deviceId }: DeviceSSHKeyProps) {
             </p>
             <div className="mb-1 flex items-center justify-between">
               <span className="font-medium">Comando installazione</span>
-              <CopyButton text={result.install_command} label="Copia comando Metodo 1" />
+              <CopyButton text={controller.result.install_command} label="Copia comando Metodo 1" />
             </div>
             <pre className="overflow-auto whitespace-pre-wrap break-all rounded bg-gray-100 p-2 text-xs dark:bg-gray-900">
-              {result.install_command}
+              {controller.result.install_command}
             </pre>
           </div>
 
@@ -130,7 +185,7 @@ export function DeviceSSHKey({ deviceId }: DeviceSSHKeyProps) {
               aggiungi la chiave pubblica a <code>~/.ssh/authorized_keys</code>.
             </p>
             <pre className="overflow-auto whitespace-pre-wrap break-all rounded bg-gray-100 p-2 text-xs dark:bg-gray-900">
-              {result.manual_hint}
+              {controller.result.manual_hint}
             </pre>
           </div>
 
@@ -143,39 +198,25 @@ export function DeviceSSHKey({ deviceId }: DeviceSSHKeyProps) {
             </ol>
           </div>
 
-          {result.private_key && (
+          {controller.result.private_key && (
             <div>
               <div className="mb-1 flex items-center justify-between">
                 <span className="font-medium text-red-600">
-                  Chiave privata — salvala tu in {result.key_path}
+                  Chiave privata — salvala tu in {controller.result.key_path}
                 </span>
-                <CopyButton text={result.private_key} />
+                <CopyButton text={controller.result.private_key} />
               </div>
               <p className="mb-1 text-xs text-red-600">
                 Non è stato possibile salvarla su disco (es. cartella in sola
                 lettura in Docker). Copiala ora: non verrà più mostrata.
               </p>
               <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-gray-100 p-2 text-xs dark:bg-gray-900">
-                {result.private_key}
+                {controller.result.private_key}
               </pre>
             </div>
           )}
         </div>
       )}
-
-      <CommandModal
-        open={confirmForce !== null}
-        title={confirmForce ? 'Sovrascrivere la chiave esistente?' : 'Generare una chiave SSH?'}
-        description={
-          confirmForce
-            ? 'Attenzione: sovrascrivere la chiave romperà l’accesso SSH finché non installi la nuova chiave pubblica sul Raspberry. Dopo la sovrascrittura reinstallala subito per evitare errori di monitoraggio.'
-            : 'Verrà generata una nuova coppia di chiavi Ed25519 per questo device.'
-        }
-        destructive={Boolean(confirmForce)}
-        confirmLabel={confirmForce ? 'Sovrascrivi' : 'Genera'}
-        onConfirm={() => run(Boolean(confirmForce))}
-        onCancel={() => setConfirmForce(null)}
-      />
     </div>
   );
 }

@@ -21,7 +21,11 @@ import { MetricChart } from '../components/MetricChart';
 import { EventsPanel } from '../components/EventsPanel';
 import { DeviceCommands } from '../components/DeviceCommands';
 import { DeviceServicesPanel } from '../components/DeviceServicesPanel';
-import { DeviceSSHKey } from '../components/DeviceSSHKey';
+import {
+  DeviceSSHKeyActions,
+  DeviceSSHKeyDetails,
+  useDeviceSSHKey,
+} from '../components/DeviceSSHKey';
 import { DeviceFormModal } from '../components/DeviceFormModal';
 import { CommandModal } from '../components/CommandModal';
 import {
@@ -112,6 +116,8 @@ export function DeviceDetailPage() {
       setError((err as Error)?.message ?? 'Errore');
     }
   }, [deviceId]);
+
+  const sshKeyController = useDeviceSSHKey(device?.id ?? deviceId ?? '');
 
   const handleClearEvents = async () => {
     if (!deviceId) return;
@@ -268,16 +274,17 @@ export function DeviceDetailPage() {
             deviceLanAddress={device.ip_vpn}
             metric={metric}
             onChanged={load}
+            leadingActions={<DeviceSSHKeyActions controller={sshKeyController} />}
+            afterMystSection={<DeviceSSHKeyDetails controller={sshKeyController} />}
           />
         </div>
         <div>
-          <DeviceServicesPanel deviceId={device.id} />
+          <DeviceServicesPanel
+            deviceId={device.id}
+            deviceLanAddress={device.ip_vpn}
+            onChanged={load}
+          />
         </div>
-      </section>
-
-      <section>
-        <h3 className="mb-3 text-lg font-semibold">Chiave SSH</h3>
-        <DeviceSSHKey deviceId={device.id} />
       </section>
 
       {editing && (

@@ -1,25 +1,55 @@
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ServiceStatus } from '../types';
 import {
+  addMonitoredService,
   commandRestartService,
   commandStartService,
   commandStopService,
+  getAvailableServices,
   getServiceLogs,
   getServices,
+  removeMonitoredService,
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { ServiceStatusTable } from './ServiceStatusTable';
+import { CommandModal } from './CommandModal';
 
 interface DeviceServicesPanelProps {
   deviceId: string;
+  deviceLanAddress?: string;
+  onChanged?: () => void;
 }
 
-export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
+const SERVICE_NAME_RE = /^[A-Za-z0-9._@:-]{1,128}$/;
+const TOAST_DURATION_MS = 3200;
+
+type ToastState = {
+  message: string;
+  type: 'success' | 'error';
+} | null;
+
+function formatServiceLabel(serviceName: string): string {
+  return serviceName.endsWith('.service')
+    ? serviceName.slice(0, -'.service'.length)
+    : serviceName;
+}
+
+export function DeviceServicesPanel({
+  deviceId,
+  onChanged,
+}: DeviceServicesPanelProps) {
+  const { isAdmin } = useAuth();
   const [services, setServices] = useState<ServiceStatus[]>([]);
+  const [availableServices, setAvailableServices] = useState<string[]>([]);
+  const [selectedService, setSelectedService] = useState('');
   const [loadingServices, setLoadingServices] = useState(true);
+  const [savingService, setSavingService] = useState(false);
   const [logs, setLogs] = useState<{ service: string; content: string } | null>(null);
-  const [result, setResult] = useState<{ status: 'success' | 'error'; detail: string } | null>(
-    null,
-  );
+  const [pendingAddService, setPendingAddService] = useState<string | null>(null);
+  const [pendingRemoveService, setPendingRemoveService] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
+  const [toastProgress, setToastProgress] = useState(100);
 
   const loadServices = useCallback(async () => {
     setLoadingServices(true);
@@ -35,6 +65,43 @@ export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
   useEffect(() => {
     void loadServices();
   }, [loadServices]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadAvailable = async () => {
+      try {
+        const list = await getAvailableServices(deviceId);
+        if (mounted) setAvailableServices(list);
+      } catch {
+        if (mounted) setAvailableServices([]);
+      }
+    };
+    void loadAvailable();
+    return () => {
+      mounted = false;
+    };
+  }, [deviceId]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const startedAt = Date.now();
+    setToastProgress(100);
+    const intervalId = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, TOAST_DURATION_MS - elapsed);
+      setToastProgress((remaining / TOAST_DURATION_MS) * 100);
+    }, 33);
+    const timeoutId = window.setTimeout(() => {
+      setToast(null);
+      setToastProgress(100);
+      window.clearInterval(intervalId);
+    }, TOAST_DURATION_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [toast]);
 
   const viewLogs = async (service: string) => {
     try {
@@ -56,7 +123,7 @@ export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
     } as const;
     const ok = window.confirm(`${labels[action]} il servizio ${service}?`);
     if (!ok) return;
-    setResult(null);
+    setToast(null);
     try {
       const res =
         action === 'start'
@@ -64,17 +131,108 @@ export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
           : action === 'stop'
             ? await commandStopService(deviceId, service)
             : await commandRestartService(deviceId, service);
-      setResult({
-        status: res.status === 'success' ? 'success' : 'error',
-        detail: res.detail ?? `${service}: ${res.status}`,
+      setToast({
+        type: res.status === 'success' ? 'success' : 'error',
+        message: res.detail ?? `${service}: ${res.status}`,
       });
       await loadServices();
     } catch (err) {
       const detail = (err as { response?: { data?: { detail?: string } } }).response?.data
         ?.detail;
-      setResult({ status: 'error', detail: detail ?? (err as Error)?.message ?? 'Errore' });
+      setToast({ type: 'error', message: detail ?? (err as Error)?.message ?? 'Errore' });
     }
   };
+
+  const addService = async (serviceName: string) => {
+    const service = serviceName.trim();
+    if (!service) {
+      setToast({ type: 'error', message: 'Seleziona un servizio dalla lista.' });
+      return;
+    }
+    if (!SERVICE_NAME_RE.test(service)) {
+      setToast({
+        type: 'error',
+        message: 'Nome servizio non valido. Usa solo lettere, numeri, . _ @ : e -',
+      });
+      return;
+    }
+    setSavingService(true);
+    setToast(null);
+    try {
+      await addMonitoredService(deviceId, service);
+      setSelectedService('');
+      await loadServices();
+      setToast({
+        type: 'success',
+        message: `Servizio ${formatServiceLabel(service)} aggiunto.`,
+      });
+      onChanged?.();
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data
+        ?.detail;
+      setToast({ type: 'error', message: detail ?? (err as Error)?.message ?? 'Errore' });
+    } finally {
+      setSavingService(false);
+    }
+  };
+
+  const requestAddService = () => {
+    const service = selectedService.trim();
+    if (!service) {
+      setToast({ type: 'error', message: 'Seleziona un servizio dalla lista.' });
+      return;
+    }
+    if (!SERVICE_NAME_RE.test(service)) {
+      setToast({
+        type: 'error',
+        message: 'Nome servizio non valido. Usa solo lettere, numeri, . _ @ : e -',
+      });
+      return;
+    }
+    setPendingAddService(service);
+  };
+
+  const confirmAddService = async () => {
+    if (!pendingAddService) return;
+    const service = pendingAddService;
+    setPendingAddService(null);
+    await addService(service);
+  };
+
+  const removeService = async (service: string) => {
+    setSavingService(true);
+    setToast(null);
+    try {
+      await removeMonitoredService(deviceId, service);
+      await loadServices();
+      setToast({
+        type: 'success',
+        message: `Servizio ${formatServiceLabel(service)} rimosso.`,
+      });
+      onChanged?.();
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } }).response?.data
+        ?.detail;
+      setToast({ type: 'error', message: detail ?? (err as Error)?.message ?? 'Errore' });
+    } finally {
+      setSavingService(false);
+    }
+  };
+
+  const requestRemoveService = (service: string) => {
+    setPendingRemoveService(service);
+  };
+
+  const confirmRemoveService = async () => {
+    if (!pendingRemoveService) return;
+    const service = pendingRemoveService;
+    setPendingRemoveService(null);
+    await removeService(service);
+  };
+
+  const selectableServices = availableServices.filter(
+    (name) => !services.some((svc) => svc.name === name),
+  );
 
   const startService = (service: string) => runServiceAction(service, 'start');
   const stopService = (service: string) => runServiceAction(service, 'stop');
@@ -85,8 +243,54 @@ export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
       <div className="mb-3">
         <h3 className="text-lg font-semibold">Servizi</h3>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Stato dei servizi systemd e log rapidi.
+          Stato servizi, gestione monitoraggio e azioni operative unificate.
         </p>
+      </div>
+
+      <div className="mb-4 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          Servizi monitorati
+        </p>
+        {isAdmin ? (
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="w-full">
+              <label
+                htmlFor={`available-services-${deviceId}`}
+                className="mb-1 block text-xs text-gray-500 dark:text-gray-400"
+              >
+                Seleziona servizio systemd
+              </label>
+              <select
+                id={`available-services-${deviceId}`}
+                value={selectedService}
+                onChange={(e) => setSelectedService(e.target.value)}
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+              >
+                <option value="">
+                  {selectableServices.length > 0
+                    ? 'Scegli un servizio...'
+                    : 'Nessun servizio disponibile'}
+                </option>
+                {selectableServices.map((name) => (
+                  <option key={name} value={name}>
+                    {formatServiceLabel(name)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={requestAddService}
+              disabled={savingService || !selectedService}
+              className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {savingService ? 'Salvataggio…' : 'Aggiungi servizio'}
+            </button>
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Solo admin possono modificare la lista dei servizi monitorati.
+          </p>
+        )}
       </div>
 
       {loadingServices ? (
@@ -98,19 +302,8 @@ export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
           onStop={stopService}
           onRestart={restartService}
           onViewLogs={viewLogs}
+          onRemove={isAdmin ? requestRemoveService : undefined}
         />
-      )}
-
-      {result && (
-        <div
-          className={`mt-3 rounded-md border-l-4 p-3 text-sm ${
-            result.status === 'success'
-              ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
-              : 'border-red-400 bg-red-50 dark:bg-red-900/20'
-          }`}
-        >
-          {result.detail}
-        </div>
       )}
 
       {logs && (
@@ -131,6 +324,57 @@ export function DeviceServicesPanel({ deviceId }: DeviceServicesPanelProps) {
           </div>
         </div>
       )}
+
+      <CommandModal
+        open={Boolean(pendingAddService)}
+        title="Aggiungere servizio monitorato"
+        description={
+          <>
+            Vuoi aggiungere il servizio{' '}
+            <strong>
+              {pendingAddService ? formatServiceLabel(pendingAddService) : ''}
+            </strong>{' '}
+            alla lista monitorata?
+          </>
+        }
+        confirmLabel={savingService ? 'Salvataggio…' : 'Aggiungi'}
+        onConfirm={confirmAddService}
+        onCancel={() => setPendingAddService(null)}
+      />
+
+      <CommandModal
+        open={Boolean(pendingRemoveService)}
+        title="Rimuovere servizio monitorato"
+        description={
+          <>
+            Vuoi rimuovere il servizio{' '}
+            <strong>
+              {pendingRemoveService ? formatServiceLabel(pendingRemoveService) : ''}
+            </strong>{' '}
+            dalla lista monitorata?
+          </>
+        }
+        confirmLabel={savingService ? 'Rimozione…' : 'Rimuovi'}
+        destructive
+        onConfirm={confirmRemoveService}
+        onCancel={() => setPendingRemoveService(null)}
+      />
+
+      {toast &&
+        createPortal(
+          <div className="pointer-events-none fixed right-4 top-4 z-[9999] overflow-hidden rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-xl dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+            <p>{toast.message}</p>
+            <div className="mt-2 h-1 w-full rounded bg-gray-200/80 dark:bg-gray-700/80">
+              <div
+                className={`h-full rounded transition-[width] duration-75 ease-linear ${
+                  toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                } ml-auto`}
+                style={{ width: `${toastProgress}%` }}
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
     </section>
   );
 }
