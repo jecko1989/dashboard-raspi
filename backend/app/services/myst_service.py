@@ -56,7 +56,8 @@ def _readme() -> str:
         "  sudo tar -xzf mysterium-node-data.tar.gz -C /var/lib/mysterium-node\n"
         "  sudo chown -R mysterium-node /var/lib/mysterium-node\n"
         "  sudo systemctl restart mysterium-node\n\n"
-        "Dopo il ripristino, ri-rivendica il nodo su https://mystnodes.com/me\n"
+        "Dopo il ripristino, per riscattare il nodo apri i settings locali:\n"
+        "  http://<ip_lan>:4449#settings\n"
     )
 
 
@@ -127,7 +128,8 @@ def restore_backup(
 
     detail = (
         "Backup ripristinato e servizio riavviato. "
-        "Ricordati di ri-rivendicare il nodo su https://mystnodes.com/me."
+        "Per riscattare il nodo accedi ai settings locali: "
+        "http://<ip_lan>:4449#settings"
         if restart.status == "success"
         else f"Estrazione ok, ma il riavvio del servizio ha restituito: {restart.detail}"
     )

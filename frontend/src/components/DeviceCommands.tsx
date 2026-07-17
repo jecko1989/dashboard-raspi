@@ -14,7 +14,7 @@ import {
 import { CommandModal } from './CommandModal';
 import { ShellModal } from './ShellModal';
 import { useAuth } from '../context/AuthContext';
-import { formatFanMode, formatFanRpm } from '../utils/format';
+import { formatDurationShort, formatFanMode, formatFanRpm } from '../utils/format';
 
 type Pending =
   | { kind: 'reboot' }
@@ -30,6 +30,7 @@ type Pending =
 interface DeviceCommandsProps {
   deviceId: string;
   deviceName?: string;
+  deviceLanAddress?: string;
   metric?: Metric | null;
   onChanged?: () => void;
 }
@@ -57,7 +58,13 @@ function Spinner() {
 }
 
 // Pannello comandi remoti + gestione servizi, con conferma modale e audit.
-export function DeviceCommands({ deviceId, deviceName, metric, onChanged }: DeviceCommandsProps) {
+export function DeviceCommands({
+  deviceId,
+  deviceName,
+  deviceLanAddress,
+  metric,
+  onChanged,
+}: DeviceCommandsProps) {
   const { isAdmin } = useAuth();
   const [pending, setPending] = useState<Pending>(null);
   const [dryRun, setDryRun] = useState(true);
@@ -268,8 +275,16 @@ export function DeviceCommands({ deviceId, deviceName, metric, onChanged }: Devi
                 riavviato.
               </p>
               <p className="text-xs text-gray-500">
-                Dopo il ripristino ricordati di ri-rivendicare il nodo su
-                mystnodes.com.
+                Dopo il ripristino, per riscattare il nodo apri i settings locali:
+                {' '}
+                <a
+                  href={mystSettingsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline decoration-dotted hover:decoration-solid"
+                >
+                  {mystSettingsUrl}
+                </a>
               </p>
             </div>
           ),
@@ -280,6 +295,32 @@ export function DeviceCommands({ deviceId, deviceName, metric, onChanged }: Devi
   };
 
   const cfg = modalConfig();
+  const lanAddressForLinks = (deviceLanAddress || '').trim() || 'ip_raspberry';
+  const mystSettingsUrl = `http://${lanAddressForLinks}:4449#settings`;
+  const replaceDetailPlaceholders = (value: string | null | undefined): string => {
+    if (!value) return '';
+    return value.replace(/<ip_lan>/g, lanAddressForLinks);
+  };
+  const linkifyText = (value: string): React.ReactNode[] => {
+    const splitRegex = /(https?:\/\/[^\s]+)/g;
+    const isUrl = /^https?:\/\/[^\s]+$/;
+    return value.split(splitRegex).map((part, idx) => {
+      if (isUrl.test(part)) {
+        return (
+          <a
+            key={`url-${idx}`}
+            href={part}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-dotted hover:decoration-solid"
+          >
+            {part}
+          </a>
+        );
+      }
+      return <span key={`txt-${idx}`}>{part}</span>;
+    });
+  };
   const currentFanMode = formatFanMode(metric?.fan_mode) ?? 'N/A';
   const currentFanRpm = formatFanRpm(metric?.fan_rpm);
   const parsedFanRpm = Number.parseInt(fanRpm, 10);
@@ -475,7 +516,9 @@ export function DeviceCommands({ deviceId, deviceName, metric, onChanged }: Devi
           <div>
             <p className="font-medium text-blue-800 dark:text-blue-200">
               {RUNNING_LABELS[runningKind]}
-              {elapsed > 0 && <span className="ml-1 font-normal">· {elapsed}s</span>}
+              {elapsed > 0 && (
+                <span className="ml-1 font-normal">· {formatDurationShort(elapsed)}</span>
+              )}
             </p>
             <p className="mt-0.5 text-xs text-blue-700/80 dark:text-blue-300/80">
               {runningKind === 'update'
@@ -498,9 +541,9 @@ export function DeviceCommands({ deviceId, deviceName, metric, onChanged }: Devi
             {result.command} → {result.status}
           </p>
           {result.detail && (
-            <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-xs text-gray-600 dark:text-gray-300">
-              {result.detail}
-            </pre>
+            <div className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xs text-gray-600 dark:text-gray-300">
+              {linkifyText(replaceDetailPlaceholders(result.detail))}
+            </div>
           )}
         </div>
       )}

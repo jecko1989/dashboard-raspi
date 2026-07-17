@@ -265,6 +265,7 @@ export function DeviceDetailPage() {
           <DeviceCommands
             deviceId={device.id}
             deviceName={device.name}
+            deviceLanAddress={device.hostname || device.ip_vpn}
             metric={metric}
             onChanged={load}
           />
