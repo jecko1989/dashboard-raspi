@@ -35,12 +35,12 @@ export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
               ariaLabel="Azioni device"
               items={[
                 ...(onEdit
-                  ? [{ label: 'Modifica', icon: '✏️', onSelect: () => onEdit(device) }]
+                  ? [{ label: 'Modifica device', icon: '✏️', onSelect: () => onEdit(device) }]
                   : []),
                 ...(onDelete
                   ? [
                       {
-                        label: 'Elimina',
+                        label: 'Elimina device',
                         icon: '🗑️',
                         destructive: true,
                         onSelect: () => onDelete(device),

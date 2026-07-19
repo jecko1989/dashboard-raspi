@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { DashboardEvent, Device, Metric } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -79,6 +79,77 @@ const metricTrends = [
     unit: ' rpm',
   },
 ];
+
+// Dropdown "Azioni" con click-outside per chiudersi.
+function ActionsMenu({
+  device,
+  onEdit,
+  onDelete,
+  onToggleMute,
+}: {
+  device: Device;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggleMute: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+      >
+        ⚙️ Azioni
+        <svg
+          className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+          <button
+            onClick={() => { onEdit(); setOpen(false); }}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            ✏️ Modifica
+          </button>
+          <button
+            onClick={() => { onDelete(); setOpen(false); }}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+          >
+            🗑️ Elimina
+          </button>
+          <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
+          <button
+            onClick={() => { onToggleMute(); setOpen(false); }}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            {device.alerts_muted ? '🔔 Riattiva alert' : '🔕 Silenzia alert'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Pagina dettaglio dispositivo.
 // FASE 4: metriche + storico + eventi + comandi remoti sicuri (con conferma e audit).
@@ -180,30 +251,18 @@ export function DeviceDetailPage() {
             badgeCount={eventsLast24hCount}
             onClearEvents={isAdmin ? handleClearEvents : undefined}
           />
-          <button
-            onClick={handleToggleMute}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-          >
-            {device.alerts_muted ? '🔔 Riattiva alert' : '🔕 Silenzia alert'}
-          </button>
+          <ActionsMenu
+            device={device}
+            onEdit={() => setEditing(true)}
+            onDelete={() => setDeleting(true)}
+            onToggleMute={handleToggleMute}
+          />
           <button
             onClick={handleCheck}
             disabled={checking}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {checking ? 'Verifica…' : 'Verifica ora'}
-          </button>
-          <button
-            onClick={() => setEditing(true)}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-          >
-            ✏️ Modifica
-          </button>
-          <button
-            onClick={() => setDeleting(true)}
-            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-          >
-            🗑️ Elimina
           </button>
         </div>
       </div>

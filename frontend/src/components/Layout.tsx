@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ChangePasswordModal } from './ChangePasswordModal';
@@ -20,10 +20,22 @@ export function Layout({ children }: LayoutProps) {
   );
   // Stato del drawer di navigazione mobile.
   const [menuOpen, setMenuOpen] = useState(false);
+  // Stato collapsed della sidebar desktop (persistito in localStorage).
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
+    () => localStorage.getItem('sidebar-collapsed') === 'true',
+  );
+  const toggleSidebar = () => {
+    setSidebarCollapsed((v) => {
+      localStorage.setItem('sidebar-collapsed', String(!v));
+      return !v;
+    });
+  };
   // Stato del dropdown utente
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   // Stato della modale cambio password
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  // Ref per il container del dropdown utente (click-outside)
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -41,10 +53,22 @@ export function Layout({ children }: LayoutProps) {
     setMenuOpen(false);
   }, [location.pathname]);
 
+  // Chiudi il dropdown utente al click esterno.
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [userMenuOpen]);
+
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       {/* Rail fisso su desktop */}
-      <Sidebar luoghi={luoghi} className="hidden lg:flex" dark={dark} onDarkChange={setDark} />
+      <Sidebar luoghi={luoghi} className="hidden lg:flex" dark={dark} onDarkChange={setDark} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
 
       {/* Drawer di navigazione su mobile */}
       {menuOpen && (
@@ -75,7 +99,7 @@ export function Layout({ children }: LayoutProps) {
           </button>
           
           {/* Dropdown utente a destra */}
-          <div className="relative ml-auto">
+          <div className="relative ml-auto" ref={userMenuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"

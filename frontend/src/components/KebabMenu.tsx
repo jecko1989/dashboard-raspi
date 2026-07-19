@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 
 export interface KebabMenuItem {
@@ -19,7 +20,9 @@ interface KebabMenuProps {
 // Menu contestuale a 3 puntini riutilizzabile (card device, sezioni luogo).
 export function KebabMenu({ items, ariaLabel = 'Azioni', horizontal = true }: KebabMenuProps) {
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -32,26 +35,34 @@ export function KebabMenu({ items, ariaLabel = 'Azioni', horizontal = true }: Ke
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [open]);
 
+  const handleOpen = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, left: rect.right - 176 });
+    }
+    setOpen((o) => !o);
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button
+        ref={btnRef}
         type="button"
         aria-label={ariaLabel}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen((o) => !o);
-        }}
+        onClick={handleOpen}
         className="rounded-md p-1.5 text-xl leading-none text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
       >
         {horizontal ? '⋯' : '⋮'}
       </button>
-      {open && (
+      {open && menuPos && createPortal(
         <div
           role="menu"
-          className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
+          className="w-44 overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
         >
           {items.map((item) => (
             <button
@@ -74,7 +85,8 @@ export function KebabMenu({ items, ariaLabel = 'Azioni', horizontal = true }: Ke
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

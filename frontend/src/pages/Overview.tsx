@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { DashboardEvent } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,66 @@ import { LuogoFormModal } from '../components/LuogoFormModal';
 import { DeviceCreateModal } from '../components/DeviceCreateModal';
 import { EventsPanel } from '../components/EventsPanel';
 import { clearEvents, getAlerts, getEvents, getEventsCount, refreshAll } from '../services/api';
+
+// Dropdown "Aggiungi" con click-outside per chiudersi.
+function AggiungiMenu({
+  onAggiungiLuogo,
+  onAggiungiDevice,
+}: {
+  onAggiungiLuogo: () => void;
+  onAggiungiDevice: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+      >
+        ➕ Aggiungi
+        <svg
+          className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+          <button
+            onClick={() => { onAggiungiLuogo(); setOpen(false); }}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            🏠 Aggiungi luogo
+          </button>
+          <button
+            onClick={() => { onAggiungiDevice(); setOpen(false); }}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            🖥️ Aggiungi device
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Pagina overview globale: tutti i luoghi con i loro device.
 export function Overview() {
@@ -100,18 +160,10 @@ export function Overview() {
           >
             {refreshing ? 'Aggiornamento…' : 'Aggiorna tutto'}
           </button>
-          <button
-            onClick={() => setCreatingLuogo(true)}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-          >
-            ➕ Aggiungi luogo
-          </button>
-          <button
-            onClick={() => setCreatingDevice(true)}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-          >
-            ➕ Aggiungi device
-          </button>
+          <AggiungiMenu
+            onAggiungiLuogo={() => setCreatingLuogo(true)}
+            onAggiungiDevice={() => setCreatingDevice(true)}
+          />
         </div>
       </div>
 

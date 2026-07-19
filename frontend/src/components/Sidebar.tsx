@@ -11,16 +11,15 @@ import { deleteLuogo } from '../services/api';
 // Usata come rail fisso su desktop e come drawer su mobile (vedi Layout).
 interface SidebarProps {
   luoghi: Luogo[];
-  // Classi aggiuntive per adattare il contenitore (es. drawer mobile).
   className?: string;
-  // Callback invocata dopo la navigazione (chiude il drawer su mobile).
   onNavigate?: () => void;
-  // Theme control
   dark: boolean;
   onDarkChange: (dark: boolean) => void;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
-export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange }: SidebarProps) {
+export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange, collapsed = false, onToggleCollapsed }: SidebarProps) {
   const [luoghiExpanded, setLuoghiExpanded] = useState(true);
   const [azioniExpanded, setAzioniExpanded] = useState(true);
   const [creatingDevice, setCreatingDevice] = useState(false);
@@ -51,7 +50,7 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
   };
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `block rounded-md px-3 py-2 text-sm transition ${
+    `${collapsed ? 'flex justify-center' : 'block'} rounded-md px-3 py-2 text-sm transition ${
       isActive
         ? 'bg-blue-600 text-white'
         : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -65,32 +64,60 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
 
   return (
     <aside
-      className={`flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 h-screen sticky top-0 ${className}`}
+      className={`flex shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 h-screen sticky top-0 transition-[width] duration-300 overflow-hidden ${collapsed ? 'w-14' : 'w-64'} ${className}`}
     >
-      <div className="flex-1 overflow-y-auto p-4 min-h-0">
-        <h1 className="mb-6 px-3 text-lg font-bold text-gray-900 dark:text-gray-100">
-          🖥️ RPi Dashboard
-        </h1>
+      <div className="flex-1 overflow-y-auto p-2 min-h-0">
+        {/* Header con logo e pulsante toggle */}
+        <div className={`mb-4 flex items-center ${collapsed ? 'flex-col gap-1' : 'justify-between'} px-2 pt-2`}>
+          {collapsed ? (
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              className="rounded-md p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label="Espandi sidebar"
+            >
+              <span className="text-xl" aria-hidden="true">🖥️</span>
+            </button>
+          ) : (
+            <>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                🖥️ RPi Dashboard
+              </h1>
+              {onToggleCollapsed && (
+                <button
+                  type="button"
+                  onClick={onToggleCollapsed}
+                  className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                  aria-label="Comprimi sidebar"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
         <nav className="space-y-1" onClick={onNavigate}>
-        <NavLink to="/" end className={linkClass}>
-          <span aria-hidden="true" className="mr-2">
-            📊
-          </span>
-          Overview
+        <NavLink to="/" end className={linkClass} title={collapsed ? 'Overview' : undefined}>
+          <span aria-hidden="true" className={collapsed ? '' : 'mr-2'}>📊</span>
+          {!collapsed && 'Overview'}
         </NavLink>
-        <NavLink to="/alerts" className={linkClass}>
-          <span aria-hidden="true" className="mr-2">
-            🚨
-          </span>
-          Alert
+        <NavLink to="/alerts" className={linkClass} title={collapsed ? 'Alert' : undefined}>
+          <span aria-hidden="true" className={collapsed ? '' : 'mr-2'}>🚨</span>
+          {!collapsed && 'Alert'}
         </NavLink>
-        <NavLink to="/settings" className={linkClass}>
-          <span aria-hidden="true" className="mr-2">
-            ⚙️
-          </span>
-          Impostazioni
+        <NavLink to="/settings" className={linkClass} title={collapsed ? 'Impostazioni' : undefined}>
+          <span aria-hidden="true" className={collapsed ? '' : 'mr-2'}>⚙️</span>
+          {!collapsed && 'Impostazioni'}
         </NavLink>
 
+        {!collapsed && (
+          <>
         <button
           type="button"
           onClick={(e) => {
@@ -201,22 +228,26 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
             </button>
           </div>
         </div>
+          </>
+        )}
       </nav>
       </div>
 
-      {/* Tema selector in fondo a sinistra */}
-      <div className="py-4 px-4">
+      {/* Tema selector in fondo */}
+      <div className={`py-4 ${collapsed ? 'flex justify-center px-0' : 'px-4'}`}>
         <button
           onClick={() => onDarkChange(!dark)}
-          className="flex w-full cursor-pointer items-center justify-start"
+          className={`flex cursor-pointer items-center ${collapsed ? 'justify-center' : 'justify-start w-full'}`}
           aria-label="Cambia tema"
+          title={collapsed ? (dark ? 'Passa a tema chiaro' : 'Passa a tema scuro') : undefined}
         >
-          {/* Toggle switch */}
+          {collapsed ? (
+            <span className="text-xl">{dark ? '🌙' : '☀️'}</span>
+          ) : (
           <div 
             className="relative inline-flex h-8 w-16 items-center rounded-full transition-colors"
             style={{ backgroundColor: dark ? '#2563eb' : '#e5e7eb' }}
           >
-            {/* Sfondo del toggle */}
             <span 
               className="absolute h-7 w-7 rounded-full bg-white shadow transition-all"
               style={{
@@ -224,7 +255,6 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
                 transitionDuration: '300ms',
               }}
             />
-            {/* Icone */}
             <span 
               className="absolute left-1.5 text-sm transition-opacity"
               style={{ opacity: dark ? 0.3 : 1, transitionDuration: '300ms' }}
@@ -238,6 +268,7 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
               🌙
             </span>
           </div>
+          )}
         </button>
       </div>
 

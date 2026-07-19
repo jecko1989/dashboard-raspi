@@ -11,9 +11,10 @@ import { deleteLuogo, deleteDevice } from '../services/api';
 interface LuogoSectionProps {
   luogo: Luogo;
   devices: Device[];
+  hideHeader?: boolean;
 }
 
-export function LuogoSection({ luogo, devices }: LuogoSectionProps) {
+export function LuogoSection({ luogo, devices, hideHeader = false }: LuogoSectionProps) {
   const [editingLuogo, setEditingLuogo] = useState(false);
   const [deletingLuogo, setDeletingLuogo] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
@@ -57,15 +58,16 @@ export function LuogoSection({ luogo, devices }: LuogoSectionProps) {
 
   return (
     <section className="mb-8">
-      <div className="mb-3 flex items-center gap-2">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {luogo.name}
-        </h2>
-        <span className="text-sm font-normal text-gray-500">
-          ({devices.length} device)
-        </span>
-        <KebabMenu
-          ariaLabel="Azioni luogo"
+      {!hideHeader && (
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            {luogo.name}
+          </h2>
+          <span className="text-sm font-normal text-gray-500">
+            ({devices.length} device)
+          </span>
+          <KebabMenu
+            ariaLabel="Azioni luogo"
           items={[
             { label: 'Modifica luogo', icon: '✏️', onSelect: () => setEditingLuogo(true) },
             {
@@ -75,8 +77,9 @@ export function LuogoSection({ luogo, devices }: LuogoSectionProps) {
               onSelect: () => setDeletingLuogo(true),
             },
           ]}
-        />
-      </div>
+          />
+        </div>
+      )}
 
       {error && (
         <div className="mb-3 rounded-md border-l-4 border-red-400 bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
