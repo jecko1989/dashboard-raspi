@@ -81,7 +81,9 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
           ) : (
             <>
               <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                🖥️ RPi Dashboard
+                <NavLink to="/" end className="hover:opacity-80 transition-opacity">
+                  🖥️ RPi Dashboard
+                </NavLink>
               </h1>
               {onToggleCollapsed && (
                 <button
