@@ -109,7 +109,7 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Dropdown menu */}
             {userMenuOpen && (
-              <div className="absolute right-0 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+              <div className="absolute right-0 z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
                 {/* Nome utente in alto */}
                 <div className="border-b border-gray-200 px-4 py-2 dark:border-gray-700">
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
