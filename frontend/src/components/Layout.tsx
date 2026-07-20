@@ -89,7 +89,7 @@ export function Layout({ children }: LayoutProps) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
           <button
             onClick={() => setMenuOpen(true)}
             className="rounded-md border border-gray-300 p-2 text-lg leading-none lg:hidden dark:border-gray-600"

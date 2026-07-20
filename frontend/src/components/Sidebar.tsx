@@ -64,7 +64,7 @@ export function Sidebar({ luoghi, className = '', onNavigate, dark, onDarkChange
 
   return (
     <aside
-      className={`flex shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 h-screen sticky top-0 transition-[width] duration-300 overflow-hidden ${collapsed ? 'w-14' : 'w-64'} ${className}`}
+      className={`flex shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 h-dvh sticky top-0 transition-[width] duration-300 overflow-hidden ${collapsed ? 'w-14' : 'w-64'} ${className}`}
     >
       <div className="flex-1 overflow-y-auto p-2 min-h-0">
         {/* Header con logo e pulsante toggle */}
