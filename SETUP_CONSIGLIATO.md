@@ -848,8 +848,12 @@ nome_utente ALL=(root) NOPASSWD: /usr/bin/apt-get update
 nome_utente ALL=(root) NOPASSWD: /usr/bin/apt-get -y upgrade
 nome_utente ALL=(root) NOPASSWD: /usr/bin/apt-get -s upgrade
 
-# --- Restart servizi: SOLO quelli che vuoi gestire dalla dashboard (esempi) ---
+# --- Start/Stop/Restart servizi: SOLO quelli che vuoi gestire dalla dashboard (esempi) ---
+nome_utente ALL=(root) NOPASSWD: /bin/systemctl start ssh
+nome_utente ALL=(root) NOPASSWD: /bin/systemctl stop ssh
 nome_utente ALL=(root) NOPASSWD: /bin/systemctl restart ssh
+nome_utente ALL=(root) NOPASSWD: /bin/systemctl start cron
+nome_utente ALL=(root) NOPASSWD: /bin/systemctl stop cron
 nome_utente ALL=(root) NOPASSWD: /bin/systemctl restart cron
 
 # --- Tailscale (Exit node / Subnet routes) ---

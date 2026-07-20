@@ -213,7 +213,7 @@ Per evitare prompt password durante il deploy `native`, una configurazione minim
 di `sudoers` puo' essere simile a questa:
 
 ```sudoers
-<utente-deploy> ALL=(root) NOPASSWD: /usr/bin/install, /usr/bin/systemctl, /usr/sbin/nginx
+<utente-deploy> ALL=(root) NOPASSWD: /usr/bin/install, /usr/bin/systemctl, /usr/sbin/nginx, /usr/bin/tee, /usr/bin/ln
 ```
 
 Installa la regola in modo sicuro con `visudo` oppure creando un file dedicato in

@@ -365,7 +365,11 @@ pi ALL=(root) NOPASSWD: /usr/bin/apt-get -y upgrade
 pi ALL=(root) NOPASSWD: /usr/bin/apt-get -s upgrade
 
 # Restart servizi (solo quelli che intendi gestire)
+pi ALL=(root) NOPASSWD: /bin/systemctl start ssh
+pi ALL=(root) NOPASSWD: /bin/systemctl stop ssh
 pi ALL=(root) NOPASSWD: /bin/systemctl restart ssh
+pi ALL=(root) NOPASSWD: /bin/systemctl start cron
+pi ALL=(root) NOPASSWD: /bin/systemctl stop cron
 pi ALL=(root) NOPASSWD: /bin/systemctl restart cron
 
 # Tailscale
