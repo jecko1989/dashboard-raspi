@@ -3,13 +3,13 @@
 // inviano l'header Authorization).
 import { TOKEN_KEY } from './api';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-
-// Deriva l'origin WebSocket dal base URL HTTP (http->ws, https->wss).
+// Deriva l'URL WebSocket dall'host corrente della pagina (LAN, Tailscale, localhost).
+// In questo modo il WebSocket funziona su qualsiasi indirizzo senza configurazione.
 function wsOrigin(): string {
   const explicit = import.meta.env.VITE_API_WS_URL as string | undefined;
   if (explicit) return explicit.replace(/\/$/, '');
-  return baseURL.replace(/^http/i, 'ws').replace(/\/$/, '');
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${window.location.host}`;
 }
 
 export interface ShellSocketOptions {

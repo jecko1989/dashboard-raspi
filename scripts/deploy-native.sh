@@ -13,7 +13,7 @@
 # =============================================================================
 
 deploy_native() {
-  require_vars SERVICE_NAME SERVICE_USER BACKEND_PORT VITE_API_BASE_URL
+  require_vars SERVICE_NAME SERVICE_USER BACKEND_PORT FRONTEND_PORT
   local template="${REPO_ROOT}/deploy/systemd/rpi-dashboard.service.template"
   [[ -f "$template" ]] || die "Template systemd mancante: $template"
 
@@ -43,8 +43,8 @@ deploy_native() {
   else
     require_cmd node
     require_cmd npm
-    log_info "Build del frontend (VITE_API_BASE_URL=${VITE_API_BASE_URL})..."
-    run_local bash -c "cd '${REPO_ROOT}/frontend' && npm install && VITE_API_BASE_URL='${VITE_API_BASE_URL}' npm run build"
+    log_info "Build del frontend..."
+    run_local bash -c "cd '${REPO_ROOT}/frontend' && npm install && npm run build"
   fi
   if [[ "$DRY_RUN" != "true" && ! -d "${REPO_ROOT}/frontend/dist" ]]; then
     die "Manca ${REPO_ROOT}/frontend/dist: esegui senza --skip-build."
@@ -124,5 +124,35 @@ deploy_native() {
     ssh_exec "cd '${DEPLOY_PATH}/releases' && ls -1dt */ 2>/dev/null | tail -n +$((keep+1)) | xargs -r -I{} rm -rf -- '{}'"
   fi
 
-  log_info "Frontend statico in ${DEPLOY_PATH}/current/frontend (servilo via nginx: vedi docs/DEPLOYMENT.md)."
+  # --- Nginx config (aggiornamento automatico se NGINX_CONF_PATH e' impostato) ---
+  if [[ -n "${NGINX_CONF_PATH:-}" ]]; then
+    log_info "Aggiornamento config nginx: ${NGINX_CONF_PATH}..."
+    local nginx_src rendered_nginx
+    nginx_src="${REPO_ROOT}/deploy/nginx/dashboard-raspi.conf"
+    rendered_nginx="$(mktemp)"
+    # shellcheck disable=SC2064
+    trap "rm -f '${rendered_nginx}'" RETURN
+    sed \
+      -e "s#__DEPLOY_PATH__#${DEPLOY_PATH}#g" \
+      -e "s#__BACKEND_PORT__#${BACKEND_PORT}#g" \
+      -e "s#__FRONTEND_PORT__#${FRONTEND_PORT}#g" \
+      "$nginx_src" > "$rendered_nginx"
+    # Usa stdin-piping + sudo tee: evita scp diretto verso /etc/ (Permission denied)
+    # e non dipende dal path lookup di sudo install.
+    # Richiede in sudoers NOPASSWD: /usr/bin/tee
+    "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" \
+      "sudo /usr/bin/tee '${NGINX_CONF_PATH}' >/dev/null" < "$rendered_nginx"
+    # Se il config e' in sites-available, crea il symlink in sites-enabled.
+    # Richiede in sudoers NOPASSWD: /usr/bin/ln
+    if [[ "$NGINX_CONF_PATH" == */sites-available/* ]]; then
+      local conf_name
+      conf_name="$(basename "$NGINX_CONF_PATH")"
+      ssh_exec "sudo /usr/bin/ln -sfn '${NGINX_CONF_PATH}' '/etc/nginx/sites-enabled/${conf_name}'"
+    fi
+    ssh_exec "sudo /usr/sbin/nginx -t && sudo /usr/bin/systemctl reload nginx"
+    log_ok "Nginx aggiornato e ricaricato."
+  else
+    log_warn "NGINX_CONF_PATH non impostato: copia manualmente deploy/nginx/dashboard-raspi.conf sul Raspberry e ricarica nginx."
+    log_info "Frontend statico in ${DEPLOY_PATH}/current/frontend."
+  fi
 }

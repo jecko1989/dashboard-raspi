@@ -4,8 +4,9 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# VITE_API_BASE_URL viene "bruciato" nel bundle in fase di build.
-ARG VITE_API_BASE_URL=http://localhost:8000
+# VITE_API_BASE_URL non e' piu' usato nel bundle: il frontend usa URL relativi
+# e nginx fa proxy di /api verso il backend. Mantenuto per compatibilita'.
+ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 COPY package.json package-lock.json* ./

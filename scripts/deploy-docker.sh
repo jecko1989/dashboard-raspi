@@ -8,7 +8,7 @@
 # =============================================================================
 
 deploy_docker() {
-  require_vars FRONTEND_PORT BACKEND_PORT VITE_API_BASE_URL
+  require_vars FRONTEND_PORT BACKEND_PORT
 
   # --- Verifica prerequisiti remoti ------------------------------------------
   log_info "Verifica Docker e Docker Compose V2 sul Raspberry..."
@@ -38,8 +38,9 @@ deploy_docker() {
   rsync_to_remote "${REPO_ROOT}/" "${DEPLOY_PATH}/"
 
   # --- Build e avvio ---------------------------------------------------------
-  # VITE_API_BASE_URL viene bruciato nel bundle: lo passiamo al build del frontend.
-  local compose_env="VITE_API_BASE_URL='${VITE_API_BASE_URL}' FRONTEND_PORT='${FRONTEND_PORT}' BACKEND_PORT='${BACKEND_PORT}'"
+  # VITE_API_BASE_URL non e' piu' necessario: il frontend usa URL relativi e nginx
+  # del container fa proxy di /api verso il backend.
+  local compose_env="FRONTEND_PORT='${FRONTEND_PORT}' BACKEND_PORT='${BACKEND_PORT}'"
   local build_flag="--build"
   [[ "$SKIP_BUILD" == "true" ]] && build_flag=""
 

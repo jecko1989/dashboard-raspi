@@ -20,12 +20,13 @@ import type {
   SSHKeyResult,
 } from '../types';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-
+// URL relativi: il proxy nginx (o Vite in dev) instrada /api al backend.
+// In questo modo il frontend funziona su qualsiasi indirizzo (LAN, Tailscale,
+// localhost) senza doverlo ricompilare con VITE_API_BASE_URL.
 export const TOKEN_KEY = 'rpi_token';
 
 export const api = axios.create({
-  baseURL: `${baseURL}/api`,
+  baseURL: '/api',
 });
 
 // Aggiunge automaticamente il token JWT alle richieste.
