@@ -4,11 +4,12 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 
 > Il progetto è pensato per gestire più luoghi (es. appartamenti), ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
 
-## Stato attuale del progetto (2026-07-17)
+## Stato attuale del progetto (2026-07-20)
 
 - Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
 - Milestone v0.8.0 completata: eventi accessibili da pulsante campanella contestuale (overview/luogo/device) con modale dedicata.
 - Milestone v0.9.0 in avanzamento: servizi monitorati gestibili da UI (add/remove), controllo ventola CPU e rifiniture UX mobile nel dettaglio device.
+- **Architettura nginx proxy**: il frontend usa URL relativi (`/api`); nginx instrada le chiamate al backend. Non esiste più `VITE_API_BASE_URL` da impostare — lo stesso bundle gira su qualsiasi indirizzo senza rebuild.
 - Badge eventi in testata allineato alle ultime 24h; la modale mostra anche storico piu' ampio.
 - Svuotamento eventi contestuale (overview/luogo/device) riservato agli admin, con feedback toast auto-dismiss.
 - Sidebar aggiornata: `Impostazioni` sotto `Alert`, sezioni `Luoghi` e `Azioni` collassabili con animazione smooth; toggle tema in fondo a sinistra con icone sole/luna.
@@ -136,7 +137,6 @@ Modifica `.env` impostando almeno:
   python -c "import secrets; print(secrets.token_urlsafe(48))"
   ```
 - **`ADMIN_PASSWORD`** — password dell'utente admin (creato una sola volta al primo avvio).
-- `VITE_API_BASE_URL` — se il backend non è su `localhost:8000`.
 
 ### 3. Configura i device
 
@@ -274,7 +274,7 @@ cp deploy/deploy.env.example deploy/deploy.env   # poi personalizza host/porte
 ./scripts/deploy.sh --mode native                # deploy nativo con systemd
 ```
 
-Guida completa (binding `0.0.0.0`, `VITE_API_BASE_URL`, CORS, firewall, accesso
+Guida completa (binding `0.0.0.0`, nginx proxy, CORS, firewall, accesso
 LAN e Tailscale/MagicDNS): **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 Note pratiche per il deploy `native`:
@@ -422,7 +422,7 @@ Dal dettaglio device, un utente admin può aprire una shell interattiva sul Rasp
 | `SHELL_IDLE_TIMEOUT_SECONDS` | `300` | Chiusura automatica dopo inattività |
 | `SHELL_MAX_SESSIONS` | `3` | Sessioni concorrenti massime |
 | `SHELL_RATE_LIMIT_PER_MINUTE` | `5` | Aperture al minuto per utente |
-| `VITE_API_WS_URL` | *(derivato)* | Override URL WebSocket; se assente, derivato da `VITE_API_BASE_URL` (`http`→`ws`, `https`→`wss`) |
+| `VITE_API_WS_URL` | *(derivato)* | Override URL WebSocket; se assente, derivato dall'host corrente della pagina (`ws`/`wss`) |
 
 ### Proxy WebSocket (Docker / nginx)
 

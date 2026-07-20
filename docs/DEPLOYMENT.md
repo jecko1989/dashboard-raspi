@@ -67,8 +67,10 @@ e indicano cosa installare (es. `sudo apt-get install -y python3 python3-venv`).
    cp deploy/deploy.env.example deploy/deploy.env
    ```
 
-   Imposta almeno `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, le porte,
-   `VITE_API_BASE_URL` e `HEALTHCHECK_URL`.
+   Imposta almeno `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, le porte e
+   `HEALTHCHECK_URL`. Per la modalità **native**, valuta di impostare anche
+   `NGINX_CONF_PATH` per fare in modo che il deploy aggiorni e ricarichi nginx
+   automaticamente.
 
 2. **Sul Raspberry**, prepara i file che gli script **non** trasferiscono (per
    sicurezza restano solo sul Pi e non vengono mai sovrascritti dal deploy):
@@ -145,26 +147,47 @@ virtualenv del backend, installa/riavvia la unit systemd e fa l'health check con
 **rollback** automatico alla release precedente in caso di fallimento.
 
 Il servizio systemd serve il **backend** (uvicorn su `0.0.0.0:${BACKEND_PORT}`). Il
-**frontend statico** (`${DEPLOY_PATH}/current/frontend`) va servito da un web
-server, ad esempio nginx. Nel repo e' incluso anche un template pronto in
-[`deploy/nginx/dashboard-raspi.conf`](../deploy/nginx/dashboard-raspi.conf):
+**frontend statico** (`${DEPLOY_PATH}/current/frontend`) va servito da nginx. Nel
+repo è incluso un template pronto in
+[`deploy/nginx/dashboard-raspi.conf`](../deploy/nginx/dashboard-raspi.conf) che
+**fa il proxy di `/api` al backend**: in questo modo il frontend usa URL relativi
+(`/api`) e gira su qualsiasi indirizzo senza bisogno di `VITE_API_BASE_URL`.
 
 ```nginx
 server {
   listen 8080;
   server_name _;
-  root ${DEPLOY_PATH}/current/frontend;
-  index index.html;
+  root /home/deploy/workspace/dashboard-raspi/current/frontend;
+
+  # Proxy WebSocket (shell web)
+  location /api/ws/ {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_read_timeout 3600;
+  }
+
+  # Proxy REST API al backend
+  location /api/ {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+  }
+
   location / {
     try_files $uri $uri/ /index.html;   # fallback SPA per il routing client
   }
 }
 ```
 
-Ricorda di personalizzare la direttiva `root` del template in base al tuo
-`DEPLOY_PATH` reale prima di installarlo sul Raspberry.
+Il template reale in `deploy/nginx/dashboard-raspi.conf` usa segnaposto
+(`__FRONTEND_PORT__`, `__DEPLOY_PATH__`, `__BACKEND_PORT__`) che lo script di
+deploy sostituisce automaticamente. Se imposti `NGINX_CONF_PATH` in `deploy.env`,
+lo script installa il config e ricarica nginx senza intervento manuale.
 
-Per installarlo sul Raspberry puoi usare, ad esempio:
+In alternativa, per installarlo manualmente sul Raspberry:
 
 ```bash
 sudo install -m 0644 deploy/nginx/dashboard-raspi.conf /etc/nginx/sites-available/dashboard-raspi
@@ -231,33 +254,40 @@ Non modificare il binding dell'ambiente di **sviluppo**: lì `localhost` va bene
 
 ## 8. Come il frontend trova il backend
 
-Il frontend legge l'URL del backend da **`VITE_API_BASE_URL`**, valore *bruciato
-nel bundle in fase di build* (vedi [`frontend/src/services/api.ts`](../frontend/src/services/api.ts)
-e [`frontend/Dockerfile`](../frontend/Dockerfile)). Non ci sono IP hardcoded nel codice.
+Il frontend usa **URL relativi** (`/api`): non ha indirizzi IP o hostname nel
+bundle (vedi [`frontend/src/services/api.ts`](../frontend/src/services/api.ts)).
+nginx (sia nel container Docker sia in modalità native) fa da **proxy** e
+instrada le richieste `/api` al backend.
 
-Regola pratica: **`VITE_API_BASE_URL` deve puntare all'indirizzo con cui il
-browser raggiunge il Pi**, non a `localhost`:
+Vantaggi pratici:
 
-- LAN: `VITE_API_BASE_URL=http://192.168.1.50:8000`
-- Tailscale/MagicDNS: `VITE_API_BASE_URL=http://rpi-dashboard:8000`
+- Lo stesso bundle gira su qualsiasi indirizzo (LAN, Tailscale, localhost) **senza
+  doverlo ricompilare**.
+- Non esiste più `VITE_API_BASE_URL` da impostare nel deploy.
+- Frontend e backend risultano sulla **stessa origine** per il browser, quindi il
+  CORS è meno rilevante (vedi §9).
 
-Poiché il valore è compilato nel bundle, se cambi indirizzo devi **ribuildare** il
-frontend (nuovo deploy). Se ti serve accedere sia da LAN sia da Tailscale con lo
-stesso bundle, valuta un reverse proxy con URL relativi (vedi §12).
+`VITE_API_BASE_URL` è deprecata e ignorata. Se presente in un `deploy.env`
+esistente, non causa errori ma non ha effetto.
 
 ---
 
 ## 9. CORS
 
-Il backend abilita CORS con credenziali (`allow_credentials=True`) e legge le
-origini consentite da **`CORS_ORIGINS`** (lista separata da virgola, in `.env`;
-vedi [`backend/app/core/config.py`](../backend/app/core/config.py) e
-[`backend/app/main.py`](../backend/app/main.py)).
+Con nginx che fa da proxy (`/api → backend`) il browser vede frontend e backend
+sulla **stessa origine**: gli errori CORS sulla dashboard spariscono. Il CORS è
+comunque configurato nel backend per compatibilità con sviluppo locale (Vite su
+`localhost:5173` chiama direttamente il backend su `:8000`).
 
-Aggiungi l'origine da cui apri il frontend. Esempio in `${DEPLOY_PATH}/.env`:
+Il backend legge le origini consentite da **`CORS_ORIGINS`** (lista separata da
+virgola, in `.env`; vedi [`backend/app/core/config.py`](../backend/app/core/config.py)).
+
+Per lo sviluppo locale il valore di default (`http://localhost:5173`) è
+sufficiente. In produzione, se accedi al backend **direttamente** (es. dalla
+pagina `/docs` di FastAPI su `:8000` o da strumenti esterni), aggiungi l'origine:
 
 ```bash
-CORS_ORIGINS="http://192.168.1.50:8080,http://rpi-dashboard:8080,http://100.64.0.10:8080"
+CORS_ORIGINS="http://192.168.1.50:8080,http://rpi-dashboard:8080"
 ```
 
 Attenzione:
@@ -267,47 +297,20 @@ Attenzione:
 
 ### 9.1 Troubleshooting rapido errore CORS in login
 
-Se in console vedi errori come _"blocked by CORS policy"_ sulla chiamata
-`/api/auth/login`, in produzione la causa tipica e' che l'origine reale del
-frontend non e' presente in `CORS_ORIGINS` nel file `${DEPLOY_PATH}/.env` del
-Raspberry.
+### 9.1 Troubleshooting errore CORS (sviluppo locale)
 
-Esempio reale: frontend aperto da `http://<ip_tailscale>:8080` mentre nel backend
-erano consentiti solo `http://localhost:5173,http://localhost:8080`.
-
-Passi consigliati sul Raspberry:
+In sviluppo locale Vite gira su `localhost:5173` e chiama il backend su `:8000`
+direttamente (origini diverse). Se in console vedi errori CORS, verifica che in
+`backend/.env` il valore includa l'origine del frontend:
 
 ```bash
-# 1) Verifica il valore attuale
-grep -E '^CORS_ORIGINS=' /home/<utente>/workspace/dashboard-raspi/.env
-
-# 2) Backup rapido del file
-cp /home/<utente>/workspace/dashboard-raspi/.env \
-   /home/<utente>/workspace/dashboard-raspi/.env.bak-cors-$(date +%Y%m%d)
-
-# 3) Aggiorna CORS_ORIGINS includendo l'origine esatta del frontend
-#    (schema + host + porta)
-#    Esempio:
-#    CORS_ORIGINS="http://localhost:5173,http://localhost:8080,http://<magicDNS_tailscale>:8080,http://<ip_tailscale>:8080"
-
-# 4) Riavvia il backend
-sudo systemctl restart dashboard-raspi
-systemctl is-active dashboard-raspi
+CORS_ORIGINS="http://localhost:5173"
 ```
 
-Verifica tecnica del preflight CORS:
-
-```bash
-curl -i -X OPTIONS 'http://localhost:8000/api/auth/login' \
-  -H 'Origin: http://<ip_tailscale>:8080' \
-  -H 'Access-Control-Request-Method: POST' \
-  -H 'Access-Control-Request-Headers: content-type'
-```
-
-Se la configurazione e' corretta, la risposta include:
-
-- `HTTP/1.1 200 OK`
-- `Access-Control-Allow-Origin: http://<ip_tailscale>:8080`
+In produzione (Docker o native) le chiamate passano da nginx sulla stessa
+origine, quindi gli errori CORS non devono comparire. Se compaiono comunque,
+controlla che nginx stia girando e che il proxy `/api` sia configurato
+correttamente (es. test con `curl http://localhost:8080/api/health`).
 
 Nota: in modalita' native il backend legge CORS da `${DEPLOY_PATH}/.env`
 (EnvironmentFile della unit systemd), quindi modificare file locali del repo non
@@ -380,7 +383,8 @@ Distinguere problema di **rete** da problema dell'**app**:
 1. `tailscale status`/`ping` falliscono → problema di **rete/Tailscale**.
 2. rete OK ma `curl .../api/health` fallisce → problema dell'**applicazione**
    (servizio non avviato, binding su `127.0.0.1`, porta non esposta).
-3. health OK ma la UI dà errori → probabile **CORS** o `VITE_API_BASE_URL` errato.
+3. health OK ma la UI dà errori → probabile problema **CORS** (vedi §9) o
+   proxy nginx non configurato correttamente.
 
 ---
 
@@ -413,17 +417,18 @@ http://rpi-dashboard.example-tailnet.ts.net:8080   # Tailscale (FQDN)
 
 ---
 
-## 15. Reverse proxy (miglioramento futuro, opzionale)
+## 15. Proxy nginx (architettura attuale)
 
-Il frontend è già servito da **nginx** nel container. Un reverse proxy davanti a
-frontend **e** backend permetterebbe di:
+nginx è il punto di accesso unico alla dashboard, **sia in Docker sia in
+modalità native**:
 
-- servire l'app su un'unica porta / **URL senza porta**;
-- usare **URL relativi** (es. `/api`) eliminando `VITE_API_BASE_URL` e i problemi
-  di CORS;
-- abilitare **HTTPS** con certificati (es. Caddy/Traefik, o `tailscale cert` per i
-  domini `*.ts.net`);
-- avere hostname più semplici.
+- **Frontend**: nginx serve i file statici React sulla porta `FRONTEND_PORT`.
+- **Proxy `/api`**: nginx instrada le richieste REST al backend (stessa porta,
+  nessuna porta aggiuntiva da esporre o configurare nel bundle).
+- **Proxy `/api/ws/`**: WebSocket della shell web instradati con upgrade HTTP/1.1.
 
-Non è richiesto per il funzionamento base ed è lasciato come evoluzione futura per
-non introdurre un nuovo componente senza necessità.
+Grazie a questo schema il frontend usa URL relativi e funziona su qualsiasi
+indirizzo senza rebuild. Per esporre la dashboard su **HTTPS** o su una **porta
+standard (80/443)** puoi configurare nginx come reverse proxy con certificati
+(es. `tailscale cert` per i domini `*.ts.net`, Certbot/Let's Encrypt o un
+certificato autofirmato).

@@ -7,6 +7,12 @@
 * **backend:** aggiunge endpoint cambio password (`POST /auth/change-password`) con verifica vecchia password e hashing bcrypt; nuovo schema `ChangePasswordRequest` e servizio `change_password` in `user_service`
 * **frontend:** rework layout sidebar e header — toggle tema con icone sole/luna in fondo a sinistra, menu utente a icona in alto a destra con dropdown (nome utente, cambio password, logout), animazioni smooth collapse/expand sezioni sidebar, sidebar fissa all'altezza dello schermo su desktop
 
+### Fix
+
+* **deploy:** rimossa `VITE_API_BASE_URL` (deprecata); il frontend usa ora URL relativi (`/api`) e nginx fa da proxy verso il backend — lo stesso bundle funziona su qualsiasi indirizzo (LAN, Tailscale, localhost) senza rebuild
+* **deploy:** aggiunta variabile `NGINX_CONF_PATH` in `deploy.env` per installazione e reload automatico del config nginx in modalità native
+* **deploy:** aggiornato config nginx (Docker e native) con proxy `/api/` e `/api/ws/` verso il backend; rimosso il vecchio config senza proxy
+
 ---
 
 ## [0.8.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.7.0...v0.8.0) (2026-07-13)
@@ -192,7 +198,7 @@ Le versioni usano Semantic Versioning (`MAJOR.MINOR.PATCH`) con tag Git `vX.Y.Z`
 - **Aggiunta device dalla dashboard**: voce di sidebar "➕ Aggiungi device" e form dedicato (`/devices/new`). `POST /api/devices` valida i dati, gestisce hostname/IP duplicati (409) e appartamento inesistente (404), persiste il device in `config/devices.yaml` (fonte di verità) e sincronizza il DB. I campi runtime (online, latenza, ultima verifica) restano gestiti dal monitoraggio.
 - **Emoji nella sidebar** (Overview, Alert, appartamenti, Impostazioni): decorative e accessibili (`aria-hidden`).
 - **Deploy su Raspberry**: script generici `scripts/deploy.sh` (Docker e nativo systemd) via Tailscale o LAN, con `--dry-run`, health check e rollback (modalità nativa). Config di esempio in `deploy/deploy.env.example`, template systemd in `deploy/systemd/`.
-- **Guida deploy/accesso**: `docs/DEPLOYMENT.md` (binding `0.0.0.0`, `VITE_API_BASE_URL`, CORS, firewall, LAN, Tailscale/MagicDNS).
+- **Guida deploy/accesso**: `docs/DEPLOYMENT.md` (binding `0.0.0.0`, nginx proxy, CORS, firewall, LAN, Tailscale/MagicDNS).
 - Porte del compose parametrizzabili (`FRONTEND_PORT`/`BACKEND_PORT`, default invariati).
 
 ---

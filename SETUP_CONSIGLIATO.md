@@ -1306,13 +1306,10 @@ sudo usermod -aG docker "$USER"     # poi ri-login per usare docker senza sudo
 # 2. porta il progetto sul Pi (git clone / scp) ed entra nella cartella
 cd dashboard-raspi
 
-# 3. imposta l'URL con cui il BROWSER raggiunge l'API (vedi §8c)
-echo 'VITE_API_BASE_URL=http://192.168.1.50:8000' >> .env
-
-# 4. build + avvio in background
+# 3. build + avvio in background
 docker compose up -d --build
 
-# 5. (disco) libera la build cache dopo la build
+# 4. (disco) libera la build cache dopo la build
 docker builder prune -f
 ```
 
@@ -1338,23 +1335,16 @@ router. Dal PC apri semplicemente:
 http://<IP-LAN-del-raspberry>:8080      # es. http://192.168.1.50:8080
 ```
 
-Servono però due accortezze **sul Raspberry** (non sul FritzBox):
+Serve un'accortezza **sul Raspberry** (non sul FritzBox):
 
-1. **`VITE_API_BASE_URL`** — il frontend chiama l'API da questo URL. Il default
-   `http://localhost:8000` è sbagliato quando apri la dashboard da un *altro* PC
-   (per quel browser "localhost" è il PC stesso). Impostalo all'IP LAN (o al nome
-   Tailscale) del Raspberry, come nel §8b (`.env`).
-
-2. **IP fisso al Raspberry** — sul FritzBox imposta una **DHCP reservation**
+1. **IP fisso al Raspberry** — sul FritzBox imposta una **DHCP reservation**
    (Rete → assegna sempre lo stesso IP al MAC del Pi), così l'indirizzo non
    cambia. Questa è l'**unica** cosa da fare sul router: nessuna porta da inoltrare.
 
 Se in futuro attivi UFW, le regole per dashboard LAN sono in §11.
 
 > **Da fuori casa** raggiungi la dashboard con il nome/IP Tailscale del Raspberry
-> (`http://casa-mia:8080`), sempre **senza** toccare il FritzBox. Se vuoi usarla
-> anche via Tailscale, imposta `VITE_API_BASE_URL` sul nome Tailscale
-> (`http://casa-mia:8000`) invece che sull'IP LAN.
+> (`http://casa-mia:8080`), sempre **senza** toccare il FritzBox.
 
 ### 8d. Configurazione dei device e verifica
 
