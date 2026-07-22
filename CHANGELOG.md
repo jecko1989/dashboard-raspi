@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.9.0](https://github.com/jecko1989/dashboard-raspi/compare/v0.8.0...v0.9.0) (2026-07-22)
+
+
+### Features
+
+* **ai:** aggiunte skill Copilot Agent per workflow documentazione e PR ([#21](https://github.com/jecko1989/dashboard-raspi/issues/21)) ([16c3c6d](https://github.com/jecko1989/dashboard-raspi/commit/16c3c6d56ad532ed5c4f10bcc314984c6d9215f6))
+* **backend:** add fan metrics and fan control command ([dc45696](https://github.com/jecko1989/dashboard-raspi/commit/dc456965ae97690845d6cd2be6460c7333db57d0))
+* **backend:** add service start/stop commands ([1e9d222](https://github.com/jecko1989/dashboard-raspi/commit/1e9d222addcbc631db97b778d18ee47d506bbb2c))
+* **backend:** aggiunge gestione servizi monitorati config-driven ([a802618](https://github.com/jecko1989/dashboard-raspi/commit/a802618c0a1b96480bc1381acca7ab984b85618c))
+* **commands:** chiarisce riscatto nodo Mysterium e migliora detail UI ([65497d4](https://github.com/jecko1989/dashboard-raspi/commit/65497d4228875cb189c21294291c17c5ecf00c5d))
+* **events:** add scoped events count and admin clear endpoints ([fcf5665](https://github.com/jecko1989/dashboard-raspi/commit/fcf5665f511648b6a1d8e5bbd0e24d8bcd51b121))
+* **frontend:** add fan monitoring and control in device detail ([b718073](https://github.com/jecko1989/dashboard-raspi/commit/b718073f4ff7109846192d0380bcd2f77ca639de))
+* **frontend:** add start/stop actions in services table ([a83e21e](https://github.com/jecko1989/dashboard-raspi/commit/a83e21ef63a0c85ea40af75907d82bbb76a5c269))
+* **frontend:** implement lazy loading for routes with Suspense ([0fcbdce](https://github.com/jecko1989/dashboard-raspi/commit/0fcbdcecc3aec7eaee83a3cbea03e8b121ee29bd))
+* **frontend:** rifinisce pannello servizi per UX mobile ([b8b0ec0](https://github.com/jecko1989/dashboard-raspi/commit/b8b0ec044e356218a33722c8f27873286814a1a5))
+* **frontend:** update events badge, clear flow, and toast feedback ([e277a7d](https://github.com/jecko1989/dashboard-raspi/commit/e277a7d2156a27b8dd74a3908d612e882648df1d))
+* **ui:** sidebar collapsibile e modali creazione coerenti ([4f6204f](https://github.com/jecko1989/dashboard-raspi/commit/4f6204fe05fb06009b40e38ab9a0670f8ac71c64))
+
+
+### Bug Fixes
+
+* add *.tsbuildinfo to .gitignore and remove tsconfig.tsbuildinfo file ([7f492cb](https://github.com/jecko1989/dashboard-raspi/commit/7f492cb25ece61a6303b3cb1184c4e6ac81e04f6))
+* aggiungere istruzioni per la configurazione di CUPS con TLS e rinnovo automatico del certificato ([a02ecd2](https://github.com/jecko1989/dashboard-raspi/commit/a02ecd2c16e28e2f663d07358286bf94582b31e2))
+* **ai:** skill crea-pr rileva branch main e crea branch dedicato ([#22](https://github.com/jecko1989/dashboard-raspi/issues/22)) ([dfc3d60](https://github.com/jecko1989/dashboard-raspi/commit/dfc3d60a56cd2a66688674c6d364e433b920053b))
+* **backend:** remove hostname duplication checks from device creation ([1a44771](https://github.com/jecko1989/dashboard-raspi/commit/1a44771213acfe842ae9630c7fea63ad4a99cc2f))
+* **deploy:** remove deprecated VITE_API_BASE_URL and update nginx configuration for relative URLs ([4ec443c](https://github.com/jecko1989/dashboard-raspi/commit/4ec443ce0097fc2d05412647283aea0da5c8d204))
+* **deploy:** remove deprecated VITE_API_BASE_URL and update nginx configuration for relative URLs ([2e74e9e](https://github.com/jecko1989/dashboard-raspi/commit/2e74e9e04f6b914ebdf99ad4e7fffad8971d3b5b))
+* **docs:** enhance AGENTS.md with additional details on configuration and metrics flow ([e0b7da7](https://github.com/jecko1989/dashboard-raspi/commit/e0b7da760d46230449634335e0aeca031f802208))
+* **docs:** update sudoers configuration to include additional commands for deployment ([911a67c](https://github.com/jecko1989/dashboard-raspi/commit/911a67c2ecf26b9343f359cbaa5c3892b4dac39f))
+* **frontend:** add missing newline at end of tsconfig.tsbuildinfo ([70bf0df](https://github.com/jecko1989/dashboard-raspi/commit/70bf0dfc4af2346bbf09c2176b4f1d29db5a721e))
+* **frontend:** add z-index to user dropdown menu for proper stacking ([041d493](https://github.com/jecko1989/dashboard-raspi/commit/041d493d66215c9ed595f807d56445591c602314))
+* **frontend:** aggiunge gestione delle azioni sui servizi con conferma ([facc566](https://github.com/jecko1989/dashboard-raspi/commit/facc566cdc4e5535865b38ac7082bcd6f464e8a0))
+* **frontend:** conditionally render Mysterium node header based on hasMyst state ([#18](https://github.com/jecko1989/dashboard-raspi/issues/18)) ([4387bd5](https://github.com/jecko1989/dashboard-raspi/commit/4387bd5a74272a15a353a2418bd93537fadb3934))
+* **frontend:** implement action menus with click-outside functionality for devices and locations ([e0af48a](https://github.com/jecko1989/dashboard-raspi/commit/e0af48ae125c782774ab4be8256bc53ce85992fd))
+* **frontend:** reset luogo form state on modal reopen ([54c49e3](https://github.com/jecko1989/dashboard-raspi/commit/54c49e3fe916a28acb686ff05b5be099e1038349))
+* **frontend:** sidebar fixes and animated collapse sections ([7e08c89](https://github.com/jecko1989/dashboard-raspi/commit/7e08c89a8e6acb4d691655df1448516236ec2a97))
+* **frontend:** update header and sidebar to use sticky positioning for better layout ([433c931](https://github.com/jecko1989/dashboard-raspi/commit/433c931a0686d33ae8000f152753741fe42619d3))
+* **frontend:** update result panels and running indicators to be context-specific in DeviceCommands ([#20](https://github.com/jecko1989/dashboard-raspi/issues/20)) ([7e99b76](https://github.com/jecko1989/dashboard-raspi/commit/7e99b76f93f187ae54b14764a7dea38f3a3db198))
+* **frontend:** wrap dashboard title in NavLink for improved navigation ([fe1a1d0](https://github.com/jecko1989/dashboard-raspi/commit/fe1a1d0a218ba1562148c42f82740ca53e204bcb))
+* mark final tests on real devices as completed in roadmap ([62a8390](https://github.com/jecko1989/dashboard-raspi/commit/62a8390474a35fe7043fb863e8fea75b2e36c5b0))
+* migliora il layout delle etichette nel componente DeviceCommands ([5d8d1ca](https://github.com/jecko1989/dashboard-raspi/commit/5d8d1cac523a331230c06db4f2dc48f447ece26a))
+* migliora le istruzioni per l'installazione della chiave SSH e aggiunge dettagli sui metodi alternativi ([d71b397](https://github.com/jecko1989/dashboard-raspi/commit/d71b39768d8760c840477b4031a8644635aa1fcd))
+* **release:** attiva release milestone v0.9.0 ([8ba468b](https://github.com/jecko1989/dashboard-raspi/commit/8ba468b5217ff7b71cd441516c095192e0313b2a))
+* rimuove duplicazione di variabili per l'indirizzo LAN e migliora la gestione degli URL delle impostazioni Mysterium ([6670ec8](https://github.com/jecko1989/dashboard-raspi/commit/6670ec82f2f52cc4c5e8c264a569e57db1a9a8ca))
+* rimuove l'indirizzo LAN dal componente DeviceCommands per utilizzare solo l'indirizzo VPN ([2c332a4](https://github.com/jecko1989/dashboard-raspi/commit/2c332a4324be86cc6ecdbc0da6f030127c469e6c))
+* timestamp visualizzati nel fuso orario corretto (Europe/Rome) ([#19](https://github.com/jecko1989/dashboard-raspi/issues/19)) ([e0a274f](https://github.com/jecko1989/dashboard-raspi/commit/e0a274f168e02d377ff432080771369ebbdb4e0d))
+* **tsconfig:** add missing components to the build configuration ([73d3429](https://github.com/jecko1989/dashboard-raspi/commit/73d3429b6f29c7ca391ab5ab2c78eb79cf5f63e7))
+* update .gitignore to include additional coverage and cache files ([12d0eae](https://github.com/jecko1989/dashboard-raspi/commit/12d0eae08e31aeaa005e14a469af41de3bef8b3f))
+* update CUPS installation instructions to include HP components and improve security exposure details ([75fff59](https://github.com/jecko1989/dashboard-raspi/commit/75fff5994678d934250a1d9707371cd3e2bb2495))
+* update setup documentation to include optional UFW section and clarify network exposure settings ([75a6fc4](https://github.com/jecko1989/dashboard-raspi/commit/75a6fc4eb52c9978a63a3be2e6df09bd7f6c4224))
+
 ## [Unreleased]
 
 ### Features
