@@ -4,6 +4,7 @@
 
 ### Features
 
+* **ai:** aggiunte skill Copilot Agent per automazione workflow (`aggiorna-documentazioni` e `crea-pr`) in `.github/skills/`; le skill orchestrano aggiornamento documentazione e apertura PR via `gh` CLI
 * **backend:** aggiunge endpoint cambio password (`POST /auth/change-password`) con verifica vecchia password e hashing bcrypt; nuovo schema `ChangePasswordRequest` e servizio `change_password` in `user_service`
 * **frontend:** rework layout sidebar e header — toggle tema con icone sole/luna in fondo a sinistra, menu utente a icona in alto a destra con dropdown (nome utente, cambio password, logout), animazioni smooth collapse/expand sezioni sidebar, sidebar fissa all'altezza dello schermo su desktop
 * **commands:** controllo ventola CPU da UI — sezione `Ventola CPU` in `Comandi remoti` con scelta modalità (PWM automatico / FIXED) e input RPM; endpoint `POST /api/devices/{id}/commands/fan` con audit e allowlist
