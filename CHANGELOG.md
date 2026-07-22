@@ -16,6 +16,8 @@
 
 ### Refactor
 
+* **frontend:** comandi remoti — i pannelli di risultato e l'indicatore "in corso" sono ora contestuali alla sezione da cui viene lanciato il comando (Aggiorna pacchetti → sotto i pulsanti principali, Ventola CPU → sotto la sua sezione, Tailscale → sotto la sezione Tailscale, Nodo myst → nella sezione myst); i comandi `tailscale` e `fan_control` passano da toast a pannello inline; solo `reboot` e `shutdown` mantengono il toast auto-dismiss
+* **frontend:** aggiunto pulsante × per chiudere manualmente i pannelli risultato in `DeviceCommands`
 * **frontend:** UI `Servizi` rifinita per mobile — tabella compatta con azioni a icona, stato a pallino colorato, conferme via modale e feedback toast auto-dismiss
 * **frontend:** dettaglio device semplificato — box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` nella colonna destra senza card ridondante
 
