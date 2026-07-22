@@ -4,11 +4,11 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 
 > Il progetto è pensato per gestire più luoghi (es. appartamenti), ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
 
-## Stato attuale del progetto (2026-07-20)
+## Stato attuale del progetto (2026-07-22)
 
 - Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
 - Milestone v0.8.0 completata: eventi accessibili da pulsante campanella contestuale (overview/luogo/device) con modale dedicata.
-- Milestone v0.9.0 in avanzamento: servizi monitorati gestibili da UI (add/remove), controllo ventola CPU e rifiniture UX mobile nel dettaglio device.
+- **Milestone v0.9.0 completata**: servizi monitorati gestibili da UI (add/remove), controllo ventola CPU (PWM/FIXED), comandi Tailscale (exit node + subnet routes), backup/ripristino nodo Mysterium, cambio password per tutti gli utenti, rework sidebar e menu utente.
 - **Architettura nginx proxy**: il frontend usa URL relativi (`/api`); nginx instrada le chiamate al backend. Non esiste più `VITE_API_BASE_URL` da impostare — lo stesso bundle gira su qualsiasi indirizzo senza rebuild.
 - Badge eventi in testata allineato alle ultime 24h; la modale mostra anche storico piu' ampio.
 - Svuotamento eventi contestuale (overview/luogo/device) riservato agli admin, con feedback toast auto-dismiss.
@@ -17,7 +17,7 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 - Cambio password disponibile per ogni utente autenticato tramite modale dedicata con validazione lato client e backend.
 - Azioni di creazione coerenti in tutta la UI: `Aggiungi luogo` e `Aggiungi device` aprono modali con chiusura anche da click esterno.
 - Dettaglio device semplificato: sezione `Prestazioni` con valori correnti, trend recente per card e pulsante CSV nello stesso box.
-- Layout dettaglio device riallineato: box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` senza card separata.
+- Layout dettaglio device riallineato: box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` nella colonna destra senza card ridondante.
 - Dettaglio device esteso: `Uptime` nel box dettagli e card `Ventola CPU` in `Prestazioni` (RPM + modalita').
 - Deploy operativo in modalità Docker e nativa (systemd) con script dedicati.
 - Gestione CORS documentata con troubleshooting pratico in produzione.
@@ -43,6 +43,8 @@ Documenti di riferimento rapido:
 - Trend recente delle metriche integrato nelle card `Prestazioni` del dettaglio device
 - Alert configurabili (temperatura, disco, RAM, CPU, offline, riavvio) con auto-risoluzione
 - Comandi remoti sicuri: reboot, shutdown, aggiornamenti, restart servizi, cambio modalita' ventola (PWM/FIXED)
+- Comandi Tailscale da UI: annuncio exit node e/o subnet routes via `tailscale set` (visibile se `tailscaled.service` monitorato)
+- Backup e ripristino nodo Mysterium da UI: download .zip keystore + restore (visibile se `mysterium-node.service` monitorato)
 - Stato e log dei servizi systemd (read-only) con azioni rapide contestuali (log/start/stop/restart/rimozione)
 - Gestione servizi monitorati da UI: aggiunta/rimozione servizi persistita in `config/devices.yaml` (admin-only, conferma modale)
 - Suggestion servizi systemd disponibili da host remoto (`/api/devices/{id}/services/available`)

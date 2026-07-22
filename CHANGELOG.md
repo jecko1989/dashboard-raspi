@@ -2,10 +2,22 @@
 
 ## [Unreleased]
 
-### Refactor
+### Features
 
 * **backend:** aggiunge endpoint cambio password (`POST /auth/change-password`) con verifica vecchia password e hashing bcrypt; nuovo schema `ChangePasswordRequest` e servizio `change_password` in `user_service`
 * **frontend:** rework layout sidebar e header — toggle tema con icone sole/luna in fondo a sinistra, menu utente a icona in alto a destra con dropdown (nome utente, cambio password, logout), animazioni smooth collapse/expand sezioni sidebar, sidebar fissa all'altezza dello schermo su desktop
+* **commands:** controllo ventola CPU da UI — sezione `Ventola CPU` in `Comandi remoti` con scelta modalità (PWM automatico / FIXED) e input RPM; endpoint `POST /api/devices/{id}/commands/fan` con audit e allowlist
+* **commands:** comandi Tailscale da UI — sezione `Tailscale` in `Comandi remoti` con pulsanti `Exit node`, `Subnet routes` e `Exit node + routes`; visibile solo se `tailscaled.service` è nella lista servizi monitorati
+* **commands:** backup e ripristino nodo Mysterium da UI — sezione `Nodo Mysterium (myst)` in `Comandi remoti` con download .zip (stream SSH) e ripristino da file; visibile solo se `mysterium-node.service` o `myst.service` è monitorato
+* **services:** gestione servizi monitorati da UI (admin-only) — aggiunta/rimozione con select suggeriti da `GET /api/devices/{id}/services/available`, conferma modale e feedback toast; persistenza su `config/devices.yaml`
+* **metrics:** raccolta `fan_rpm` e `fan_mode` nelle metriche; card `Ventola CPU` nella sezione `Prestazioni` del dettaglio device
+* **backend:** comandi Mysterium avvio/arresto — `POST /api/devices/{id}/commands/myst` con azione `start|stop`; avvio/arresto anche tramite service controls su `mysterium-node.service`
+* **backend:** endpoint `GET /api/devices/{id}/services/available` — lista servizi systemd disponibili sull'host remoto per suggerimento in UI
+
+### Refactor
+
+* **frontend:** UI `Servizi` rifinita per mobile — tabella compatta con azioni a icona, stato a pallino colorato, conferme via modale e feedback toast auto-dismiss
+* **frontend:** dettaglio device semplificato — box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` nella colonna destra senza card ridondante
 
 ### Fix
 
