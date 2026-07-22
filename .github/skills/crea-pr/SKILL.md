@@ -18,12 +18,48 @@ argument-hint: "ID issue GitHub da chiudere (opzionale, es: 42)"
 
 ## Procedura
 
-### 1. Verifica stato branch
+### 1. Verifica branch corrente e crea branch dedicato se necessario
 
 ```bash
-# Branch corrente
 git branch --show-current
+```
 
+**Se il branch corrente è `main` (o il branch di default):**
+
+Prima di qualsiasi altra operazione, verificare che `main` sia aggiornato:
+
+```bash
+git fetch origin
+git status -sb   # controlla se main è ahead/behind rispetto a origin/main
+```
+
+Se `main` è indietro rispetto a `origin/main`, aggiornarlo:
+```bash
+git pull --ff-only origin main
+```
+
+Poi creare un branch dedicato con nome descrittivo basato sulle modifiche presenti o sull'argomento (issue ID se fornito):
+
+```bash
+# Esempi di naming:
+# feat/aggiunge-endpoint-cambio-password
+# fix/corregge-nginx-url-relativi
+# issue-42-descrizione-breve   (se argomento issue ID fornito)
+
+git checkout -b <nome-branch>
+git push -u origin <nome-branch>
+```
+
+Il nome del branch deve:
+- Usare kebab-case in minuscolo
+- Iniziare con il tipo Conventional Commit (`feat/`, `fix/`, `docs/`, ecc.) o con `issue-<id>-` se l'argomento è fornito
+- Essere descrittivo ma conciso (max 50 caratteri)
+
+**Se il branch corrente è già diverso da `main`**, proseguire direttamente.
+
+### 2. Verifica stato branch
+
+```bash
 # Commit nel branch non presenti in main
 git log --oneline main..HEAD
 
@@ -39,7 +75,7 @@ Se il branch non è ancora pushato, eseguire:
 git push -u origin $(git branch --show-current)
 ```
 
-### 2. Aggiorna documentazione
+### 3. Aggiorna documentazione
 
 Invocare la skill `aggiorna-documentazioni` prima di procedere.
 
@@ -50,7 +86,7 @@ git commit -m "docs: aggiorna documentazione per PR"
 git push
 ```
 
-### 3. Genera titolo PR
+### 4. Genera titolo PR
 
 Il titolo deve:
 - Essere in italiano o seguire il Conventional Commit del commit principale
@@ -64,7 +100,7 @@ Esempi:
 
 Se il branch contiene più commit eterogenei, usare il tipo predominante o `feat` generico.
 
-### 4. Genera descrizione PR
+### 5. Genera descrizione PR
 
 Usare il template `.github/pull_request_template.md` come base, compilando:
 
@@ -79,7 +115,7 @@ Se l'argomento (issue ID) è fornito, aggiungere in fondo alla descrizione:
 Closes #<issue_id>
 ```
 
-### 5. Apri la PR con `gh`
+### 6. Apri la PR con `gh`
 
 ```bash
 gh pr create \
@@ -93,7 +129,7 @@ Se si vuole aprire l'editor interattivo invece:
 gh pr create --base main --title "<titolo>" --body-file /tmp/pr_body.md
 ```
 
-### 6. Conferma
+### 7. Conferma
 
 Dopo la creazione riportare:
 - URL della PR appena aperta
