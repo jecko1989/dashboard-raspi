@@ -12,6 +12,7 @@
 * **deploy:** rimossa `VITE_API_BASE_URL` (deprecata); il frontend usa ora URL relativi (`/api`) e nginx fa da proxy verso il backend — lo stesso bundle funziona su qualsiasi indirizzo (LAN, Tailscale, localhost) senza rebuild
 * **deploy:** aggiunta variabile `NGINX_CONF_PATH` in `deploy.env` per installazione e reload automatico del config nginx in modalità native
 * **deploy:** aggiornato config nginx (Docker e native) con proxy `/api/` e `/api/ws/` verso il backend; rimosso il vecchio config senza proxy
+* **frontend:** tutti i timestamp visualizzati (eventi, alert, metriche) ora mostrati nel fuso orario `Europe/Rome`; corretto bug per cui SQLite restituisce datetime senza suffisso `Z` e JavaScript li interpretava come ora locale anziché UTC, causando uno sfasamento di 2 ore in estate
 
 ---
 

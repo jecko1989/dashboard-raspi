@@ -37,7 +37,7 @@ export function MetricChart({
   const data = metrics
     .filter((m) => m[dataKey] != null)
     .map((m) => ({
-      time: new Date(m.collected_at).toLocaleTimeString(),
+      time: new Date(/Z|[+-]\d{2}:\d{2}$/.test(m.collected_at) ? m.collected_at : m.collected_at + 'Z').toLocaleTimeString('it-IT', { timeZone: 'Europe/Rome' }),
       value: m[dataKey] as number,
     }));
 
