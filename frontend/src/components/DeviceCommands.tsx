@@ -55,7 +55,19 @@ type ToastState = {
   type: 'success' | 'error';
 } | null;
 
-const TOAST_KINDS: NonNullable<Pending>['kind'][] = ['reboot', 'shutdown', 'tailscale', 'fan'];
+const TOAST_KINDS: NonNullable<Pending>['kind'][] = ['reboot', 'shutdown'];
+
+type ResultSection = 'top' | 'fan' | 'tailscale' | 'myst';
+
+const KIND_TO_SECTION: Record<NonNullable<Pending>['kind'], ResultSection | null> = {
+  reboot: null,
+  shutdown: null,
+  update: 'top',
+  restart: 'top',
+  tailscale: 'tailscale',
+  fan: 'fan',
+  'myst-restore': 'myst',
+};
 
 const COMMAND_LABEL_BY_KIND: Record<NonNullable<Pending>['kind'], string> = {
   reboot: 'reboot',
@@ -94,7 +106,7 @@ export function DeviceCommands({
   const [running, setRunning] = useState(false);
   const [runningKind, setRunningKind] = useState<NonNullable<Pending>['kind'] | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [result, setResult] = useState<CommandResult | null>(null);
+  const [results, setResults] = useState<Partial<Record<ResultSection, CommandResult>>>({});
   const [toast, setToast] = useState<ToastState>(null);
   const [toastProgress, setToastProgress] = useState(100);
   const [backupRunning, setBackupRunning] = useState(false);
@@ -178,7 +190,7 @@ export function DeviceCommands({
         : null,
     );
     setRunning(true);
-    setResult(null);
+    setResults({});
     setToast(null);
     try {
       let res: CommandResult;
@@ -214,7 +226,8 @@ export function DeviceCommands({
           message: buildToastMessage(res.command, res.status, res.detail),
         });
       } else {
-        setResult(res);
+        const section = KIND_TO_SECTION[current.kind];
+        if (section) setResults((prev) => ({ ...prev, [section]: res }));
       }
       onChanged?.();
     } catch (err) {
@@ -227,12 +240,12 @@ export function DeviceCommands({
           message: buildToastMessage(COMMAND_LABEL_BY_KIND[current.kind], 'error', errorDetail),
         });
       } else {
-        setResult({
-          device_id: deviceId,
-          command: current.kind,
-          status: 'error',
-          detail: errorDetail,
-        });
+        const section = KIND_TO_SECTION[current.kind];
+        if (section)
+          setResults((prev) => ({
+            ...prev,
+            [section]: { device_id: deviceId, command: current.kind, status: 'error', detail: errorDetail },
+          }));
       }
     } finally {
       setRunning(false);
@@ -421,6 +434,68 @@ export function DeviceCommands({
     runningTailscaleAction?.exitNode === exitNode &&
     runningTailscaleAction?.routes === routes;
 
+  const dismissResult = (section: ResultSection) =>
+    setResults((prev) => {
+      const next = { ...prev };
+      delete next[section];
+      return next;
+    });
+
+  const renderResult = (section: ResultSection) => {
+    const res = results[section];
+    if (!res) return null;
+    return (
+      <div
+        className={`relative rounded-md border-l-4 p-3 pr-8 text-sm ${
+          res.status === 'success'
+            ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
+            : 'border-red-400 bg-red-50 dark:bg-red-900/20'
+        }`}
+      >
+        <button
+          onClick={() => dismissResult(section)}
+          className="absolute right-2 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          aria-label="Chiudi"
+        >
+          ✕
+        </button>
+        <p className="font-medium">
+          {res.command} → {res.status}
+        </p>
+        {res.detail && (
+          <div className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xs text-gray-600 dark:text-gray-300">
+            {linkifyText(replaceDetailPlaceholders(res.detail))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderRunning = (section: ResultSection) => {
+    if (!running || !runningKind) return null;
+    if ((KIND_TO_SECTION[runningKind] ?? 'top') !== section) return null;
+    return (
+      <div className="flex items-start gap-3 rounded-md border-l-4 border-blue-400 bg-blue-50 p-3 text-sm dark:bg-blue-900/20">
+        <span className="mt-0.5 text-blue-600 dark:text-blue-300">
+          <Spinner />
+        </span>
+        <div>
+          <p className="font-medium text-blue-800 dark:text-blue-200">
+            {RUNNING_LABELS[runningKind]}
+            {elapsed > 0 && (
+              <span className="ml-1 font-normal">· {formatDurationShort(elapsed)}</span>
+            )}
+          </p>
+          <p className="mt-0.5 text-xs text-blue-700/80 dark:text-blue-300/80">
+            {runningKind === 'update'
+              ? 'apt-get update + upgrade: può richiedere alcuni minuti. Non chiudere la pagina né rilanciare il comando.'
+              : 'Operazione in corso sul device. Attendi il completamento.'}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -458,6 +533,9 @@ export function DeviceCommands({
           </button>
         )}
       </div>
+
+      {renderRunning('top')}
+      {renderResult('top')}
 
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
@@ -514,6 +592,9 @@ export function DeviceCommands({
         )}
       </div>
 
+      {renderRunning('fan')}
+      {renderResult('fan')}
+
       {hasTailscale && (
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
@@ -547,6 +628,9 @@ export function DeviceCommands({
         </div>
       </div>
       )}
+
+      {renderRunning('tailscale')}
+      {renderResult('tailscale')}
 
       <div>
         {hasMyst && (
@@ -594,47 +678,9 @@ export function DeviceCommands({
           </div>
         )}
         {afterMystSection && <div className="mt-3">{afterMystSection}</div>}
+        {renderRunning('myst')}
+        {renderResult('myst')}
       </div>
-
-      {running && runningKind && (
-        <div className="flex items-start gap-3 rounded-md border-l-4 border-blue-400 bg-blue-50 p-3 text-sm dark:bg-blue-900/20">
-          <span className="mt-0.5 text-blue-600 dark:text-blue-300">
-            <Spinner />
-          </span>
-          <div>
-            <p className="font-medium text-blue-800 dark:text-blue-200">
-              {RUNNING_LABELS[runningKind]}
-              {elapsed > 0 && (
-                <span className="ml-1 font-normal">· {formatDurationShort(elapsed)}</span>
-              )}
-            </p>
-            <p className="mt-0.5 text-xs text-blue-700/80 dark:text-blue-300/80">
-              {runningKind === 'update'
-                ? 'apt-get update + upgrade: può richiedere alcuni minuti. Non chiudere la pagina né rilanciare il comando.'
-                : 'Operazione in corso sul device. Attendi il completamento.'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {result && (
-        <div
-          className={`rounded-md border-l-4 p-3 text-sm ${
-            result.status === 'success'
-              ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
-              : 'border-red-400 bg-red-50 dark:bg-red-900/20'
-          }`}
-        >
-          <p className="font-medium">
-            {result.command} → {result.status}
-          </p>
-          {result.detail && (
-            <div className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words text-xs text-gray-600 dark:text-gray-300">
-              {linkifyText(replaceDetailPlaceholders(result.detail))}
-            </div>
-          )}
-        </div>
-      )}
 
       {toast &&
         createPortal(
