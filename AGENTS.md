@@ -41,6 +41,7 @@ Dashboard per monitorare e gestire piu Raspberry Pi (organizzati in "luoghi", es
 - **Path Docker vs locale**: in container usare `/data`, `/config`, `/secrets`; in locale usare path relativi progetto.
 - **Test backend**: `cd backend && pytest`.
 - **Build frontend**: `npm run dev` oppure `npm run build`.
+- **Skill Copilot Agent** (`.github/skills/`): `aggiorna-documentazioni` — aggiorna CHANGELOG, ROADMAP, AGENTS.md e README prima di una PR; `crea-pr` — verifica branch, invoca aggiorna-documentazioni e apre la PR via `gh` CLI con titolo/descrizione generati dai commit.
 
 ## Frontend struttura
 - **Pagine** (`src/pages/`): `Login`, `Overview`, `LuogoPage`, `DeviceDetailPage`, `AlertsPage`, `Settings`.
