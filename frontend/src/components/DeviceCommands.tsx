@@ -549,9 +549,11 @@ export function DeviceCommands({
       )}
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
-          Nodo Mysterium (myst)
-        </h3>
+        {hasMyst && (
+          <h3 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
+            Nodo Mysterium (myst)
+          </h3>
+        )}
         <div className="flex flex-wrap gap-2">
           {hasMyst && (
             <>
