@@ -24,6 +24,7 @@
 
 ### Fix
 
+* **ai:** skill `crea-pr` rileva quando ci si trova sul branch `main` e crea automaticamente un branch dedicato (con aggiornamento da `origin/main`) prima di procedere con la PR; corretta numerazione duplicata dei passi
 * **deploy:** rimossa `VITE_API_BASE_URL` (deprecata); il frontend usa ora URL relativi (`/api`) e nginx fa da proxy verso il backend — lo stesso bundle funziona su qualsiasi indirizzo (LAN, Tailscale, localhost) senza rebuild
 * **deploy:** aggiunta variabile `NGINX_CONF_PATH` in `deploy.env` per installazione e reload automatico del config nginx in modalità native
 * **deploy:** aggiornato config nginx (Docker e native) con proxy `/api/` e `/api/ws/` verso il backend; rimosso il vecchio config senza proxy
