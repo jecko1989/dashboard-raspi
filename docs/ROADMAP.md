@@ -1,9 +1,9 @@
 # Roadmap - Prossimi miglioramenti
 
 Stato: attiva (pianificazione)
-Data ultimo aggiornamento: 2026-07-17
-Baseline corrente: release v0.8.0 (eventi contestuali + redesign)
-Prossimo target: milestone v0.9.0 (servizi operativi unificati)
+Data ultimo aggiornamento: 2026-07-22
+Baseline corrente: release v0.9.0 (servizi operativi, Tailscale, Myst, fan control)
+Prossimo target: milestone v0.9.5 (Wiki e documentazione UI)
 
 ## Priorita' immediata - UX mobile dashboard [COMPLETATA]
 
@@ -120,26 +120,32 @@ card ridondante.
 - Sidebar: rimossa la voce ridondante "Aggiungi device".
 - Device detail: sezione servizi separata nella colonna destra, senza box/card dedicata, con sfondo coerente alla sezione comandi.
 
-## Milestone v0.9.0 - Servizi operativi unificati [IN CORSO]
+## Milestone v0.9.0 - Servizi operativi unificati [COMPLETATA]
+
+Stato: completata (2026-07-22). Comandi Tailscale e Myst disponibili in `Comandi
+remoti` con conferma modale e audit; gestione servizi monitorati da UI; ventola CPU
+controllabile da UI; cambio password per tutti gli utenti; rework sidebar e menu utente.
 
 ### Ambito
 - [x] Aggiunta servizi da UI.
-- [ ] Integrazione comandi Mysterium Node (avvio, stop, backup, restore) nel menu servizi.
-- [ ] Integrazione comandi Tailscale nel menu servizi con lo stesso pattern.
+- [x] Integrazione comandi Mysterium Node (backup/restore nel menu comandi; avvio/arresto tramite service controls su `mysterium-node.service`).
+- [x] Integrazione comandi Tailscale nel menu servizi con lo stesso pattern.
 - [x] Controllo ventola CPU da UI (PWM/FIXED + RPM) con endpoint protetto e audit.
 
 ### Criteri di accettazione
 - Tutte le azioni passano da endpoint protetti e auditati.
 - Le azioni sensibili mantengono vincolo admin e conferma obbligatoria.
 
-### Note di implementazione (stato attuale)
+### Note di implementazione
 - Endpoint ventola: `POST /api/devices/{id}/commands/fan` con `mode` (`pwm|fixed`) e `rpm` opzionale in fixed.
 - Raccolta metriche estesa con `fan_rpm` e `fan_mode`; UI `Prestazioni` aggiornata con card `Ventola CPU`.
 - Per il runtime e' richiesto helper sul Raspberry: `/usr/local/sbin/dashboard-fan-control` con regole sudoers NOPASSWD dedicate.
 - Nuovi endpoint servizi monitorati: `POST /api/devices/{id}/services` (add) e `DELETE /api/devices/{id}/services/{service}` (remove), admin-only con `confirm=true`, persistenza su `config/devices.yaml` e sync DB.
 - Nuovo endpoint read-only `GET /api/devices/{id}/services/available` per suggerire servizi systemd nella select UI.
+- Comandi Tailscale: `POST /api/devices/{id}/commands/tailscale` — sezione `Tailscale` in `Comandi remoti` visibile se `tailscaled.service` è monitorato; pulsanti exit node, subnet routes e combinato.
+- Backup/ripristino Mysterium: `GET /devices/{id}/myst/backup` (download .zip) e `POST /devices/{id}/myst/restore` (upload .zip); sezione `Nodo Mysterium (myst)` visibile se `mysterium-node.service` o `myst.service` è monitorato.
+- Avvio/arresto myst: tramite service controls (ServiceStatusTable) su `mysterium-node.service`; endpoint dedicato `POST /api/devices/{id}/commands/myst` disponibile via API.
 - UI `Servizi` rifinita per mobile: tabella compatta con azioni a icona, stato a pallino, conferme via modale e feedback toast auto-dismiss.
-- Stato corrente UX: il pannello `Servizi` e' focalizzato su monitoraggio e gestione lista servizi; i comandi operativi avanzati restano in `Comandi remoti`.
 
 ## Milestone v0.9.5 - Wiki e documentazione UI
 
