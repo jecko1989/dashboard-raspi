@@ -189,13 +189,19 @@ export function Overview() {
         </div>
       </div>
 
-      {luoghi.map((lg) => (
-        <LuogoSection
-          key={lg.id}
-          luogo={lg}
-          devices={devices.filter((d) => d.luogo_id === lg.id)}
-        />
-      ))}
+      <div className="flex items-start gap-4">
+        {luoghi.map((lg) => {
+          const lgDevices = devices.filter((d) => d.luogo_id === lg.id);
+          return (
+            <div key={lg.id} style={{ flex: Math.max(lgDevices.length, 1) }} className="min-w-0">
+              <LuogoSection
+                luogo={lg}
+                devices={lgDevices}
+              />
+            </div>
+          );
+        })}
+      </div>
 
       <DeviceCreateModal open={creatingDevice} onClose={() => setCreatingDevice(false)} />
 
