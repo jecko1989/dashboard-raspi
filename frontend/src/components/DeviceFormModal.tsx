@@ -124,8 +124,9 @@ export function DeviceFormModal({ open, device, onClose, onSaved }: DeviceFormMo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-      <div className="my-8 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50">
+      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           Modifica device
           <span className="ml-2 font-mono text-sm font-normal text-gray-400">
@@ -261,6 +262,7 @@ export function DeviceFormModal({ open, device, onClose, onSaved }: DeviceFormMo
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );

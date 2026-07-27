@@ -154,12 +154,13 @@ export function DeviceCreateModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50">
       <div
-        className="my-8 w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800"
+        className="flex min-h-full items-center justify-center p-4"
+        onClick={onClose}
+      >
+      <div
+        className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -319,6 +320,7 @@ export function DeviceCreateModal({
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );
