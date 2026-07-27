@@ -57,9 +57,9 @@ export function LuogoSection({ luogo, devices, hideHeader = false }: LuogoSectio
   };
 
   return (
-    <section className="mb-8">
+    <section className="mb-8 flex flex-col">
       {!hideHeader && (
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-3 flex min-h-[3rem] items-center gap-2">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {luogo.name}
           </h2>
@@ -90,7 +90,19 @@ export function LuogoSection({ luogo, devices, hideHeader = false }: LuogoSectio
       {devices.length === 0 ? (
         <p className="text-sm text-gray-500">Nessun device configurato.</p>
       ) : (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+        <div
+          className="grid w-full gap-4"
+          style={{
+            gridTemplateColumns:
+              devices.length === 1
+                ? '1fr'
+                : devices.length === 2
+                  ? 'repeat(2, 1fr)'
+                  : 'repeat(auto-fit, minmax(260px, 1fr))',
+            maxWidth: devices.length === 1 ? '720px' : undefined,
+            margin: devices.length === 1 ? '0 auto' : undefined,
+          }}
+        >
           {devices.map((device) => (
             <DeviceCard
               key={device.id}

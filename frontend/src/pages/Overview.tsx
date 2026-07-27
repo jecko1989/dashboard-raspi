@@ -157,7 +157,7 @@ export function Overview() {
             Stato complessivo dei luoghi e dei device monitorati.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Link
             to="/alerts"
             className={`rounded-md px-3 py-2 text-sm font-medium ${
@@ -189,11 +189,11 @@ export function Overview() {
         </div>
       </div>
 
-      <div className="flex items-start gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         {luoghi.map((lg) => {
           const lgDevices = devices.filter((d) => d.luogo_id === lg.id);
           return (
-            <div key={lg.id} style={{ flex: Math.max(lgDevices.length, 1) }} className="min-w-0">
+            <div key={lg.id} style={{ flex: Math.max(lgDevices.length, 1) }} className="min-w-0 w-full sm:w-auto">
               <LuogoSection
                 luogo={lg}
                 devices={lgDevices}
