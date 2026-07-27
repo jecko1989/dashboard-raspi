@@ -20,18 +20,29 @@ deploy_native() {
   # --- Verifica prerequisiti remoti (senza installarli) ----------------------
   log_info "Verifica prerequisiti sul Raspberry (python3, venv, systemctl, sudo)..."
   if [[ "$DRY_RUN" != "true" ]]; then
-    local missing=()
-    ssh_probe "command -v python3 >/dev/null 2>&1" || missing+=("python3")
-    ssh_probe "python3 -m venv --help >/dev/null 2>&1" || missing+=("python3-venv")
-    ssh_probe "command -v systemctl >/dev/null 2>&1" || missing+=("systemd")
-    ssh_probe "command -v sudo >/dev/null 2>&1" || missing+=("sudo")
-    if (( ${#missing[@]} > 0 )); then
-      log_error "Dipendenze di sistema mancanti sul Raspberry: ${missing[*]}"
-      log_error "Installale manualmente, es.: sudo apt-get install -y python3 python3-venv"
-      die "Deploy interrotto: prerequisiti mancanti."
-    fi
-    ssh_probe "sudo -n /usr/bin/install --version >/dev/null 2>&1 && sudo -n /usr/bin/systemctl --version >/dev/null 2>&1" \
-      || die "La modalita' native richiede sudo non interattivo sul Raspberry per install/systemctl. Configura NOPASSWD mirato per l'utente di deploy oppure usa un utente gia' abilitato."
+    # Tutte le verifiche in un'unica connessione SSH per ridurre l'overhead di latenza.
+    local prereq_result
+    prereq_result="$(ssh_probe '
+      missing=""
+      command -v python3 >/dev/null 2>&1 || missing="$missing python3"
+      python3 -m venv --help >/dev/null 2>&1 || missing="$missing python3-venv"
+      command -v systemctl >/dev/null 2>&1 || missing="$missing systemd"
+      command -v sudo >/dev/null 2>&1 || missing="$missing sudo"
+      if [ -n "$missing" ]; then printf "MISSING:%s\n" "$missing"; exit 1; fi
+      sudo -n /usr/bin/install --version >/dev/null 2>&1 && sudo -n /usr/bin/systemctl --version >/dev/null 2>&1 || { printf "NOSUDO\n"; exit 2; }
+    ')" || {
+      local exit_code=$?
+      if [[ "$prereq_result" == NOSUDO* ]]; then
+        die "La modalita' native richiede sudo non interattivo sul Raspberry per install/systemctl. Configura NOPASSWD mirato per l'utente di deploy oppure usa un utente gia' abilitato."
+      elif [[ "$prereq_result" == MISSING:* ]]; then
+        local missing_list="${prereq_result#MISSING:}"
+        log_error "Dipendenze di sistema mancanti sul Raspberry:${missing_list}"
+        log_error "Installale manualmente, es.: sudo apt-get install -y python3 python3-venv"
+        die "Deploy interrotto: prerequisiti mancanti."
+      else
+        die "Verifica prerequisiti fallita (exit $exit_code)."
+      fi
+    }
     log_ok "Prerequisiti presenti."
   else
     log_dry "ssh $(ssh_target): verifica python3 / venv / systemctl / sudo"

@@ -14,12 +14,7 @@ const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m
 
 function AuthenticatedApp() {
   return (
-    <BrowserRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true,
-      }}
-    >
+    <BrowserRouter>
       <Layout>
         <Suspense fallback={<p className="text-sm text-gray-500">Caricamento…</p>}>
           <Routes>

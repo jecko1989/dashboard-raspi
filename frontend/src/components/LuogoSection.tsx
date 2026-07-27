@@ -90,7 +90,7 @@ export function LuogoSection({ luogo, devices, hideHeader = false }: LuogoSectio
       {devices.length === 0 ? (
         <p className="text-sm text-gray-500">Nessun device configurato.</p>
       ) : (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
           {devices.map((device) => (
             <DeviceCard
               key={device.id}
