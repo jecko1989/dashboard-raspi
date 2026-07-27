@@ -23,11 +23,16 @@ export function KebabMenu({ items, ariaLabel = 'Azioni', horizontal = true }: Ke
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDocClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        ref.current && !ref.current.contains(target) &&
+        portalRef.current && !portalRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -60,6 +65,7 @@ export function KebabMenu({ items, ariaLabel = 'Azioni', horizontal = true }: Ke
       </button>
       {open && menuPos && createPortal(
         <div
+          ref={portalRef}
           role="menu"
           style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999 }}
           className="w-44 overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
