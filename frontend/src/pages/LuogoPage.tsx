@@ -1,26 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { DashboardEvent } from '../types';
-import { useAuth } from '../context/AuthContext';
 import { useLuoghi } from '../hooks/useLuoghi';
 import { useDevices } from '../hooks/useDevices';
 import { LuogoSection } from '../components/LuogoSection';
 import { DeviceCreateModal } from '../components/DeviceCreateModal';
 import { CommandModal } from '../components/CommandModal';
 import { LuogoFormModal } from '../components/LuogoFormModal';
-import { EventsPanel } from '../components/EventsPanel';
-import { clearEvents, deleteLuogo, getEvents, getEventsCount } from '../services/api';
+import { deleteLuogo } from '../services/api';
 
 // Pagina di un singolo luogo.
 export function LuogoPage() {
   const { luogoId } = useParams<{ luogoId: string }>();
-  const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const { luoghi } = useLuoghi();
   const { devices, loading, error } = useDevices(luogoId);
-  const [events, setEvents] = useState<DashboardEvent[]>([]);
-  const [eventsLast24hCount, setEventsLast24hCount] = useState<number>(0);
   const [creatingDevice, setCreatingDevice] = useState(false);
   const [editingLuogo, setEditingLuogo] = useState(false);
   const [deletingLuogo, setDeletingLuogo] = useState(false);
@@ -28,27 +22,6 @@ export function LuogoPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const luogo = luoghi.find((lg) => lg.id === luogoId);
-
-  useEffect(() => {
-    if (!luogoId) {
-      setEvents([]);
-      setEventsLast24hCount(0);
-      return;
-    }
-    getEvents(200, { luogoId })
-      .then(setEvents)
-      .catch(() => setEvents([]));
-    getEventsCount({ luogoId, sinceHours: 24 })
-      .then(setEventsLast24hCount)
-      .catch(() => setEventsLast24hCount(0));
-  }, [luogoId]);
-
-  const handleClearEvents = async () => {
-    if (!luogoId) return;
-    await clearEvents({ luogoId });
-    setEvents([]);
-    setEventsLast24hCount(0);
-  };
 
   const handleDeleteLuogo = async () => {
     if (!luogo) return;
@@ -86,17 +59,6 @@ export function LuogoPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <EventsPanel
-            events={events}
-            scope={{
-              kind: 'luogo',
-              luogoName: luogo.name,
-              deviceIds: devices.map((device) => device.id),
-            }}
-            title="Eventi"
-            badgeCount={eventsLast24hCount}
-            onClearEvents={isAdmin ? handleClearEvents : undefined}
-          />
           <ActionsMenu
             onAggiungiDevice={() => setCreatingDevice(true)}
             onModificaLuogo={() => setEditingLuogo(true)}

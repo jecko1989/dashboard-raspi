@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
-import type { DashboardEvent } from '../types';
-import { useAuth } from '../context/AuthContext';
 import { useLuoghi } from '../hooks/useLuoghi';
 import { useDevices } from '../hooks/useDevices';
 import { LuogoSection } from '../components/LuogoSection';
 import { LuogoFormModal } from '../components/LuogoFormModal';
 import { DeviceCreateModal } from '../components/DeviceCreateModal';
-import { EventsPanel } from '../components/EventsPanel';
-import { clearEvents, getAlerts, getEvents, getEventsCount, refreshAll } from '../services/api';
+import { refreshAll } from '../services/api';
 
 // Dropdown "Aggiungi" con click-outside per chiudersi.
 function AggiungiMenu({
@@ -94,44 +90,17 @@ function AggiungiMenu({
 
 // Pagina overview globale: tutti i luoghi con i loro device.
 export function Overview() {
-  const { isAdmin } = useAuth();
   const { luoghi, loading: loadingLuoghi, error: errLuoghi } = useLuoghi();
   const { devices, loading: loadingDevs, error: errDevs, reload } = useDevices();
   const [refreshing, setRefreshing] = useState(false);
   const [creatingLuogo, setCreatingLuogo] = useState(false);
   const [creatingDevice, setCreatingDevice] = useState(false);
-  const [alertCount, setAlertCount] = useState<number>(0);
-  const [events, setEvents] = useState<DashboardEvent[]>([]);
-  const [eventsLast24hCount, setEventsLast24hCount] = useState<number>(0);
-
-  const loadSummary = () => {
-    getAlerts(true)
-      .then((a) => setAlertCount(a.length))
-      .catch(() => setAlertCount(0));
-    getEvents(200)
-      .then(setEvents)
-      .catch(() => setEvents([]));
-    getEventsCount({ sinceHours: 24 })
-      .then(setEventsLast24hCount)
-      .catch(() => setEventsLast24hCount(0));
-  };
-
-  const handleClearEvents = async () => {
-    await clearEvents();
-    setEvents([]);
-    setEventsLast24hCount(0);
-  };
-
-  useEffect(() => {
-    loadSummary();
-  }, []);
 
   const handleRefreshAll = async () => {
     setRefreshing(true);
     try {
       await refreshAll();
       await reload();
-      loadSummary();
     } finally {
       setRefreshing(false);
     }
@@ -158,23 +127,6 @@ export function Overview() {
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <Link
-            to="/alerts"
-            className={`rounded-md px-3 py-2 text-sm font-medium ${
-              alertCount > 0
-                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-            }`}
-          >
-            {alertCount > 0 ? `⚠️ ${alertCount} alert attivi` : '✅ Nessun alert'}
-          </Link>
-          <EventsPanel
-            events={events}
-            scope={{ kind: 'all' }}
-            title="Eventi"
-            badgeCount={eventsLast24hCount}
-            onClearEvents={isAdmin ? handleClearEvents : undefined}
-          />
           <button
             onClick={handleRefreshAll}
             disabled={refreshing}

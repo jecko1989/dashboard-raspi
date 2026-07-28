@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { DashboardEvent, Device, Metric } from '../types';
-import { useAuth } from '../context/AuthContext';
+import type { Device, Metric } from '../types';
 import {
-  clearEvents,
   getDevice,
-  getEvents,
-  getEventsCount,
   getLatestMetric,
   getMetricHistory,
   checkDevice,
@@ -18,7 +14,6 @@ import {
 import { DeviceDetails } from '../components/DeviceDetails';
 import { MetricCard } from '../components/MetricCard';
 import { MetricChart } from '../components/MetricChart';
-import { EventsPanel } from '../components/EventsPanel';
 import { DeviceCommands } from '../components/DeviceCommands';
 import { DeviceServicesPanel } from '../components/DeviceServicesPanel';
 import {
@@ -155,13 +150,10 @@ function ActionsMenu({
 // FASE 4: metriche + storico + eventi + comandi remoti sicuri (con conferma e audit).
 export function DeviceDetailPage() {
   const { deviceId } = useParams<{ deviceId: string }>();
-  const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [device, setDevice] = useState<Device | null>(null);
   const [metric, setMetric] = useState<Metric | null>(null);
   const [history, setHistory] = useState<Metric[]>([]);
-  const [events, setEvents] = useState<DashboardEvent[]>([]);
-  const [eventsLast24hCount, setEventsLast24hCount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -171,31 +163,20 @@ export function DeviceDetailPage() {
   const load = useCallback(async () => {
     if (!deviceId) return;
     try {
-      const [dev, met, hist, evs] = await Promise.all([
+      const [dev, met, hist] = await Promise.all([
         getDevice(deviceId),
         getLatestMetric(deviceId),
         getMetricHistory(deviceId, 100),
-        getEvents(200, { deviceId }),
       ]);
       setDevice(dev);
       setMetric(met);
       setHistory(hist);
-      setEvents(evs);
-      const count = await getEventsCount({ deviceId, sinceHours: 24 });
-      setEventsLast24hCount(count);
     } catch (err) {
       setError((err as Error)?.message ?? 'Errore');
     }
   }, [deviceId]);
 
   const sshKeyController = useDeviceSSHKey(device?.id ?? deviceId ?? '');
-
-  const handleClearEvents = async () => {
-    if (!deviceId) return;
-    await clearEvents({ deviceId });
-    setEvents([]);
-    setEventsLast24hCount(0);
-  };
 
   useEffect(() => {
     void load();
@@ -244,13 +225,6 @@ export function DeviceDetailPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="break-words text-xl font-bold sm:text-2xl">{device.name}</h1>
         <div className="flex flex-wrap gap-2">
-          <EventsPanel
-            events={events}
-            scope={{ kind: 'device', deviceId: device.id, deviceName: device.name }}
-            title="Eventi"
-            badgeCount={eventsLast24hCount}
-            onClearEvents={isAdmin ? handleClearEvents : undefined}
-          />
           <ActionsMenu
             device={device}
             onEdit={() => setEditing(true)}

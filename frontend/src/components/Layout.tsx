@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { EventsPanel } from './EventsPanel';
 import { useLuoghi } from '../hooks/useLuoghi';
+import { useNavBadges } from '../hooks/useNavBadges';
 import { useAuth } from '../context/AuthContext';
 
 // Layout principale: sidebar + area contenuti, con toggle dark mode.
@@ -13,8 +15,9 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { luoghi } = useLuoghi();
-  const { username, logout } = useAuth();
+  const { username, isAdmin, logout } = useAuth();
   const location = useLocation();
+  const { alertCount, events, eventsCount24h, scope, handleClearEvents } = useNavBadges();
   const [dark, setDark] = useState<boolean>(
     () => localStorage.getItem('theme') === 'dark',
   );
@@ -98,13 +101,39 @@ export function Layout({ children }: LayoutProps) {
             ☰
           </button>
           
+          {/* Badge alert ed eventi contestuali */}
+          <div className="ml-auto flex items-center gap-1">
+            <Link
+              to="/alerts"
+              className={`relative rounded-md p-2 transition-colors ${
+                alertCount > 0
+                  ? 'text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+              }`}
+              title={alertCount > 0 ? `${alertCount} alert attivi` : 'Nessun alert'}
+            >
+              <span aria-hidden="true" className="text-xl leading-none">🚨</span>
+              {alertCount > 0 && (
+                <span className="absolute -bottom-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+                  {alertCount}
+                </span>
+              )}
+            </Link>
+            <EventsPanel
+              events={events}
+              scope={scope}
+              badgeCount={eventsCount24h}
+              onClearEvents={isAdmin ? handleClearEvents : undefined}
+            />
+          </div>
+
           {/* Dropdown utente a destra */}
-          <div className="relative ml-auto" ref={userMenuRef}>
+          <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <span className="text-lg">👤</span>
+              <span className="text-xl leading-none">👤</span>
             </button>
 
             {/* Dropdown menu */}

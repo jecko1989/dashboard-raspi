@@ -50,15 +50,6 @@ function metricColor(pct: number | null | undefined): string {
   return 'text-green-600 dark:text-green-400';
 }
 
-function MetricRow({ label, value, pct }: { label: string; value: string; pct?: number | null }) {
-  return (
-    <div className="flex w-28 items-center justify-between gap-2 text-xs">
-      <span className="text-gray-400 dark:text-gray-500">{label}</span>
-      <span className={`font-medium tabular-nums ${metricColor(pct)}`}>{value}</span>
-    </div>
-  );
-}
-
 function MetricCell({ label, value, pct }: { label: string; value: string; pct?: number | null }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
@@ -164,7 +155,7 @@ export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
             </p>
           </div>
           {device.tags.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-1 md:justify-start">
+            <div className="flex flex-wrap justify-center gap-1">
               {device.tags.map((tag) => (
                 <span
                   key={tag}
@@ -177,30 +168,30 @@ export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
           )}
         </div>
 
-        {/* Divider + Destra metriche — solo se disponibili, solo su sm+ */}
-        {metric && (
-          <>
-            <div className="hidden w-px shrink-0 self-stretch bg-gray-100 dark:bg-gray-700 sm:block" />
-            <div className="hidden flex-1 flex-col justify-between px-4 py-3 sm:flex">
-              {/* Griglia 2 colonne: CPU/RAM e Disco/Temp */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <MetricCell label="CPU"   value={formatPercent(metric.cpu_percent)}  pct={metric.cpu_percent} />
-                <MetricCell label="RAM"   value={formatPercent(metric.ram_percent)}  pct={metric.ram_percent} />
-                <MetricCell label="Disco" value={formatPercent(metric.disk_percent)} pct={metric.disk_percent} />
-                <MetricCell label="Temp"  value={formatTemp(metric.temperature_celsius)} />
-              </div>
-              {/* Uptime centrato */}
-              {metric.uptime_seconds != null && (
-                <div className="text-center text-xs">
-                  <span className="text-gray-400 dark:text-gray-500">Uptime </span>
-                  <span className={`font-medium tabular-nums ${metricColor(null)}`}>
-                    {formatUptime(metric.uptime_seconds)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+        {/* Divider + Destra metriche — sempre visibile su sm+ (placeholder se assenti) */}
+        <div className="hidden w-px shrink-0 self-stretch bg-gray-100 dark:bg-gray-700 sm:block" />
+        <div className="hidden flex-1 flex-col justify-between px-4 py-3 sm:flex">
+          {/* Griglia 2 colonne: CPU/RAM e Disco/Temp */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            <MetricCell label="CPU"   value={metric ? formatPercent(metric.cpu_percent)  : '–'} pct={metric?.cpu_percent} />
+            <MetricCell label="RAM"   value={metric ? formatPercent(metric.ram_percent)  : '–'} pct={metric?.ram_percent} />
+            <MetricCell label="Disco" value={metric ? formatPercent(metric.disk_percent) : '–'} pct={metric?.disk_percent} />
+            <MetricCell label="Temp"  value={metric ? formatTemp(metric.temperature_celsius) : '–'} />
+          </div>
+          {/* Uptime centrato */}
+          <div className="text-center text-xs">
+            {metric?.uptime_seconds != null ? (
+              <>
+                <span className="text-gray-400 dark:text-gray-500">Uptime </span>
+                <span className={`font-medium tabular-nums ${metricColor(null)}`}>
+                  {formatUptime(metric.uptime_seconds)}
+                </span>
+              </>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">–</span>
+            )}
+          </div>
+        </div>
       </Link>
 
       {/* ── Barra azioni rapide ── */}
@@ -221,11 +212,14 @@ export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
             </span>
             <button
               onClick={() => void runCmd(confirmCmd)}
-              className={`${btnBase} bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50`}
+              className={`${btnBase} bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50`}
             >
               ✓ Sì
             </button>
-            <button onClick={() => setCmdState({ phase: 'idle' })} className={btnGhost}>
+            <button
+              onClick={() => setCmdState({ phase: 'idle' })}
+              className={`${btnBase} bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50`}
+            >
               ✕
             </button>
           </>

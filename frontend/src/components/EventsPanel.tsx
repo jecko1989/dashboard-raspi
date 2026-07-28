@@ -88,14 +88,15 @@ export function EventsPanel({
       <button
         type="button"
         onClick={handleOpenPanel}
-        className={`inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 ${className}`}
+        className={`relative rounded-md p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 ${className}`}
         title={subtitle}
       >
-        <span aria-hidden="true">🔔</span>
-        <span>{title}</span>
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-300">
-          {badgeCount ?? scopedEvents.length}
-        </span>
+        <span aria-hidden="true" className="text-xl leading-none">🔔</span>
+        {(badgeCount ?? scopedEvents.length) > 0 && (
+          <span className="absolute bottom-0 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold leading-none text-white">
+            {badgeCount ?? scopedEvents.length}
+          </span>
+        )}
       </button>
 
       {open && (
