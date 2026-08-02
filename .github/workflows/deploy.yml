@@ -61,7 +61,19 @@ jobs:
           # Runner effimero: niente known_hosts persistente tra una run e
           # l'altra. TOFU ad ogni esecuzione (via Tailscale, quindi verso
           # l'host reale, non intercettabile da terzi sulla tratta pubblica).
-          ssh-keyscan -p 22 "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # Retry: subito dopo la connessione Tailscale il DNS/MagicDNS
+          # dell'host puo' non essere ancora propagato sul runner.
+          ok=""
+          for i in 1 2 3 4 5; do
+            if ssh-keyscan -p 22 "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/tmp/keyscan.err; then
+              ok=1
+              break
+            fi
+            echo "ssh-keyscan tentativo $i fallito, riprovo tra 3s..."
+            cat /tmp/keyscan.err
+            sleep 3
+          done
+          [ -n "$ok" ] || { echo "ssh-keyscan fallito dopo 5 tentativi"; exit 1; }
 
           cat > deploy/deploy.env <<EOF
           DEPLOY_HOST=${DEPLOY_HOST}
