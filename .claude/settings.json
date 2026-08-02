@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
+            "once": true,
+            "timeout": 5,
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"Promemoria pre-commit (una tantum, non bloccante): se i commit di questa sessione includono una feature o milestone rilevante, valuta di eseguire la skill Claude Code aggiorna-documentazioni per aggiornare CHANGELOG.md, docs/ROADMAP.md, AGENTS.md e README.md prima di aprire la PR (di norma la esegue gia crea-pr).\"}}'"
+          }
+        ]
+      }
+    ]
+  }
+}
