@@ -1,33 +1,36 @@
 # dashboard-raspi
 
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue.svg)
+![React](https://img.shields.io/badge/react-18-61dafb.svg)
+![TypeScript](https://img.shields.io/badge/typescript-5-3178c6.svg)
+
 Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppata con FastAPI + React.
 
 > Il progetto è pensato per gestire più luoghi (es. appartamenti), ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
 
-## Stato attuale del progetto (2026-08-02)
+## Indice
 
-- Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
-- Milestone v0.8.0 completata: eventi accessibili da pulsante campanella contestuale (overview/luogo/device) con modale dedicata.
-- **Milestone v0.9.0 completata**: servizi monitorati gestibili da UI (add/remove), controllo ventola CPU (PWM/FIXED), comandi Tailscale (exit node + subnet routes), backup/ripristino nodo Mysterium, cambio password per tutti gli utenti, rework sidebar e menu utente.
-- **Architettura nginx proxy**: il frontend usa URL relativi (`/api`); nginx instrada le chiamate al backend. Non esiste più `VITE_API_BASE_URL` da impostare — lo stesso bundle gira su qualsiasi indirizzo senza rebuild.
-- Badge eventi in testata allineato alle ultime 24h; la modale mostra anche storico piu' ampio.
-- Svuotamento eventi contestuale (overview/luogo/device) riservato agli admin, con feedback toast auto-dismiss.
-- Sidebar aggiornata: `Impostazioni` sotto `Alert`, sezioni `Luoghi` e `Azioni` collassabili con animazione smooth; toggle tema in fondo a sinistra con icone sole/luna.
-- Menu utente in alto a destra: icona omino con dropdown che mostra nome utente, cambio password e logout.
-- Cambio password disponibile per ogni utente autenticato tramite modale dedicata con validazione lato client e backend.
-- Azioni di creazione coerenti in tutta la UI: `Aggiungi luogo` e `Aggiungi device` aprono modali con chiusura anche da click esterno.
-- Dettaglio device semplificato: sezione `Prestazioni` con valori correnti, trend recente per card e pulsante CSV nello stesso box.
-- Layout dettaglio device riallineato: box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` nella colonna destra senza card ridondante.
-- Dettaglio device esteso: `Uptime` nel box dettagli e card `Ventola CPU` in `Prestazioni` (RPM + modalita').
-- Azioni rapide (aggiorna/riavvia/spegni) direttamente dalle card device in overview e pagina luogo, con conferma inline.
-- Badge di navigazione contestuali per Alert ed Eventi, aggiornati automaticamente ogni 60s in base alla sezione corrente.
-- Script di deploy irrobustiti con timeout e retry automatico sui fallimenti di connessione SSH (VPN che rinegozia il percorso).
-- Deploy operativo in modalità Docker e nativa (systemd) con script dedicati.
-- Gestione CORS documentata con troubleshooting pratico in produzione.
-- Roadmap funzionale disponibile in `docs/ROADMAP.md`.
-- Convenzione di versionamento attiva in `docs/VERSIONING.md`.
-- Automazione release/versioning configurata con Release Please su GitHub Actions.
-- Template PR e template commit locale presenti per allineare il flusso Git.
+- [Stato del progetto](#stato-del-progetto)
+- [Funzionalità](#funzionalità)
+- [Stack](#stack)
+- [Struttura del progetto](#struttura-del-progetto)
+- [Avvio rapido (Docker)](#avvio-rapido-docker)
+- [Esecuzione locale (senza Docker)](#esecuzione-locale-senza-docker)
+- [Deploy su Raspberry (LAN / Tailscale)](#deploy-su-raspberry-lan--tailscale)
+- [Configurazione](#configurazione)
+- [Sicurezza](#sicurezza)
+- [Migrazione a PostgreSQL](#migrazione-a-postgresql)
+- [Test (backend)](#test-backend)
+- [Changelog](#changelog)
+- [Licenza](#licenza)
+- [File sensibili — cosa non finisce su GitHub](#file-sensibili--cosa-non-finisce-su-github)
+
+---
+
+## Stato del progetto
+
+Lo stato evolutivo del progetto (feature completate, milestone, voci in `Unreleased`) è tracciato in [CHANGELOG.md](CHANGELOG.md); le milestone pianificate sono in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Documenti di riferimento rapido:
 
@@ -477,6 +480,12 @@ pytest
 ## Changelog
 
 Vedi [CHANGELOG.md](CHANGELOG.md) per il dettaglio delle funzionalità aggiunte in ogni fase di sviluppo.
+
+---
+
+## Licenza
+
+Distribuito con licenza [MIT](LICENSE).
 
 ---
 
