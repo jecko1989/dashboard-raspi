@@ -77,11 +77,14 @@ deploy_native() {
   log_info "Trasferimento backend e frontend (solo artefatti necessari)..."
   rsync_to_remote "${REPO_ROOT}/backend/" "${release}/backend/"
   rsync_to_remote "${REPO_ROOT}/frontend/dist/" "${release}/frontend/"
-  ssh_exec "chmod -R a+rX '${release}/frontend'"
 
   # --- Virtualenv + dipendenze backend ---------------------------------------
   log_info "Creazione virtualenv e installazione dipendenze backend..."
-  ssh_exec "cd '${release}/backend' && python3 -m venv .venv && ./.venv/bin/pip install --upgrade pip >/dev/null && ./.venv/bin/pip install -r requirements.txt"
+  # chmod frontend + venv/pip accorpati in una sola connessione SSH (meno
+  # round-trip = meno occasioni di incappare in uno stallo di rete). Timeout
+  # esplicito piu' lungo: unico comando che puo' legittimamente richiedere
+  # diversi minuti (creazione venv + download/installazione pacchetti).
+  ssh_exec "chmod -R a+rX '${release}/frontend' && cd '${release}/backend' && python3 -m venv .venv && ./.venv/bin/pip install --upgrade pip >/dev/null && ./.venv/bin/pip install -r requirements.txt" "${REMOTE_BUILD_TIMEOUT:-900}"
 
   # --- Rendering e installazione della unit systemd --------------------------
   log_info "Preparazione unit systemd '${SERVICE_NAME}'..."
@@ -96,14 +99,13 @@ deploy_native() {
     "$template" > "$rendered"
 
   copy_file_to_remote "$rendered" "${release}/${SERVICE_NAME}.service"
-  ssh_exec "sudo install -m 0644 '${release}/${SERVICE_NAME}.service' '/etc/systemd/system/${SERVICE_NAME}.service'"
-  ssh_exec "sudo systemctl daemon-reload"
-  ssh_exec "sudo systemctl enable '${SERVICE_NAME}' >/dev/null 2>&1 || true"
 
-  # --- Attiva la nuova release (symlink atomico) -----------------------------
+  # --- Installa la unit, ricarica systemd, abilita, attiva il symlink e
+  # riavvia: tutto in una sola connessione SSH (meno round-trip = meno
+  # occasioni di incappare in uno stallo di rete). L'enable resta non-fatale
+  # come prima (puo' fallire innocuamente se gia' abilitato).
   log_info "Attivazione release ${stamp}..."
-  ssh_exec "ln -sfn '${release}' '${DEPLOY_PATH}/current'"
-  ssh_exec "sudo systemctl restart '${SERVICE_NAME}'"
+  ssh_exec "sudo install -m 0644 '${release}/${SERVICE_NAME}.service' '/etc/systemd/system/${SERVICE_NAME}.service' && sudo systemctl daemon-reload && { sudo systemctl enable '${SERVICE_NAME}' >/dev/null 2>&1 || true; } && ln -sfn '${release}' '${DEPLOY_PATH}/current' && sudo systemctl restart '${SERVICE_NAME}'"
 
   # --- Health check + rollback -----------------------------------------------
   if [[ "$SKIP_HEALTHCHECK" == "true" ]]; then
@@ -111,8 +113,7 @@ deploy_native() {
   elif ! remote_healthcheck; then
     log_error "Health check fallito: avvio rollback."
     if [[ -n "$previous" && "$previous" != "$release" ]]; then
-      ssh_exec "ln -sfn '${previous}' '${DEPLOY_PATH}/current'"
-      ssh_exec "sudo systemctl restart '${SERVICE_NAME}'"
+      ssh_exec "ln -sfn '${previous}' '${DEPLOY_PATH}/current' && sudo systemctl restart '${SERVICE_NAME}'"
       log_warn "Rollback eseguito alla release precedente: ${previous}"
     else
       log_warn "Nessuna release precedente disponibile per il rollback."
@@ -150,18 +151,22 @@ deploy_native() {
       "$nginx_src" > "$rendered_nginx"
     # Usa stdin-piping + sudo tee: evita scp diretto verso /etc/ (Permission denied)
     # e non dipende dal path lookup di sudo install.
-    # Richiede in sudoers NOPASSWD: /usr/bin/tee
-    "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" \
-      "sudo /usr/bin/tee '${NGINX_CONF_PATH}' >/dev/null" < "$rendered_nginx"
-    # Se il config e' in sites-available, crea il symlink in sites-enabled.
-    # Richiede in sudoers NOPASSWD: /usr/bin/ln
+    # Richiede in sudoers NOPASSWD: /usr/bin/tee, /usr/bin/ln (se sites-available).
+    # Tee + symlink opzionale + test/reload accorpati in una sola connessione SSH.
+    local nginx_remote_cmd="sudo /usr/bin/tee '${NGINX_CONF_PATH}' >/dev/null"
     if [[ "$NGINX_CONF_PATH" == */sites-available/* ]]; then
       local conf_name
       conf_name="$(basename "$NGINX_CONF_PATH")"
-      ssh_exec "sudo /usr/bin/ln -sfn '${NGINX_CONF_PATH}' '/etc/nginx/sites-enabled/${conf_name}'"
+      nginx_remote_cmd="${nginx_remote_cmd} && sudo /usr/bin/ln -sfn '${NGINX_CONF_PATH}' '/etc/nginx/sites-enabled/${conf_name}'"
     fi
-    ssh_exec "sudo /usr/sbin/nginx -t && sudo /usr/bin/systemctl reload nginx"
-    log_ok "Nginx aggiornato e ricaricato."
+    nginx_remote_cmd="${nginx_remote_cmd} && sudo /usr/sbin/nginx -t && sudo /usr/bin/systemctl reload nginx"
+    if [[ "$DRY_RUN" == "true" ]]; then
+      log_dry "ssh $(ssh_target): $nginx_remote_cmd (config da $rendered_nginx)"
+    else
+      ssh_run_with_retry with_timeout "$REMOTE_TRANSFER_TIMEOUT" "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" \
+        "$nginx_remote_cmd" < "$rendered_nginx"
+      log_ok "Nginx aggiornato e ricaricato."
+    fi
   else
     log_warn "NGINX_CONF_PATH non impostato: copia manualmente deploy/nginx/dashboard-raspi.conf sul Raspberry e ricarica nginx."
     log_info "Frontend statico in ${DEPLOY_PATH}/current/frontend."

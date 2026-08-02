@@ -11,12 +11,23 @@ deploy_docker() {
   require_vars FRONTEND_PORT BACKEND_PORT
 
   # --- Verifica prerequisiti remoti ------------------------------------------
+  # Le due verifiche (docker, compose v2) accorpate in un'unica connessione SSH.
   log_info "Verifica Docker e Docker Compose V2 sul Raspberry..."
   if [[ "$DRY_RUN" != "true" ]]; then
-    ssh_probe "command -v docker >/dev/null 2>&1" \
-      || die "Docker non installato sul Raspberry. Installalo (vedi docs/DEPLOYMENT.md) e riprova."
-    ssh_probe "docker compose version >/dev/null 2>&1" \
-      || die "Docker Compose V2 non disponibile ('docker compose'). Installa il plugin compose-v2."
+    local docker_check
+    docker_check="$(ssh_probe '
+      command -v docker >/dev/null 2>&1 || { echo NODOCKER; exit 1; }
+      docker compose version >/dev/null 2>&1 || { echo NOCOMPOSE; exit 2; }
+      echo OK
+    ')" || {
+      if [[ "$docker_check" == NODOCKER* ]]; then
+        die "Docker non installato sul Raspberry. Installalo (vedi docs/DEPLOYMENT.md) e riprova."
+      elif [[ "$docker_check" == NOCOMPOSE* ]]; then
+        die "Docker Compose V2 non disponibile ('docker compose'). Installa il plugin compose-v2."
+      else
+        die "Verifica Docker/Compose fallita."
+      fi
+    }
     log_ok "Docker e Compose V2 presenti."
   else
     log_dry "ssh $(ssh_target): verifica 'docker' e 'docker compose version'"
@@ -26,11 +37,15 @@ deploy_docker() {
   ssh_exec "mkdir -p '${DEPLOY_PATH}'"
 
   # Avvisa se mancano i file forniti dall'operatore (non trasferiti dal deploy).
+  # Le due verifiche accorpate in un'unica connessione SSH.
   if [[ "$DRY_RUN" != "true" ]]; then
-    ssh_probe "test -f '${DEPLOY_PATH}/.env'" \
-      || log_warn "Manca ${DEPLOY_PATH}/.env sul Raspberry: crealo prima di avviare (vedi docs/DEPLOYMENT.md)."
-    ssh_probe "test -f '${DEPLOY_PATH}/config/devices.yaml'" \
-      || log_warn "Manca ${DEPLOY_PATH}/config/devices.yaml: crealo dal template devices.example.yaml."
+    local files_check
+    files_check="$(ssh_probe "
+      [ -f '${DEPLOY_PATH}/.env' ] && echo ENV_OK || echo ENV_MISSING
+      [ -f '${DEPLOY_PATH}/config/devices.yaml' ] && echo CFG_OK || echo CFG_MISSING
+    ")"
+    [[ "$files_check" == *ENV_MISSING* ]] && log_warn "Manca ${DEPLOY_PATH}/.env sul Raspberry: crealo prima di avviare (vedi docs/DEPLOYMENT.md)."
+    [[ "$files_check" == *CFG_MISSING* ]] && log_warn "Manca ${DEPLOY_PATH}/config/devices.yaml: crealo dal template devices.example.yaml."
   fi
 
   # --- Trasferimento del progetto --------------------------------------------
@@ -46,7 +61,9 @@ deploy_docker() {
 
   log_info "Avvio dei container con docker compose..."
   # --remove-orphans pulisce i servizi non piu' definiti; NIENTE -v (preserva i dati).
-  ssh_exec "cd '${DEPLOY_PATH}' && ${compose_env} docker compose up -d ${build_flag} --remove-orphans"
+  # Timeout esplicito lungo: la build immagini puo' richiedere diversi minuti,
+  # specie su Raspberry Pi meno recenti.
+  ssh_exec "cd '${DEPLOY_PATH}' && ${compose_env} docker compose up -d ${build_flag} --remove-orphans" "${REMOTE_BUILD_TIMEOUT:-900}"
 
   # --- Stato finale ----------------------------------------------------------
   if [[ "$DRY_RUN" != "true" ]]; then

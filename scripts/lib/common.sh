@@ -25,13 +25,16 @@ die()       { log_error "$*"; exit 1; }
 # --- Dry-run -----------------------------------------------------------------
 DRY_RUN="${DRY_RUN:-false}"
 
-# Esegue un comando locale, oppure lo stampa soltanto in dry-run.
+# Esegue un comando locale, oppure lo stampa soltanto in dry-run. Limitato nel
+# tempo (LOCAL_CMD_TIMEOUT, default 600s): su Windows/git-bash npm/vite/esbuild
+# possono lasciare un processo figlio orfano che tiene aperta la pipe di
+# output anche a build completata, bloccando lo script a tempo indeterminato.
 run_local() {
   if [[ "$DRY_RUN" == "true" ]]; then
     log_dry "local: $*"
     return 0
   fi
-  "$@"
+  with_timeout "${LOCAL_CMD_TIMEOUT:-600}" "$@"
 }
 
 # --- Controlli preliminari ---------------------------------------------------
@@ -89,6 +92,24 @@ SCP_BIN="scp"
 SSH_OPTS=()
 SCP_OPTS=()
 
+# 'timeout' (coreutils) non e' garantito ovunque (es. macOS senza coreutils):
+# se assente esegue senza limite invece di far fallire lo script.
+TIMEOUT_BIN=""
+command -v timeout >/dev/null 2>&1 && TIMEOUT_BIN="timeout"
+
+# Esegue un comando con un limite di tempo massimo (best-effort). ConnectTimeout
+# di ssh protegge solo la connessione TCP iniziale: se la connessione cade in
+# silenzio dopo (VPN/NAT che rinegozia il percorso), ssh puo' restare bloccato
+# indefinitamente senza questo limite esterno.
+with_timeout() {
+  local secs="$1"; shift
+  if [[ -n "$TIMEOUT_BIN" ]]; then
+    "$TIMEOUT_BIN" "$secs" "$@"
+  else
+    "$@"
+  fi
+}
+
 is_windows_shell() {
   case "$(uname -s 2>/dev/null || true)" in
     MINGW*|MSYS*|CYGWIN*) return 0 ;;
@@ -110,8 +131,11 @@ select_ssh_binaries() {
 
 build_ssh_opts() {
   select_ssh_binaries
-  SSH_OPTS=( -p "${DEPLOY_PORT:-22}" -o BatchMode=yes -o ConnectTimeout=10 )
-  SCP_OPTS=( -P "${DEPLOY_PORT:-22}" -o BatchMode=yes -o ConnectTimeout=10 )
+  # ServerAlive* rileva connessioni cadute in silenzio (VPN/NAT) durante fasi
+  # lunghe senza traffico (pip/npm install, build): senza, ssh puo' restare
+  # bloccato a tempo indeterminato invece di fallire con un errore chiaro.
+  SSH_OPTS=( -p "${DEPLOY_PORT:-22}" -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes )
+  SCP_OPTS=( -P "${DEPLOY_PORT:-22}" -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes )
   if [[ -n "${SSH_IDENTITY_FILE:-}" ]]; then
     [[ -f "$SSH_IDENTITY_FILE" ]] || die "SSH_IDENTITY_FILE non trovato: $SSH_IDENTITY_FILE"
     SSH_OPTS+=( -i "$SSH_IDENTITY_FILE" )
@@ -126,28 +150,77 @@ build_ssh_opts() {
 # Target user@host.
 ssh_target() { printf '%s@%s' "${DEPLOY_USER}" "${DEPLOY_HOST}"; }
 
+# Ogni ssh_exec/ssh_probe apre una NUOVA connessione (nessun ControlMaster):
+# la finestra tra "TCP connesso" e "sessione autenticata" (banner/KEX/auth) non
+# e' coperta ne' da ConnectTimeout ne' da ServerAliveInterval (che vale solo a
+# sessione stabilita). Senza un timeout esterno, una connessione che si blocca
+# in quella finestra (es. VPN che rinegozia il percorso) appende lo script a
+# tempo indeterminato.
+#
+# Due livelli: la maggior parte dei comandi remoti (mkdir, chmod, systemctl,
+# ln, i probe di sola lettura) sono quasi istantanei, quindi un timeout breve
+# li fa fallire in fretta con un errore chiaro. Il timeout lungo va passato
+# esplicitamente solo ai comandi che richiedono legittimamente minuti (es.
+# creazione venv + pip install) - usare 900s ovunque farebbe restare "appeso"
+# fino a 15 minuti anche un semplice controllo che si blocca.
+REMOTE_CMD_TIMEOUT="${REMOTE_CMD_TIMEOUT:-60}"
+REMOTE_PROBE_TIMEOUT="${REMOTE_PROBE_TIMEOUT:-30}"
+# Trasferimenti file (tar+ssh, scp, rsync): piu' margine dei comandi istantanei,
+# ma senza arrivare ai 900s riservati esplicitamente al venv+pip install.
+REMOTE_TRANSFER_TIMEOUT="${REMOTE_TRANSFER_TIMEOUT:-180}"
+
+# Ritenta automaticamente solo sui fallimenti di TRASPORTO: exit 255 (ssh non
+# riesce a stabilire/mantenere la connessione) o 124 (ucciso dal nostro
+# with_timeout). Non ritenta un vero fallimento applicativo del comando remoto
+# (il suo exit code passa attraverso invariato) per non nascondere errori reali.
+SSH_RETRY_COUNT="${SSH_RETRY_COUNT:-2}"
+SSH_RETRY_DELAY="${SSH_RETRY_DELAY:-3}"
+
+ssh_run_with_retry() {
+  local attempt=1 code
+  while true; do
+    # "&& code=0 || code=$?" (invece di "$@"; code=$?) e' necessario sotto
+    # 'set -e': un comando fallito come statement diretto nel corpo di un
+    # ciclo termina subito lo script, senza lasciarci leggere il suo exit code.
+    "$@" && code=0 || code=$?
+    if [[ "$code" -eq 0 || ( "$code" -ne 255 && "$code" -ne 124 ) ]]; then
+      return "$code"
+    fi
+    if [[ "$attempt" -gt "$SSH_RETRY_COUNT" ]]; then
+      return "$code"
+    fi
+    log_warn "Connessione SSH interrotta (exit $code): nuovo tentativo tra ${SSH_RETRY_DELAY}s ($attempt/${SSH_RETRY_COUNT})..."
+    sleep "$SSH_RETRY_DELAY"
+    attempt=$((attempt + 1))
+  done
+}
+
 # Esegue un comando remoto (stringa). In dry-run lo stampa soltanto.
+# Secondo argomento opzionale: timeout in secondi (default REMOTE_CMD_TIMEOUT)
+# per i pochi comandi legittimamente lunghi (es. venv+pip install).
 ssh_exec() {
   local cmd="$1"
+  local timeout_secs="${2:-$REMOTE_CMD_TIMEOUT}"
   if [[ "$DRY_RUN" == "true" ]]; then
     log_dry "ssh $(ssh_target): $cmd"
     return 0
   fi
-  "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" "$cmd"
+  ssh_run_with_retry with_timeout "$timeout_secs" "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" "$cmd"
 }
 
-# Come ssh_exec ma esegue sempre (anche in dry-run): per sole letture/verifiche.
+# Come ssh_exec ma esegue sempre (anche in dry-run): per sole letture/verifiche
+# rapide, quindi timeout breve (REMOTE_PROBE_TIMEOUT) non sovrascrivibile.
 ssh_probe() {
-  "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" "$1"
+  ssh_run_with_retry with_timeout "$REMOTE_PROBE_TIMEOUT" "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" "$1"
 }
 
 # Verifica la raggiungibilita' SSH.
 check_ssh() {
   log_info "Verifica connessione SSH a $(ssh_target) (porta ${DEPLOY_PORT:-22})..."
-  if "$SSH_BIN" "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$(ssh_target)" "true" 2>/dev/null; then
+  if with_timeout 20 "$SSH_BIN" "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$(ssh_target)" "true" 2>/dev/null; then
     log_ok "Connessione SSH riuscita."
   else
-    die "SSH non raggiungibile. Verifica host/porta/chiave e che l'host sia in known_hosts (vedi docs/DEPLOYMENT.md)."
+    die "SSH non raggiungibile entro 20s. Verifica host/porta/chiave, che l'host sia in known_hosts e lo stato della VPN/Tailscale (vedi docs/DEPLOYMENT.md)."
   fi
 }
 
@@ -203,8 +276,13 @@ tar_dir_to_remote() {
   fi
 
   ssh_exec "mkdir -p '$dest'"
-  tar -czf - "${TAR_EXCLUDES[@]}" -C "$src" . | \
-    "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" "tar -xzf - -C '$dest'"
+  # Il retry deve rilanciare tar+ssh insieme: se si ritenta solo la meta' ssh
+  # della pipe, tar e' gia' terminato e non c'e' piu' nulla da leggere.
+  _tar_pipe_to_remote() {
+    tar -czf - "${TAR_EXCLUDES[@]}" -C "$src" . | \
+      with_timeout "$REMOTE_TRANSFER_TIMEOUT" "$SSH_BIN" "${SSH_OPTS[@]}" "$(ssh_target)" "tar -xzf - -C '$dest'"
+  }
+  ssh_run_with_retry _tar_pipe_to_remote
 }
 
 copy_file_to_remote() {
@@ -218,7 +296,7 @@ copy_file_to_remote() {
   fi
 
   ssh_exec "mkdir -p '$(dirname "$dest")'"
-  "$SCP_BIN" "${SCP_OPTS[@]}" "$src" "$(ssh_target):$dest"
+  ssh_run_with_retry with_timeout "$REMOTE_TRANSFER_TIMEOUT" "$SCP_BIN" "${SCP_OPTS[@]}" "$src" "$(ssh_target):$dest"
 }
 
 # Sincronizza una sorgente locale verso una destinazione remota.
@@ -241,7 +319,7 @@ rsync_to_remote() {
       "$src" "$(ssh_target):$dest" || true
     return 0
   fi
-  rsync -az --human-readable -e "$ssh_cmd" "${RSYNC_EXCLUDES[@]}" "${extra[@]}" \
+  ssh_run_with_retry with_timeout "$REMOTE_TRANSFER_TIMEOUT" rsync -az --human-readable -e "$ssh_cmd" "${RSYNC_EXCLUDES[@]}" "${extra[@]}" \
     "$src" "$(ssh_target):$dest"
 }
 
