@@ -1,0 +1,86 @@
+name: Deploy to Raspberry Pi
+
+# Trigger solo manuale (bottone "Run workflow"): il deploy tocca un host privato
+# di casa con privilegi sudo, quindi resta un'azione deliberata, mai automatica
+# su push/PR. NON aggiungere trigger 'pull_request' o 'push' senza aver
+# ristretto opportunamente permessi ed environment: il repo e' pubblico.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run (nessuna modifica reale sul Raspberry)"
+        type: boolean
+        default: true
+      mode:
+        description: "Modalita' di deploy"
+        type: choice
+        options:
+          - native
+          - docker
+        default: native
+
+concurrency:
+  group: deploy-raspberry-pi
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: raspberry-pi-deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Connetti alla tailnet
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci-deploy
+          version: latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Prepara chiave SSH e configurazione deploy
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          NGINX_CONF_PATH: ${{ secrets.NGINX_CONF_PATH }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy_ci
+          chmod 600 ~/.ssh/id_deploy_ci
+
+          cat > deploy/deploy.env <<EOF
+          DEPLOY_HOST=${DEPLOY_HOST}
+          DEPLOY_USER=${DEPLOY_USER}
+          DEPLOY_PORT=22
+          DEPLOY_PATH=${DEPLOY_PATH}
+          DEPLOY_MODE=native
+          FRONTEND_PORT=8080
+          BACKEND_PORT=8000
+          NGINX_CONF_PATH=${NGINX_CONF_PATH}
+          HEALTHCHECK_URL=http://localhost:8000/api/health
+          HEALTHCHECK_RETRIES=15
+          HEALTHCHECK_DELAY=4
+          SERVICE_NAME=dashboard-raspi
+          SERVICE_USER=${DEPLOY_USER}
+          KEEP_RELEASES=2
+          SSH_IDENTITY_FILE=${HOME}/.ssh/id_deploy_ci
+          EOF
+          chmod 600 deploy/deploy.env
+
+      - name: Deploy
+        run: |
+          ARGS="--mode ${{ inputs.mode }} --env-file deploy/deploy.env"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          ./scripts/deploy.sh $ARGS
