@@ -249,7 +249,7 @@ export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
               🔄 Riavvia
             </button>
             <button onClick={() => handleBtn('shutdown')} disabled={!device.is_online} title="Spegni" className={btnGhost}>
-              <span className="text-red-500 dark:text-red-400">⏻</span> Spegni
+              <span className="text-red-500 dark:text-red-400">🔌</span> Spegni
             </button>
           </>
         )}
