@@ -4,7 +4,12 @@
 
 ### Features
 
+* **ai:** convertite le skill `aggiorna-documentazioni` e `crea-pr` per Claude Code in `.claude/skills/`; aggiunto `CLAUDE.md` con guida al progetto e riferimento alle skill disponibili, aggiornato `AGENTS.md` di conseguenza
 * **ai:** aggiunte skill Copilot Agent per automazione workflow (`aggiorna-documentazioni` e `crea-pr`) in `.github/skills/`; le skill orchestrano aggiornamento documentazione e apertura PR via `gh` CLI
+* **frontend:** azioni rapide (aggiorna/riavvia/spegni) direttamente dalla `DeviceCard` nella overview e nelle pagine luogo, con conferma inline a due passaggi, indicatore di caricamento e feedback di esito auto-dismiss — senza dover entrare nel dettaglio device
+* **frontend:** badge di navigazione contestuali per Alert ed Eventi (`useNavBadges`) — il conteggio nella sidebar/header si aggiorna automaticamente ogni 60s ed è filtrato per il contesto corrente (tutti i device, luogo o singolo device)
+* **frontend:** colorazione della temperatura nelle card device (`MetricCell`) in base alle soglie, coerente con la colorazione già presente nel dettaglio device
+* **deploy:** script di deploy (`deploy-docker.sh`, `deploy-native.sh`, `scripts/lib/common.sh`) irrobustiti con timeout e retry — timeout sui comandi locali (`LOCAL_CMD_TIMEOUT`) e remoti (`REMOTE_CMD_TIMEOUT`, `REMOTE_PROBE_TIMEOUT`, `REMOTE_TRANSFER_TIMEOUT`), opzioni SSH `ServerAliveInterval`/`ServerAliveCountMax`/`TCPKeepAlive` per rilevare connessioni VPN cadute in silenzio, retry automatico (`SSH_RETRY_COUNT`/`SSH_RETRY_DELAY`) solo sui fallimenti di trasporto (exit 255/124)
 * **backend:** aggiunge endpoint cambio password (`POST /auth/change-password`) con verifica vecchia password e hashing bcrypt; nuovo schema `ChangePasswordRequest` e servizio `change_password` in `user_service`
 * **frontend:** rework layout sidebar e header — toggle tema con icone sole/luna in fondo a sinistra, menu utente a icona in alto a destra con dropdown (nome utente, cambio password, logout), animazioni smooth collapse/expand sezioni sidebar, sidebar fissa all'altezza dello schermo su desktop
 * **commands:** controllo ventola CPU da UI — sezione `Ventola CPU` in `Comandi remoti` con scelta modalità (PWM automatico / FIXED) e input RPM; endpoint `POST /api/devices/{id}/commands/fan` con audit e allowlist
@@ -21,6 +26,7 @@
 * **frontend:** aggiunto pulsante × per chiudere manualmente i pannelli risultato in `DeviceCommands`
 * **frontend:** UI `Servizi` rifinita per mobile — tabella compatta con azioni a icona, stato a pallino colorato, conferme via modale e feedback toast auto-dismiss
 * **frontend:** dettaglio device semplificato — box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` nella colonna destra senza card ridondante
+* **frontend:** `DeviceCard` e `LuogoSection` riorganizzati per mostrare più metriche nella lista device (overview e pagina luogo) e per una griglia più responsiva
 
 ### Fix
 
@@ -29,6 +35,11 @@
 * **deploy:** aggiunta variabile `NGINX_CONF_PATH` in `deploy.env` per installazione e reload automatico del config nginx in modalità native
 * **deploy:** aggiornato config nginx (Docker e native) con proxy `/api/` e `/api/ws/` verso il backend; rimosso il vecchio config senza proxy
 * **frontend:** tutti i timestamp visualizzati (eventi, alert, metriche) ora mostrati nel fuso orario `Europe/Rome`; corretto bug per cui SQLite restituisce datetime senza suffisso `Z` e JavaScript li interpretava come ora locale anziché UTC, causando uno sfasamento di 2 ore in estate
+* **frontend:** `KebabMenu` — aggiunto `portalRef` per una corretta gestione del click quando il menu è renderizzato in portale, evitando chiusure premature
+* **frontend:** modali di creazione/modifica device e luogo — corretta gestione click e layout (`DeviceCreateModal`, `DeviceFormModal`, `LuogoPage`, `Overview`)
+* **frontend:** icona del pulsante spegnimento in `DeviceCard` corretta
+* **dependencies:** aggiornato `react-router-dom` a 7.18.1 e altre dipendenze frontend
+* **deploy:** ottimizzati i controlli dei prerequisiti in `deploy-native.sh` per ridurre i tempi di esecuzione
 
 ---
 

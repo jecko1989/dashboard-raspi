@@ -31,7 +31,7 @@ Dashboard per monitorare e gestire piu Raspberry Pi (organizzati in "luoghi", es
 - **Frontend WebSocket**: la shell usa WebSocket nativo con token in query string; l'URL si costruisce con `frontend/src/services/shell.ts` (deriva `ws`/`wss` dall'host corrente della pagina, override con `VITE_API_WS_URL`).
 - **No fetch diretto**: aggiungere funzioni tipizzate in `services/api.ts` e tipi in `src/types`.
 - **URL relativi**: il frontend usa sempre `/api/...` senza prefisso di host; non usare `VITE_API_BASE_URL` (deprecata e rimossa). Usare `VITE_API_WS_URL` solo per override WebSocket.
-- **Hooks**: logica di fetch/stato incapsulata in hook dedicati (`useDevices`, `useLuoghi`, `useScopedEvents`); evitare chiamate API dirette nei componenti.
+- **Hooks**: logica di fetch/stato incapsulata in hook dedicati (`useDevices`, `useLuoghi`, `useScopedEvents`, `useNavBadges`); evitare chiamate API dirette nei componenti.
 - **Utils**: formattazione valori in `frontend/src/utils/format.ts`; non duplicare la logica nei componenti.
 
 ## Workflow sviluppo
@@ -46,7 +46,7 @@ Dashboard per monitorare e gestire piu Raspberry Pi (organizzati in "luoghi", es
 
 ## Frontend struttura
 - **Pagine** (`src/pages/`): `Login`, `Overview`, `LuogoPage`, `DeviceDetailPage`, `AlertsPage`, `Settings`.
-- **Hooks** (`src/hooks/`): `useDevices` (fetch e stato device), `useLuoghi` (fetch e stato luoghi), `useScopedEvents` (eventi filtrati per device/luogo).
+- **Hooks** (`src/hooks/`): `useDevices` (fetch e stato device), `useLuoghi` (fetch e stato luoghi), `useScopedEvents` (eventi filtrati per device/luogo), `useNavBadges` (contatori alert/eventi contestuali alla rotta corrente, refresh automatico ogni 60s).
 - **Context** (`src/context/`): `AuthContext` — espone `user`, `isAdmin`, `login`, `logout`.
 - **Services** (`src/services/`): `api.ts` (tutte le chiamate HTTP), `shell.ts` (costruzione URL WebSocket).
 - **Types** (`src/types/index.ts`): tutti i tipi TypeScript dell'applicazione.

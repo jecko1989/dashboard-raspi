@@ -4,7 +4,7 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 
 > Il progetto è pensato per gestire più luoghi (es. appartamenti), ciascuno con uno o più Raspberry Pi connessi tramite Tailscale. Consente di monitorare lo stato dei device, raccogliere metriche di sistema, eseguire comandi remoti e aprire una shell web interattiva — tutto da un'unica interfaccia.
 
-## Stato attuale del progetto (2026-07-22)
+## Stato attuale del progetto (2026-08-02)
 
 - Interfaccia responsive mobile-first (navigazione a drawer su smartphone).
 - Milestone v0.8.0 completata: eventi accessibili da pulsante campanella contestuale (overview/luogo/device) con modale dedicata.
@@ -19,6 +19,9 @@ Dashboard personale per monitorare e gestire più Raspberry Pi via VPN, sviluppa
 - Dettaglio device semplificato: sezione `Prestazioni` con valori correnti, trend recente per card e pulsante CSV nello stesso box.
 - Layout dettaglio device riallineato: box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` nella colonna destra senza card ridondante.
 - Dettaglio device esteso: `Uptime` nel box dettagli e card `Ventola CPU` in `Prestazioni` (RPM + modalita').
+- Azioni rapide (aggiorna/riavvia/spegni) direttamente dalle card device in overview e pagina luogo, con conferma inline.
+- Badge di navigazione contestuali per Alert ed Eventi, aggiornati automaticamente ogni 60s in base alla sezione corrente.
+- Script di deploy irrobustiti con timeout e retry automatico sui fallimenti di connessione SSH (VPN che rinegozia il percorso).
 - Deploy operativo in modalità Docker e nativa (systemd) con script dedicati.
 - Gestione CORS documentata con troubleshooting pratico in produzione.
 - Roadmap funzionale disponibile in `docs/ROADMAP.md`.
@@ -43,6 +46,7 @@ Documenti di riferimento rapido:
 - Trend recente delle metriche integrato nelle card `Prestazioni` del dettaglio device
 - Alert configurabili (temperatura, disco, RAM, CPU, offline, riavvio) con auto-risoluzione
 - Comandi remoti sicuri: reboot, shutdown, aggiornamenti, restart servizi, cambio modalita' ventola (PWM/FIXED)
+- Azioni rapide aggiorna/riavvia/spegni direttamente dalla card device (overview e pagina luogo), con conferma inline a due passaggi
 - Comandi Tailscale da UI: annuncio exit node e/o subnet routes via `tailscale set` (visibile se `tailscaled.service` monitorato)
 - Backup e ripristino nodo Mysterium da UI: download .zip keystore + restore (visibile se `mysterium-node.service` monitorato)
 - Stato e log dei servizi systemd (read-only) con azioni rapide contestuali (log/start/stop/restart/rimozione)
@@ -58,6 +62,7 @@ Documenti di riferimento rapido:
 - Cambio password: `POST /auth/change-password` con verifica vecchia password, hashing bcrypt della nuova
 - Timeline attività, badge VPN/latenza
 - Contatore eventi ultime 24h e azione `Svuota eventi` contestuale (solo admin)
+- Badge di navigazione per alert ed eventi, filtrati per contesto (tutti i device/luogo/device) con refresh automatico ogni 60s
 - Feedback operativi con toast auto-dismiss (stesso pattern della sezione eventi)
 - Interfaccia responsive mobile-first: navigazione a drawer, griglie e grafici adattivi, tabelle anti-overflow
 - Deploy con Docker Compose o esecuzione locale (script PowerShell incluso)
