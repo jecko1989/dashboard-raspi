@@ -58,6 +58,11 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy_ci
           chmod 600 ~/.ssh/id_deploy_ci
 
+          # Runner effimero: niente known_hosts persistente tra una run e
+          # l'altra. TOFU ad ogni esecuzione (via Tailscale, quindi verso
+          # l'host reale, non intercettabile da terzi sulla tratta pubblica).
+          ssh-keyscan -p 22 "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
           cat > deploy/deploy.env <<EOF
           DEPLOY_HOST=${DEPLOY_HOST}
           DEPLOY_USER=${DEPLOY_USER}
