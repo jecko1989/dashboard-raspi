@@ -42,6 +42,7 @@ Dashboard per monitorare e gestire piu Raspberry Pi (organizzati in "luoghi", es
 - **Test backend**: `cd backend && pytest`.
 - **Build frontend**: `npm run dev` oppure `npm run build`.
 - **Skill Copilot Agent** (`.github/skills/`): `aggiorna-documentazioni` — aggiorna CHANGELOG, ROADMAP, AGENTS.md e README prima di una PR; `crea-pr` — verifica branch, invoca aggiorna-documentazioni e apre la PR via `gh` CLI con titolo/descrizione generati dai commit.
+- **Skill Claude Code** (`.claude/skills/`): stesse due skill (`aggiorna-documentazioni`, `crea-pr`), convertite per essere invocate come slash command o auto-invocate da Claude Code in questo repo. Versioni generiche equivalenti (senza assunzioni specifiche su questo repo) vivono in `~/.claude/skills/` e si applicano a qualsiasi progetto.
 
 ## Frontend struttura
 - **Pagine** (`src/pages/`): `Login`, `Overview`, `LuogoPage`, `DeviceDetailPage`, `AlertsPage`, `Settings`.
