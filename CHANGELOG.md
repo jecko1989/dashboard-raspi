@@ -9,7 +9,9 @@
 * **frontend:** azioni rapide (aggiorna/riavvia/spegni) direttamente dalla `DeviceCard` nella overview e nelle pagine luogo, con conferma inline a due passaggi, indicatore di caricamento e feedback di esito auto-dismiss — senza dover entrare nel dettaglio device
 * **frontend:** badge di navigazione contestuali per Alert ed Eventi (`useNavBadges`) — il conteggio nella sidebar/header si aggiorna automaticamente ogni 60s ed è filtrato per il contesto corrente (tutti i device, luogo o singolo device)
 * **frontend:** colorazione della temperatura nelle card device (`MetricCell`) in base alle soglie, coerente con la colorazione già presente nel dettaglio device
-* **deploy:** script di deploy (`deploy-docker.sh`, `deploy-native.sh`, `scripts/lib/common.sh`) irrobustiti con timeout e retry — timeout sui comandi locali (`LOCAL_CMD_TIMEOUT`) e remoti (`REMOTE_CMD_TIMEOUT`, `REMOTE_PROBE_TIMEOUT`, `REMOTE_TRANSFER_TIMEOUT`), opzioni SSH `ServerAliveInterval`/`ServerAliveCountMax`/`TCPKeepAlive` per rilevare connessioni VPN cadute in silenzio, retry automatico (`SSH_RETRY_COUNT`/`SSH_RETRY_DELAY`) solo sui fallimenti di trasporto (exit 255/124)
+* **deploy:** script di deploy (`deploy-docker.sh`, `deploy-native.sh`, `scripts/lib/common.sh`) irrobustiti con timeout e retry — timeout sui comandi locali (`LOCAL_CMD_TIMEOUT`) e remoti (`REMOTE_CMD_TIMEOUT`, `REMOTE_PROBE_TIMEOUT`, `REMOTE_TRANSFER_TIMEOUT`), opzioni SSH `ServerAliveInterval`/`ServerAliveCountMax`/`TCPKeepAlive` per rilevare connessioni VPN cadute in silenzio, retry automatico (`SSH_RETRY_COUNT`/`SSH_RETRY_DELAY`) solo sui fallimenti di trasporto (exit 255/124); comandi remoti correlati accorpati in singole connessioni SSH per ridurre le occasioni di stallo
+* **deploy:** workflow GitHub Actions (`.github/workflows/deploy.yml`) per eseguire `deploy.sh` da un runner Linux collegato alla tailnet privata via `tailscale/github-action` (OAuth client con scope minimo, tag dedicato ristretto via ACL alla sola porta SSH del Pi, chiave SSH separata da quella personale); trigger solo manuale (`workflow_dispatch`) con `dry_run` di default e `known_hosts` popolato ad ogni run (runner effimero)
+* **ai:** hook pre-commit (`PreToolUse` su `git commit*`) che ricorda, una tantum per sessione e in modo non bloccante, di valutare la skill `aggiorna-documentazioni` prima di aprire una PR
 * **backend:** aggiunge endpoint cambio password (`POST /auth/change-password`) con verifica vecchia password e hashing bcrypt; nuovo schema `ChangePasswordRequest` e servizio `change_password` in `user_service`
 * **frontend:** rework layout sidebar e header — toggle tema con icone sole/luna in fondo a sinistra, menu utente a icona in alto a destra con dropdown (nome utente, cambio password, logout), animazioni smooth collapse/expand sezioni sidebar, sidebar fissa all'altezza dello schermo su desktop
 * **commands:** controllo ventola CPU da UI — sezione `Ventola CPU` in `Comandi remoti` con scelta modalità (PWM automatico / FIXED) e input RPM; endpoint `POST /api/devices/{id}/commands/fan` con audit e allowlist
@@ -27,6 +29,11 @@
 * **frontend:** UI `Servizi` rifinita per mobile — tabella compatta con azioni a icona, stato a pallino colorato, conferme via modale e feedback toast auto-dismiss
 * **frontend:** dettaglio device semplificato — box `Dettaglio` e `Prestazioni` affiancati su desktop, sezione `Servizi` nella colonna destra senza card ridondante
 * **frontend:** `DeviceCard` e `LuogoSection` riorganizzati per mostrare più metriche nella lista device (overview e pagina luogo) e per una griglia più responsiva
+
+### Docs
+
+* **deploy:** documentata la nuova modalità di deploy da GitHub Actions (`docs/DEPLOYMENT.md` §16) — setup Tailscale (tag/ACL, OAuth client), chiave SSH dedicata alla CI, repository secret
+* README riorganizzato con indice, badge e sezione licenza; rimossa `MILESTONE_QUICKSTART.md` (orfano, duplicato di `docs/MILESTONE_WORKFLOW.md`); il template PR rimanda ora dinamicamente a `docs/ROADMAP.md` invece di elencare milestone fisse
 
 ### Fix
 

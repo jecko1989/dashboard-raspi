@@ -287,6 +287,10 @@ cp deploy/deploy.env.example deploy/deploy.env   # poi personalizza host/porte
 Guida completa (binding `0.0.0.0`, nginx proxy, CORS, firewall, accesso
 LAN e Tailscale/MagicDNS): **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
+In alternativa, `.github/workflows/deploy.yml` esegue lo stesso deploy da un
+runner GitHub connesso alla tailnet privata (trigger manuale, setup in
+[docs/DEPLOYMENT.md §16](docs/DEPLOYMENT.md#16-deploy-da-github-actions-via-tailscale)).
+
 Note pratiche per il deploy `native`:
 
 - su **Windows** puoi lanciare gli script da **Git Bash**; se `rsync` non e'
