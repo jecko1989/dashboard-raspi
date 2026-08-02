@@ -15,7 +15,7 @@ e la configurazione di esempio in [`deploy/deploy.env.example`](../deploy/deploy
 |----------|-----------|-------------|
 | **Sviluppo (locale)** | `run-local.ps1` oppure `npm run dev` + uvicorn | `http://localhost:5173` (Vite) / API su `http://localhost:8000` |
 | **Sviluppo in Docker** | `docker compose up --build` sul tuo PC | Frontend `http://localhost:8080`, backend `http://localhost:8000` |
-| **Produzione sul Raspberry** | `./scripts/deploy.sh --mode docker|native` | Dal Raspberry stesso: `http://localhost:8080`. Da altri dispositivi: IP/hostname del Pi |
+| **Produzione sul Raspberry** | `./scripts/deploy.sh --mode docker\|native` (manuale) oppure workflow GitHub Actions (§16, manuale on-demand) | Dal Raspberry stesso: `http://localhost:8080`. Da altri dispositivi: IP/hostname del Pi |
 
 Concetto chiave: **`localhost` indica sempre il dispositivo su cui è aperto il
 browser**, non il Raspberry remoto. Da un altro PC/telefono devi usare l'indirizzo
@@ -235,6 +235,8 @@ e aggiungi in sudoers:
 <utente-ssh-dashboard> ALL=(root) NOPASSWD: /usr/local/sbin/dashboard-fan-control fixed *
 ```
 
+Per lanciare questo stesso deploy da GitHub Actions invece che dal tuo PC, vedi §16.
+
 ---
 
 ## 7. Binding: `0.0.0.0` vs `127.0.0.1`
@@ -432,3 +434,78 @@ indirizzo senza rebuild. Per esporre la dashboard su **HTTPS** o su una **porta
 standard (80/443)** puoi configurare nginx come reverse proxy con certificati
 (es. `tailscale cert` per i domini `*.ts.net`, Certbot/Let's Encrypt o un
 certificato autofirmato).
+
+---
+
+## 16. Deploy da GitHub Actions (via Tailscale)
+
+Il workflow [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
+esegue lo **stesso** `scripts/deploy.sh` da un runner GitHub (Linux), che si
+unisce temporaneamente alla tailnet per raggiungere il Raspberry — senza
+esporlo pubblicamente.
+
+**Trigger solo manuale** (`workflow_dispatch`, bottone "Run workflow" nel tab
+Actions): il deploy tocca un host privato con privilegi `sudo`, quindi resta
+un'azione deliberata. Non aggiungere trigger `push`/`pull_request` senza aver
+ristretto opportunamente permessi ed environment — vale ancora di più se il
+repo è **pubblico**, come in questo progetto.
+
+Il primo campo del workflow è `dry_run` (default `true`): con `dry_run = true`
+verifica l'intera catena (Tailscale → SSH → script) senza toccare il Pi;
+imposta `dry_run = false` per un deploy reale.
+
+### 16.1 Setup una tantum
+
+**Tailscale — tag e ACL dedicati** (Access controls, formato `grants`):
+
+```json
+{
+	"tagOwners": {
+		"tag:ci-deploy": ["autogroup:admin"]
+	},
+	"grants": [
+		{"src": ["autogroup:member"], "dst": ["autogroup:member"], "ip": ["*"]},
+
+		// IP Tailscale del Raspberry (non l'hostname MagicDNS: "dst" vuole IP/CIDR
+		// o un alias definito in "hosts"). Sostituisci con l'IP reale del tuo Pi.
+		{"src": ["tag:ci-deploy"], "dst": ["100.x.x.x"], "ip": ["tcp:22"]}
+	],
+	"ssh": [
+		{"action": "check", "src": ["autogroup:member"], "dst": ["autogroup:self"], "users": ["autogroup:nonroot", "root"]}
+	]
+}
+```
+
+Poi crea un **OAuth client** (Settings → OAuth clients) con scope minimo
+`Devices: Core (Write)` e tag `tag:ci-deploy` — niente altro (DNS, Policy File,
+Users, ecc. restano disattivati).
+
+**Raspberry — chiave SSH dedicata alla CI** (mai riusare la tua chiave
+personale, così è revocabile senza toccare il tuo accesso):
+
+```bash
+ssh-keygen -t ed25519 -f secrets/ssh/id_rpi_<device>_ci -N "" -C "github-actions-ci"
+# poi aggiungi il contenuto del .pub a ~/.ssh/authorized_keys sul Pi (utente di deploy)
+```
+
+**GitHub — repository secret** (repo pubblico: mai in chiaro nel workflow o
+nei log, per questo sono tutti secret e non variabili):
+
+```bash
+gh secret set TS_OAUTH_CLIENT_ID
+gh secret set TS_OAUTH_SECRET
+gh secret set DEPLOY_SSH_PRIVATE_KEY < secrets/ssh/id_rpi_<device>_ci
+gh secret set DEPLOY_HOST --body "<hostname-tailscale>"
+gh secret set DEPLOY_USER --body "<utente-deploy>"
+gh secret set DEPLOY_PATH --body "/home/<utente>/workspace/dashboard-raspi"
+gh secret set NGINX_CONF_PATH --body "/etc/nginx/sites-available/dashboard-raspi"
+```
+
+### 16.2 Perché un runner Linux, non solo comodità
+
+Su un runner Linux (`ubuntu-latest`) `deploy.sh` usa `rsync` reale (non il
+fallback `tar+ssh` di Windows), l'orologio è sincronizzato via NTP di default
+(niente warning `tar` sui timestamp) e non esistono i problemi di processi
+orfani di `npm`/`vite` osservati in Git Bash su Windows — l'esecuzione è
+strutturalmente più prevedibile di un laptop personale, indipendentemente dal
+fatto che il trigger sia manuale o automatico.
