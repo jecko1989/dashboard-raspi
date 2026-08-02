@@ -50,11 +50,28 @@ function metricColor(pct: number | null | undefined): string {
   return 'text-green-600 dark:text-green-400';
 }
 
-function MetricCell({ label, value, pct }: { label: string; value: string; pct?: number | null }) {
+function tempColor(celsius: number | null | undefined): string {
+  if (celsius == null) return 'text-gray-400 dark:text-gray-500';
+  if (celsius >= 80) return 'text-red-500 dark:text-red-400';
+  if (celsius >= 65) return 'text-yellow-500 dark:text-yellow-400';
+  return 'text-green-600 dark:text-green-400';
+}
+
+function MetricCell({
+  label,
+  value,
+  pct,
+  colorClass,
+}: {
+  label: string;
+  value: string;
+  pct?: number | null;
+  colorClass?: string;
+}) {
   return (
     <div className="flex flex-col items-center gap-0.5">
       <span className="text-xs text-gray-400 dark:text-gray-500">{label}</span>
-      <span className={`text-sm font-semibold tabular-nums ${metricColor(pct)}`}>{value}</span>
+      <span className={`text-sm font-semibold tabular-nums ${colorClass ?? metricColor(pct)}`}>{value}</span>
     </div>
   );
 }
@@ -176,7 +193,7 @@ export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
             <MetricCell label="CPU"   value={metric ? formatPercent(metric.cpu_percent)  : '–'} pct={metric?.cpu_percent} />
             <MetricCell label="RAM"   value={metric ? formatPercent(metric.ram_percent)  : '–'} pct={metric?.ram_percent} />
             <MetricCell label="Disco" value={metric ? formatPercent(metric.disk_percent) : '–'} pct={metric?.disk_percent} />
-            <MetricCell label="Temp"  value={metric ? formatTemp(metric.temperature_celsius) : '–'} />
+            <MetricCell label="Temp"  value={metric ? formatTemp(metric.temperature_celsius) : '–'} colorClass={tempColor(metric?.temperature_celsius)} />
           </div>
           {/* Uptime centrato */}
           <div className="text-center text-xs">
