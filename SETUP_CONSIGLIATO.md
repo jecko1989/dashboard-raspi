@@ -1279,6 +1279,153 @@ systemctl status cups-localca-renew.timer --no-pager
 systemctl list-timers --all | grep cups-localca-renew
 ```
 
+### 7g. Scansione da client Windows (NAPS2) via Tailscale
+
+Le sezioni precedenti coprono la **stampa** in rete (IPP su `:631`, §7d). La
+**scansione** da un PC Windows con **NAPS2** è un percorso a parte: NAPS2 non
+stampa, quindi qui l'obiettivo è raggiungere lo **scanner** della multifunzione
+(già verificato lato Pi con `scanimage -L` in §7c) dal client remoto.
+
+> **Perché non basta il discovery automatico.** NAPS2 normalmente trova gli
+> scanner di rete via **mDNS/Bonjour** (eSCL/AirScan) o **WSD**, entrambi
+> protocolli broadcast pensati per la LAN locale. Tailscale è una mesh
+> punto-a-punto e **non inoltra il traffico broadcast/multicast**: il PC
+> remoto non vedrà mai lo scanner nella lista automatica, va configurato
+> l'indirizzo **manualmente**.
+
+#### Opzione A (consigliata) — driver SANE via `saned`
+
+I pacchetti `sane-utils` sono già installati dal §7a. Basta esporre il demone
+di rete SANE (`saned`, porta TCP `6566`) sulla mesh:
+
+```bash
+sudo nano /etc/sane.d/saned.conf
+```
+
+Aggiungi in fondo al file le sottoreti autorizzate (LAN di casa + Tailscale).
+**Adatta la subnet LAN a quella reale della casa** (verificala con `ip -4 addr
+show`): nell'esempio sotto è `192.168.1.0/24`, ma ogni casa ha la propria (es.
+ogni casa ha la propria, vedi §5c per il piano di rinumerazione).
+
+```
+192.168.1.0/24
+100.64.0.0/10
+```
+
+Abilita il socket systemd (su Ubuntu `saned` usa socket activation, non serve
+un servizio sempre attivo):
+
+```bash
+sudo systemctl enable --now saned.socket
+sudo systemctl status saned.socket --no-pager
+```
+
+Verifica che il servizio ascolti e sia raggiungibile dalla mesh:
+
+```bash
+ss -lntp | grep 6566
+```
+
+> ⚠️ **Verificato su NAPS2 8.3.2 (Windows): il driver SANE non esiste su
+> questa piattaforma.** La finestra "Seleziona dispositivo" di NAPS2 su
+> Windows espone **solo** Driver WIA, Driver TWAIN e Driver ESCL — la lista è
+> fissa per piattaforma (SANE è disponibile solo su Linux/Mac in NAPS2),
+> quindi nessun aggiornamento di NAPS2 la farà comparire. `saned` da solo
+> **non basta**: serve un bridge lato client (Opzione C sotto) che traduca
+> il protocollo SANE-net in TWAIN.
+
+#### Opzione B (alternativa) — bridge eSCL con AirSane
+
+Se preferisci che lo scanner compaia come dispositivo **eSCL/AirScan**
+"nativo" (stesso protocollo di AirPrint scan, utile anche per app mobile),
+puoi installare il progetto [AirSane](https://github.com/SimulPiscator/AirSane)
+sul Raspberry: espone gli scanner SANE locali come servizio eSCL su HTTP. Non
+è pacchettizzato nei repository Ubuntu standard, quindi richiede una build da
+sorgente (`cmake` + `libmicrohttpd-dev` + `libavahi-client-dev`) o un
+container Docker dedicato. Anche con AirSane, ricordati che il **discovery
+mDNS non attraversa Tailscale**: in NAPS2 dovrai comunque aggiungere il
+dispositivo inserendo manualmente l'IP Tailscale del Pi sulla porta eSCL
+(default `8080` o `8443` a seconda della configurazione).
+
+Per la maggior parte dei casi l'**Opzione A** (`saned`, già pronta con i
+pacchetti installati in §7a) è sufficiente e più semplice da mantenere.
+
+#### Opzione C (consigliata per Windows) — bridge client TWAIN con SANEWinDS
+
+Dato che NAPS2 su Windows non ha un driver SANE nativo (vedi avviso sopra),
+questa opzione aggiunge un bridge **lato client**: nessuna modifica ulteriore
+al Raspberry oltre a `saned` (Opzione A, già fatta). Serve solo un piccolo
+programma sul PC Windows che parla il protocollo SANE-net e si presenta a
+NAPS2 come sorgente **TWAIN**.
+
+1. Scarica l'installer di **SANEWinDS** da
+   <https://sourceforge.net/projects/sanewinds/files/> e installa la variante
+   **TWAIN Data Source** (si posiziona in `C:\Windows\twain_32\SANEWinDS\` su
+   Windows 64-bit).
+   > Progetto di terze parti poco recente, non firmato da un vendor noto:
+   > scaricalo ed eseguilo tu stesso dal browser (non farlo scaricare
+   > automaticamente da un agente/script) così puoi valutarne la provenienza
+   > prima di installare un data source TWAIN a livello di sistema.
+2. Configura l'host remoto in `SANEWinDS.ini` (cartella di installazione):
+
+   ```ini
+   [Host.0]
+   NameOrAddress=ip_raspberry_CUPS
+   Port=6566
+   TCP_Timeout_ms=5000
+   ```
+
+   `Username`/`Password` possono restare vuoti se `saned.conf` filtra solo
+   per IP/subnet (configurazione di default in Opzione A).
+3. In NAPS2: **Seleziona dispositivo** → **Driver TWAIN** → scegli
+   **SANEWinDS** → alla richiesta "Configure SANE Host", seleziona il device
+   SANE da usare (es. `hpaio:/usb/...` o il backend dedicato al modello, se
+   presente).
+
+**Problemi noti e soluzioni:**
+
+- **`SANE_STATUS_DEVICE_BUSY` all'apertura.** `saned` non sempre chiude la
+  sessione precedente quando il client Windows si disconnette in modo
+  brusco (errore, timeout, chiusura di NAPS2): resta un processo
+  `saned@N-...` residuo che tiene occupata la USB dello scanner. Sintomo:
+  `systemctl list-units --all | grep saned` mostra istanze `active running`
+  anche a client disconnesso. Soluzione sul Raspberry:
+
+  ```bash
+  sudo systemctl stop 'saned@*'
+  ```
+
+  Verifica che il device sia libero con `sudo lsof /dev/bus/usb/<bus>/<dev>`
+  (nessun output = libero) prima di ritentare la scansione dal client.
+
+- **`Version mismatch!` nel log di SANEWinDS** (`%APPDATA%\SANEWinDS\*.log`).
+  SANEWinDS implementa una versione più vecchia del protocollo SANE-net
+  rispetto a `sane-backends` recenti (es. 1.2.1 su Ubuntu 24.04): è un
+  warning innocuo nella maggior parte dei casi, non blocca la connessione di
+  controllo.
+
+- **Timeout durante il trasferimento immagine ("TWAIN error: Bummer" /
+  `SANE_STATUS_IO_ERROR`), ma senza problemi di rete.** Prima di alzare
+  `TCP_Timeout_ms` in `SANEWinDS.ini`, isola il problema testando **in
+  locale sul Raspberry**, bypassando completamente rete/Windows/NAPS2:
+
+  ```bash
+  time timeout 90 scanimage -d '<device>' --format=png -x 50 -y 50 \
+    --resolution 100 > /tmp/test.png 2>/tmp/test.err
+  cat /tmp/test.err
+  ```
+
+  Se anche così la scansione non completa o fallisce con un errore I/O
+  reale (non un timeout), il problema **non è la rete/il timeout del
+  client**: è il backend SANE o l'hardware dello scanner. Su alcuni modelli
+  datati (es. HP LaserJet M1005/M1120, che riusano il motore della testina
+  di stampa per la scansione) il meccanismo è noto per essere lento o
+  soggetto a guasti meccanici/ottici nel tempo, indipendentemente dal
+  backend usato (`hpljm1005` o `hpaio`) — a quel punto conviene verificare
+  fisicamente la stampante (power-cycle, scan da pannello frontale se
+  presente, controllo se la sola stampa funziona ancora) prima di continuare
+  a intervenire lato software.
+
 ---
 
 ## 8. Integrazione con la Raspberry Dashboard
