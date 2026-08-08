@@ -53,6 +53,11 @@ class DeviceConfig(BaseModel):
     thresholds: DeviceThresholdOverride | None = None
     # Ordine di visualizzazione dentro il luogo (0 = default).
     order: int = 0
+    # Nodo Mysterium containerizzato (Docker, container "myst") invece che
+    # installazione nativa (systemd, servizio "mysterium-node"). Determina quale
+    # variante dei comandi myst_start/myst_stop/myst_restart viene eseguita
+    # (vedi command_service._resolve_myst_command_key). Default: nativo.
+    myst_docker: bool = False
 
 
 class LuogoConfig(BaseModel):

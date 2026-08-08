@@ -55,13 +55,38 @@ def _target(device: Device) -> SSHTarget:
     )
 
 
+# Chiavi generiche myst il cui comando reale dipende dal tipo di installazione
+# (nativa systemd o container Docker) del singolo device.
+_MYST_LIFECYCLE_KEYS = {"myst_start", "myst_stop", "myst_restart"}
+
+
+def _resolve_myst_command_key(command_key: str, device: Device) -> str:
+    """Sceglie la variante docker/native del comando myst per questo device.
+
+    L'allowlist e' condivisa da tutta la flotta: alcuni Raspberry hanno
+    Mysterium nativo, altri containerizzato. Il flag e' in config/devices.yaml
+    (DeviceConfig.myst_docker, default False = nativo).
+    """
+    if command_key not in _MYST_LIFECYCLE_KEYS:
+        return command_key
+
+    from app.services.config_loader import get_device_config, load_devices_config
+
+    config = load_devices_config()
+    dev_cfg = get_device_config(config, device.id)
+    uses_docker = bool(dev_cfg and dev_cfg.myst_docker)
+    return f"{command_key}_{'docker' if uses_docker else 'native'}"
+
+
 def _build_command(
     command_key: str,
+    device: Device,
     service: str | None,
     subnet: str | None = None,
     pwm: int | None = None,
 ) -> str:
     """Costruisce la stringa di comando dall'allowlist, validando gli argomenti."""
+    command_key = _resolve_myst_command_key(command_key, device)
     if command_key not in allowlist.PRIVILEGED_COMMANDS:
         raise CommandError(f"Comando non consentito: {command_key}")
 
@@ -162,7 +187,7 @@ def run_command(
     """Esegue un comando privilegiato sul device, con audit completo."""
     audit_target = service or subnet or (str(pwm) if pwm is not None else None)
     try:
-        command_str = _build_command(command_key, service, subnet, pwm)
+        command_str = _build_command(command_key, device, service, subnet, pwm)
     except CommandError as exc:
         _audit(
             db, device, command_key, "denied", requested_by, target=audit_target, detail=str(exc)

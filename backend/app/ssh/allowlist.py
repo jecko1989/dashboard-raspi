@@ -52,15 +52,27 @@ PRIVILEGED_COMMANDS: dict[str, str] = {
     "tailscale_exit_and_routes": (
         "sudo /usr/bin/tailscale set --advertise-exit-node --advertise-routes={subnet}"
     ),
-    # Nodo Mysterium (myst): avvio/arresto del servizio systemd.
-    # L'installazione nativa crea il servizio "mysterium-node".
-    "myst_start": "sudo /bin/systemctl start mysterium-node",
-    "myst_stop": "sudo /bin/systemctl stop mysterium-node",
-    "myst_restart": "sudo /bin/systemctl restart mysterium-node",
-    # Backup/restore del nodo Mysterium. La data-dir nativa è /var/lib/mysterium-node
-    # (contiene keystore/ con l'identità del nodo). Stream binario via SSH.
+    # Nodo Mysterium (myst): alcuni device lo hanno nativo (systemd, servizio
+    # "mysterium-node"), altri containerizzato (Docker, container "myst") per
+    # isolare le sue interfacce myst# dal network namespace host (evita rebind
+    # spuri di tailscaled, che monitora le interfacce di rete dell'host).
+    # command_service._resolve_myst_command_key sceglie la variante corretta
+    # per device in base al flag DeviceConfig.myst_docker (config/devices.yaml);
+    # i chiamanti usano sempre la chiave generica "myst_start"/"myst_stop"/
+    # "myst_restart", mai queste direttamente.
+    "myst_start_native": "sudo /bin/systemctl start mysterium-node",
+    "myst_stop_native": "sudo /bin/systemctl stop mysterium-node",
+    "myst_restart_native": "sudo /bin/systemctl restart mysterium-node",
+    "myst_start_docker": "sudo /usr/bin/docker start myst",
+    "myst_stop_docker": "sudo /usr/bin/docker stop myst",
+    "myst_restart_docker": "sudo /usr/bin/docker restart myst",
+    # Backup/restore del nodo Mysterium. La data-dir /var/lib/mysterium-node è la
+    # stessa sia per l'installazione nativa sia in bind-mount Docker, quindi il
+    # comando è identico in entrambi i casi (nessuna variante necessaria).
     "myst_backup": "sudo /usr/bin/tar -czf - -C /var/lib/mysterium-node .",
     "myst_restore": "sudo /usr/bin/tar -xzf - -C /var/lib/mysterium-node",
+    # Chown legacy dell'installazione nativa: nei device Docker il container gira
+    # come root e non ne ha bisogno, ma resta innocuo se eseguito comunque.
     "myst_chown": "sudo /usr/bin/chown -R mysterium-node /var/lib/mysterium-node",
     # Ventola CPU: helper dedicato installato sul Raspberry.
     "fan_mode_pwm": "sudo /usr/local/sbin/dashboard-fan-control pwm",

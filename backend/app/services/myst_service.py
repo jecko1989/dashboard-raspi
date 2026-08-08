@@ -1,4 +1,4 @@
-"""Backup e ripristino del nodo Mysterium (installazione nativa).
+"""Backup e ripristino del nodo Mysterium (installazione nativa o container Docker).
 
 La data-dir del nodo (`/var/lib/mysterium-node`) contiene l'identità in
 `keystore/` (file `UTC*`), i DB e `nodeui-pass`. Il backup viene prodotto sul
@@ -6,9 +6,16 @@ device con `tar -czf -` (via SSH, come root) e incapsulato in un file **.zip**
 scaricabile dal browser. Lo zip contiene il `.tar.gz` originale, così i permessi
 e l'ownership Unix sono preservati per un ripristino pulito.
 
-Ripristino: si ferma il servizio, si estrae il tar nella data-dir, si ripristina
-l'ownership e si riavvia. Dopo il ripristino il nodo va **ri-rivendicato** su
-mystnodes.com.
+Il nodo puo' essere nativo (systemd) o containerizzato (Docker) a seconda del
+device: il flag `DeviceConfig.myst_docker` (config/devices.yaml) determina quale
+variante dei comandi myst_start/myst_stop/myst_restart viene eseguita
+(risolta in `command_service._resolve_myst_command_key`). Se il nodo gira in
+Docker, la data-dir e' la stessa in bind-mount nel container (stesso path host
+e container), quindi il flusso di backup/restore qui sotto non cambia.
+
+Ripristino: si ferma il servizio/container, si estrae il tar nella data-dir, si
+ripristina l'ownership e si riavvia. Dopo il ripristino il nodo va **ri-rivendicato**
+su mystnodes.com.
 """
 from __future__ import annotations
 
@@ -49,13 +56,19 @@ def _readme() -> str:
         "i database e nodeui-pass, con permessi Unix preservati.\n\n"
         "RIPRISTINO consigliato: usa il pulsante 'Ripristina backup' nella\n"
         "dashboard sullo stesso device (o su un Raspberry appena reinstallato con\n"
-        "il nodo myst gia' installato).\n\n"
+        "il nodo myst gia' installato, nativo o in Docker).\n\n"
         "Ripristino manuale (in alternativa), sul Raspberry:\n"
+        "  # installazione nativa (systemd):\n"
         "  sudo systemctl stop mysterium-node\n"
         f"  # estrai '{TARGZ_ENTRY}' dentro /var/lib/mysterium-node\n"
         "  sudo tar -xzf mysterium-node-data.tar.gz -C /var/lib/mysterium-node\n"
         "  sudo chown -R mysterium-node /var/lib/mysterium-node\n"
         "  sudo systemctl restart mysterium-node\n\n"
+        "  # installazione Docker (container 'myst'):\n"
+        "  sudo docker stop myst\n"
+        f"  # estrai '{TARGZ_ENTRY}' dentro /var/lib/mysterium-node (stesso path, bind-mount)\n"
+        "  sudo tar -xzf mysterium-node-data.tar.gz -C /var/lib/mysterium-node\n"
+        "  sudo docker start myst\n\n"
         "Dopo il ripristino, per riscattare il nodo apri i settings locali:\n"
         "  http://<ip_lan>:4449#settings\n"
     )
