@@ -4,6 +4,7 @@
 
 ### Features
 
+* **backend:** supporto a nodo Mysterium containerizzato Docker oltre a quello nativo — i comandi `myst_start`/`myst_stop`/`myst_restart` vengono risolti per singolo device in base al nuovo flag `DeviceConfig.myst_docker` in `devices.yaml` (default `false` = nativo/systemd); pensato per isolare le interfacce di rete dinamiche `myst#` create da Mysterium nel network namespace del container, evitando rebind spuri di `tailscaled` (che monitora le interfacce dell'host). Backup/restore restano invariati in entrambi i casi (stessa data-dir `/var/lib/mysterium-node`, bind-mount se Docker)
 * **ai:** convertite le skill `aggiorna-documentazioni` e `crea-pr` per Claude Code in `.claude/skills/`; aggiunto `CLAUDE.md` con guida al progetto e riferimento alle skill disponibili, aggiornato `AGENTS.md` di conseguenza
 * **ai:** aggiunte skill Copilot Agent per automazione workflow (`aggiorna-documentazioni` e `crea-pr`) in `.github/skills/`; le skill orchestrano aggiornamento documentazione e apertura PR via `gh` CLI
 * **frontend:** azioni rapide (aggiorna/riavvia/spegni) direttamente dalla `DeviceCard` nella overview e nelle pagine luogo, con conferma inline a due passaggi, indicatore di caricamento e feedback di esito auto-dismiss — senza dover entrare nel dettaglio device
@@ -32,11 +33,13 @@
 
 ### Docs
 
+* aggiunta `SETUP_CONSIGLIATO.md` — guida per la scansione da client Windows (NAPS2) via Tailscale
 * **deploy:** documentata la nuova modalità di deploy da GitHub Actions (`docs/DEPLOYMENT.md` §16) — setup Tailscale (tag/ACL, OAuth client), chiave SSH dedicata alla CI, repository secret
 * README riorganizzato con indice, badge e sezione licenza; rimossa `MILESTONE_QUICKSTART.md` (orfano, duplicato di `docs/MILESTONE_WORKFLOW.md`); il template PR rimanda ora dinamicamente a `docs/ROADMAP.md` invece di elencare milestone fisse
 
 ### Fix
 
+* **nginx:** aumentati i timeout del proxy verso il backend (`proxy_read_timeout`/`proxy_send_timeout` a 600s, sia in config Docker sia native) — i comandi di aggiornamento pacchetti (`apt-get update`/`upgrade`) su device lenti (es. Raspberry Pi 4) possono superare abbondantemente il minuto pur restando sincroni lato backend, causando altrimenti un 504
 * **ai:** skill `crea-pr` rileva quando ci si trova sul branch `main` e crea automaticamente un branch dedicato (con aggiornamento da `origin/main`) prima di procedere con la PR; corretta numerazione duplicata dei passi
 * **deploy:** rimossa `VITE_API_BASE_URL` (deprecata); il frontend usa ora URL relativi (`/api`) e nginx fa da proxy verso il backend — lo stesso bundle funziona su qualsiasi indirizzo (LAN, Tailscale, localhost) senza rebuild
 * **deploy:** aggiunta variabile `NGINX_CONF_PATH` in `deploy.env` per installazione e reload automatico del config nginx in modalità native
