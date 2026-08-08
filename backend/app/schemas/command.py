@@ -39,6 +39,9 @@ class MystNodeInfo(BaseModel):
 
     device_id: str
     docker: bool
+    # Presenti solo se docker=True (range porte UDP del container).
+    udp_start: int | None = None
+    udp_end: int | None = None
 
 
 class FanControlRequest(CommandRequest):

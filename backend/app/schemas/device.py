@@ -35,6 +35,12 @@ class DeviceCreate(BaseModel):
     ssh_port: int = 22
     description: str | None = None
     tags: list[str] = []
+    # Nodo Mysterium containerizzato (Docker) invece che nativo (systemd).
+    # Se True, myst_docker_udp_start/end (default 10000-60000) devono
+    # corrispondere al port-forward configurato sul router del device.
+    myst_docker: bool = False
+    myst_docker_udp_start: int | None = None
+    myst_docker_udp_end: int | None = None
 
 
 class DeviceUpdate(BaseModel):
@@ -52,6 +58,9 @@ class DeviceUpdate(BaseModel):
     ssh_port: int = 22
     description: str | None = None
     tags: list[str] = []
+    myst_docker: bool = False
+    myst_docker_udp_start: int | None = None
+    myst_docker_udp_end: int | None = None
 
 
 class DeviceRead(DeviceBase):

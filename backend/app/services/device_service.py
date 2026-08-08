@@ -123,6 +123,24 @@ def is_valid_luogo_id(value: str) -> bool:
     return bool(_DEVICE_ID_RE.fullmatch(value))
 
 
+def _resolve_myst_docker(
+    myst_docker: bool, udp_start: int | None, udp_end: int | None
+) -> tuple[int, int] | None:
+    """Valida il range porte UDP per myst in Docker (None se myst_docker=False).
+
+    Applica i default (10000-60000, gli stessi di Mysterium) se non specificati.
+    """
+    if not myst_docker:
+        return None
+    start = udp_start if udp_start is not None else 10000
+    end = udp_end if udp_end is not None else 60000
+    if not allowlist.is_valid_port(start) or not allowlist.is_valid_port(end) or start > end:
+        raise InvalidDeviceData(
+            "Range porte UDP myst non valido: usa porte 1-65535 con inizio <= fine."
+        )
+    return start, end
+
+
 def sync_config_to_db(db: Session, config: DevicesConfig | None = None) -> None:
     """Crea/aggiorna luoghi e device nel DB a partire dalla config YAML.
 
@@ -257,6 +275,11 @@ def create_device(db: Session, payload) -> Device:
     if not (1 <= ssh_port <= 65535):
         raise InvalidDeviceData("Porta SSH non valida (1-65535).")
 
+    myst_docker = bool(payload.myst_docker)
+    myst_udp_range = _resolve_myst_docker(
+        myst_docker, payload.myst_docker_udp_start, payload.myst_docker_udp_end
+    )
+
     config = load_devices_config()
 
     # Luogo esistente?
@@ -294,6 +317,10 @@ def create_device(db: Session, payload) -> Device:
         "key_path": key_path,
     }
     device_yaml["services"] = []
+    if myst_docker and myst_udp_range:
+        device_yaml["myst_docker"] = True
+        device_yaml["myst_docker_udp_start"] = myst_udp_range[0]
+        device_yaml["myst_docker_udp_end"] = myst_udp_range[1]
 
     config_loader.append_device_to_config(luogo_id, device_yaml)
 
@@ -360,6 +387,11 @@ def update_device(db: Session, device_id: str, payload) -> Device:
     if not (1 <= ssh_port <= 65535):
         raise InvalidDeviceData("Porta SSH non valida (1-65535).")
 
+    myst_docker = bool(payload.myst_docker)
+    myst_udp_range = _resolve_myst_docker(
+        myst_docker, payload.myst_docker_udp_start, payload.myst_docker_udp_end
+    )
+
     # Luogo di destinazione esistente?
     if not any(lg.id == luogo_id for lg in config.luoghi):
         raise LuogoNotFound(luogo_id)
@@ -395,6 +427,10 @@ def update_device(db: Session, device_id: str, payload) -> Device:
     device_yaml["services"] = list(current.services)
     if current.thresholds is not None:
         device_yaml["thresholds"] = current.thresholds.model_dump(exclude_none=True)
+    if myst_docker and myst_udp_range:
+        device_yaml["myst_docker"] = True
+        device_yaml["myst_docker_udp_start"] = myst_udp_range[0]
+        device_yaml["myst_docker_udp_end"] = myst_udp_range[1]
 
     config_loader.update_device_in_config(device_id, device_yaml, luogo_id)
 

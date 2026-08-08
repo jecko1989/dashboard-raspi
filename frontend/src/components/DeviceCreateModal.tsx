@@ -27,6 +27,9 @@ interface FormState {
   ssh_port: string;
   description: string;
   tags: string;
+  mystDocker: boolean;
+  mystDockerUdpStart: string;
+  mystDockerUdpEnd: string;
 }
 
 const EMPTY: FormState = {
@@ -39,6 +42,9 @@ const EMPTY: FormState = {
   ssh_port: '22',
   description: '',
   tags: '',
+  mystDocker: false,
+  mystDockerUdpStart: '10000',
+  mystDockerUdpEnd: '60000',
 };
 
 const inputClass =
@@ -81,6 +87,9 @@ export function DeviceCreateModal({
     ) =>
       setForm((f) => ({ ...f, [field]: e.target.value }));
 
+  const updateMystDocker = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, mystDocker: e.target.checked }));
+
   const validate = (): boolean => {
     const next: Partial<Record<keyof FormState, string>> = {};
     const id = form.id.trim();
@@ -103,6 +112,14 @@ export function DeviceCreateModal({
     if (!SSH_USER_RE.test(sshUser)) next.ssh_username = 'Utente SSH non valido.';
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
       next.ssh_port = 'Porta non valida (1-65535).';
+    }
+    if (form.mystDocker) {
+      const udpStart = Number(form.mystDockerUdpStart.trim());
+      const udpEnd = Number(form.mystDockerUdpEnd.trim());
+      const validPort = (p: number) => Number.isInteger(p) && p >= 1 && p <= 65535;
+      if (!validPort(udpStart) || !validPort(udpEnd) || udpStart > udpEnd) {
+        next.mystDockerUdpStart = 'Range porte UDP non valido (1-65535, inizio ≤ fine).';
+      }
     }
 
     setErrors(next);
@@ -127,6 +144,9 @@ export function DeviceCreateModal({
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean),
+      myst_docker: form.mystDocker,
+      myst_docker_udp_start: form.mystDocker ? Number(form.mystDockerUdpStart.trim()) : null,
+      myst_docker_udp_end: form.mystDocker ? Number(form.mystDockerUdpEnd.trim()) : null,
     };
 
     setSubmitting(true);
@@ -295,6 +315,65 @@ export function DeviceCreateModal({
                 className={inputClass}
               />
             </label>
+
+            <div className="sm:col-span-2 rounded-md border border-gray-200 p-3 dark:border-gray-600">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.mystDocker}
+                  onChange={updateMystDocker}
+                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
+                />
+                <span className="text-gray-700 dark:text-gray-200">
+                  🐳 Nodo Mysterium (myst) containerizzato con Docker
+                </span>
+              </label>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Lascia deselezionato se myst è installato nativamente (systemd,
+                caso più comune). Attiva solo se il device eseguirà myst in un
+                container Docker (es. per isolarlo da Tailscale exit node).
+              </p>
+
+              {form.mystDocker && (
+                <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="text-gray-600 dark:text-gray-300">
+                      Porta UDP iniziale
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={form.mystDockerUdpStart}
+                      onChange={update('mystDockerUdpStart')}
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-gray-600 dark:text-gray-300">
+                      Porta UDP finale
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={form.mystDockerUdpEnd}
+                      onChange={update('mystDockerUdpEnd')}
+                      className={inputClass}
+                    />
+                  </label>
+                  {errors.mystDockerUdpStart && (
+                    <p className="text-xs text-red-600 sm:col-span-2">
+                      {errors.mystDockerUdpStart}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 sm:col-span-2">
+                    Deve corrispondere al range di porte che inoltrerai (port-forward)
+                    sul router verso questo device.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">

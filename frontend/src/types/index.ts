@@ -37,6 +37,9 @@ export interface DeviceCreatePayload {
   ssh_port: number;
   description?: string | null;
   tags?: string[];
+  myst_docker?: boolean;
+  myst_docker_udp_start?: number | null;
+  myst_docker_udp_end?: number | null;
 }
 
 // Payload per la modifica di un device (l'id e' immutabile).
@@ -49,6 +52,16 @@ export interface DeviceUpdatePayload {
   ssh_port: number;
   description?: string | null;
   tags?: string[];
+  myst_docker?: boolean;
+  myst_docker_udp_start?: number | null;
+  myst_docker_udp_end?: number | null;
+}
+
+export interface MystNodeInfo {
+  device_id: string;
+  docker: boolean;
+  udp_start: number | null;
+  udp_end: number | null;
 }
 
 // Payload per la creazione di un luogo.

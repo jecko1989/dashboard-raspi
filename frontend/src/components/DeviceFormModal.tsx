@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Device, DeviceUpdatePayload } from '../types';
-import { updateDevice } from '../services/api';
+import { getMystNodeInfo, updateDevice } from '../services/api';
 import { useLuoghi } from '../hooks/useLuoghi';
 
 // Validatori allineati al backend (device_service).
@@ -28,6 +28,9 @@ interface FormState {
   ssh_port: string;
   description: string;
   tags: string;
+  mystDocker: boolean;
+  mystDockerUdpStart: string;
+  mystDockerUdpEnd: string;
 }
 
 interface DeviceFormModalProps {
@@ -49,10 +52,33 @@ export function DeviceFormModal({ open, device, onClose, onSaved }: DeviceFormMo
     ssh_port: String(device.ssh_port),
     description: device.description ?? '',
     tags: device.tags.join(', '),
+    mystDocker: false,
+    mystDockerUdpStart: '10000',
+    mystDockerUdpEnd: '60000',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    getMystNodeInfo(device.id)
+      .then((info) => {
+        if (!mounted) return;
+        setForm((f) => ({
+          ...f,
+          mystDocker: info.docker,
+          mystDockerUdpStart: info.udp_start != null ? String(info.udp_start) : f.mystDockerUdpStart,
+          mystDockerUdpEnd: info.udp_end != null ? String(info.udp_end) : f.mystDockerUdpEnd,
+        }));
+      })
+      .catch(() => {
+        // Nessuna info disponibile (device non ancora raggiungibile): resta nativo di default.
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [device.id]);
 
   if (!open) return null;
 
@@ -64,6 +90,9 @@ export function DeviceFormModal({ open, device, onClose, onSaved }: DeviceFormMo
       >,
     ) =>
       setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const updateMystDocker = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, mystDocker: e.target.checked }));
 
   const validate = (): boolean => {
     const next: Partial<Record<keyof FormState, string>> = {};
@@ -79,6 +108,14 @@ export function DeviceFormModal({ open, device, onClose, onSaved }: DeviceFormMo
     }
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
       next.ssh_port = 'Porta non valida (1-65535).';
+    }
+    if (form.mystDocker) {
+      const udpStart = Number(form.mystDockerUdpStart.trim());
+      const udpEnd = Number(form.mystDockerUdpEnd.trim());
+      const validPort = (p: number) => Number.isInteger(p) && p >= 1 && p <= 65535;
+      if (!validPort(udpStart) || !validPort(udpEnd) || udpStart > udpEnd) {
+        next.mystDockerUdpStart = 'Range porte UDP non valido (1-65535, inizio ≤ fine).';
+      }
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -101,6 +138,9 @@ export function DeviceFormModal({ open, device, onClose, onSaved }: DeviceFormMo
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean),
+      myst_docker: form.mystDocker,
+      myst_docker_udp_start: form.mystDocker ? Number(form.mystDockerUdpStart.trim()) : null,
+      myst_docker_udp_end: form.mystDocker ? Number(form.mystDockerUdpEnd.trim()) : null,
     };
 
     setSubmitting(true);
@@ -238,6 +278,65 @@ export function DeviceFormModal({ open, device, onClose, onSaved }: DeviceFormMo
                 className={inputClass}
               />
             </label>
+
+            <div className="sm:col-span-2 rounded-md border border-gray-200 p-3 dark:border-gray-600">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.mystDocker}
+                  onChange={updateMystDocker}
+                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
+                />
+                <span className="text-gray-700 dark:text-gray-200">
+                  🐳 Nodo Mysterium (myst) containerizzato con Docker
+                </span>
+              </label>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Lascia deselezionato se myst è installato nativamente (systemd,
+                caso più comune). Attiva solo se il device esegue myst in un
+                container Docker (es. per isolarlo da Tailscale exit node).
+              </p>
+
+              {form.mystDocker && (
+                <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="text-gray-600 dark:text-gray-300">
+                      Porta UDP iniziale
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={form.mystDockerUdpStart}
+                      onChange={update('mystDockerUdpStart')}
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-gray-600 dark:text-gray-300">
+                      Porta UDP finale
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={form.mystDockerUdpEnd}
+                      onChange={update('mystDockerUdpEnd')}
+                      className={inputClass}
+                    />
+                  </label>
+                  {errors.mystDockerUdpStart && (
+                    <p className="text-xs text-red-600 sm:col-span-2">
+                      {errors.mystDockerUdpStart}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 sm:col-span-2">
+                    Deve corrispondere al range di porte già inoltrato (port-forward)
+                    sul router verso questo device.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">

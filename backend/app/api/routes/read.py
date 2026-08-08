@@ -181,12 +181,20 @@ def device_services(device_id: str, db: Session = Depends(get_db)) -> list[Servi
 @router.get("/devices/{device_id}/myst/info", response_model=MystNodeInfo)
 def myst_node_info(device_id: str, db: Session = Depends(get_db)) -> MystNodeInfo:
     """Ritorna se il nodo myst del device e' installato via Docker o nativo."""
-    from app.services import myst_service
+    from app.services.config_loader import get_device_config, load_devices_config
 
     device = device_service.get_device(db, device_id)
     if device is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Device non trovato")
-    return MystNodeInfo(device_id=device_id, docker=myst_service.is_docker(device_id))
+
+    dev_cfg = get_device_config(load_devices_config(), device_id)
+    is_docker = bool(dev_cfg and dev_cfg.myst_docker)
+    return MystNodeInfo(
+        device_id=device_id,
+        docker=is_docker,
+        udp_start=dev_cfg.myst_docker_udp_start if is_docker and dev_cfg else None,
+        udp_end=dev_cfg.myst_docker_udp_end if is_docker and dev_cfg else None,
+    )
 
 
 @router.get("/devices/{device_id}/services/{service_name}/logs", response_model=ServiceLogs)

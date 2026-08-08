@@ -167,6 +167,52 @@ def test_create_device_luogo_not_found(db, config_file) -> None:
         device_service.create_device(db, _payload(luogo_id="inesistente"))
 
 
+def test_create_device_myst_docker_defaults(db, config_file) -> None:
+    device_service.create_device(db, _payload(myst_docker=True))
+    config = load_devices_config()
+    dev_cfg = next(
+        d for lg in config.luoghi for d in lg.devices if d.id == "rpi-nuovo-01"
+    )
+    assert dev_cfg.myst_docker is True
+    assert dev_cfg.myst_docker_udp_start == 10000
+    assert dev_cfg.myst_docker_udp_end == 60000
+
+
+def test_create_device_myst_docker_custom_range(db, config_file) -> None:
+    device_service.create_device(
+        db,
+        _payload(myst_docker=True, myst_docker_udp_start=56000, myst_docker_udp_end=56100),
+    )
+    config = load_devices_config()
+    dev_cfg = next(
+        d for lg in config.luoghi for d in lg.devices if d.id == "rpi-nuovo-01"
+    )
+    assert dev_cfg.myst_docker_udp_start == 56000
+    assert dev_cfg.myst_docker_udp_end == 56100
+
+
+def test_create_device_myst_docker_false_ignores_range(db, config_file) -> None:
+    device_service.create_device(db, _payload(myst_docker=False, myst_docker_udp_start=1))
+    config = load_devices_config()
+    dev_cfg = next(
+        d for lg in config.luoghi for d in lg.devices if d.id == "rpi-nuovo-01"
+    )
+    assert dev_cfg.myst_docker is False
+
+
+def test_create_device_myst_docker_invalid_range(db, config_file) -> None:
+    with pytest.raises(device_service.InvalidDeviceData):
+        device_service.create_device(
+            db,
+            _payload(myst_docker=True, myst_docker_udp_start=56100, myst_docker_udp_end=56000),
+        )
+    with pytest.raises(device_service.InvalidDeviceData):
+        device_service.create_device(
+            db,
+            _payload(myst_docker=True, myst_docker_udp_start=0, myst_docker_udp_end=70000),
+        )
+
+
 # --- update_device -----------------------------------------------------------
 
 
@@ -211,6 +257,43 @@ def test_update_device_luogo_not_found(db, config_file) -> None:
     with pytest.raises(device_service.LuogoNotFound):
         device_service.update_device(
             db, "rpi-esistente-01", _update_payload(luogo_id="mancante")
+        )
+
+
+def test_update_device_enable_myst_docker(db, config_file) -> None:
+    device_service.sync_config_to_db(db)
+    device_service.update_device(
+        db,
+        "rpi-esistente-01",
+        _update_payload(myst_docker=True, myst_docker_udp_start=56000, myst_docker_udp_end=56100),
+    )
+    config = load_devices_config()
+    dev_cfg = next(
+        d for lg in config.luoghi for d in lg.devices if d.id == "rpi-esistente-01"
+    )
+    assert dev_cfg.myst_docker is True
+    assert dev_cfg.myst_docker_udp_start == 56000
+    assert dev_cfg.myst_docker_udp_end == 56100
+
+
+def test_update_device_disable_myst_docker(db, config_file) -> None:
+    device_service.sync_config_to_db(db)
+    device_service.update_device(db, "rpi-esistente-01", _update_payload(myst_docker=True))
+    device_service.update_device(db, "rpi-esistente-01", _update_payload(myst_docker=False))
+    config = load_devices_config()
+    dev_cfg = next(
+        d for lg in config.luoghi for d in lg.devices if d.id == "rpi-esistente-01"
+    )
+    assert dev_cfg.myst_docker is False
+
+
+def test_update_device_myst_docker_invalid_range(db, config_file) -> None:
+    device_service.sync_config_to_db(db)
+    with pytest.raises(device_service.InvalidDeviceData):
+        device_service.update_device(
+            db,
+            "rpi-esistente-01",
+            _update_payload(myst_docker=True, myst_docker_udp_start=100, myst_docker_udp_end=50),
         )
 
 

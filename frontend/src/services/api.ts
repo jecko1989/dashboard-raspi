@@ -18,6 +18,7 @@ import type {
   CommandResult,
   CommandAudit,
   SSHKeyResult,
+  MystNodeInfo,
 } from '../types';
 
 // URL relativi: il proxy nginx (o Vite in dev) instrada /api al backend.
@@ -385,12 +386,8 @@ export async function generateSSHKey(
   return data;
 }
 
-export async function getMystNodeInfo(
-  deviceId: string,
-): Promise<{ device_id: string; docker: boolean }> {
-  const { data } = await api.get<{ device_id: string; docker: boolean }>(
-    `/devices/${deviceId}/myst/info`,
-  );
+export async function getMystNodeInfo(deviceId: string): Promise<MystNodeInfo> {
+  const { data } = await api.get<MystNodeInfo>(`/devices/${deviceId}/myst/info`);
   return data;
 }
 
