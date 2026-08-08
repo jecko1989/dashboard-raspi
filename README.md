@@ -389,12 +389,20 @@ pi ALL=(root) NOPASSWD: /bin/systemctl restart cron
 # Tailscale
 pi ALL=(root) NOPASSWD: /usr/bin/tailscale set *
 
-# Mysterium Node
+# Mysterium Node (installazione nativa — devices con myst_docker: false/assente)
 pi ALL=(root) NOPASSWD: /bin/systemctl start mysterium-node
 pi ALL=(root) NOPASSWD: /bin/systemctl stop mysterium-node
 pi ALL=(root) NOPASSWD: /bin/systemctl restart mysterium-node
 
-# Backup/restore Mysterium
+# Mysterium Node (containerizzato Docker — SOLO devices con myst_docker: true)
+pi ALL=(root) NOPASSWD: /usr/bin/docker start myst
+pi ALL=(root) NOPASSWD: /usr/bin/docker stop myst
+pi ALL=(root) NOPASSWD: /usr/bin/docker restart myst
+pi ALL=(root) NOPASSWD: /usr/bin/docker pull mysteriumnetwork/myst\:latest
+pi ALL=(root) NOPASSWD: /usr/bin/docker rm -f myst
+pi ALL=(root) NOPASSWD: /usr/bin/docker run -d --name myst *
+
+# Backup/restore Mysterium (identico nativo o Docker: stessa data-dir, bind-mount se Docker)
 pi ALL=(root) NOPASSWD: /usr/bin/tar -czf - -C /var/lib/mysterium-node .
 pi ALL=(root) NOPASSWD: /usr/bin/tar -xzf - -C /var/lib/mysterium-node
 pi ALL=(root) NOPASSWD: /usr/bin/chown -R mysterium-node /var/lib/mysterium-node
@@ -403,6 +411,8 @@ pi ALL=(root) NOPASSWD: /usr/bin/chown -R mysterium-node /var/lib/mysterium-node
 pi ALL=(root) NOPASSWD: /usr/local/sbin/dashboard-fan-control pwm
 pi ALL=(root) NOPASSWD: /usr/local/sbin/dashboard-fan-control fixed *
 ```
+
+Aggiungi le righe Docker solo sui device con `myst_docker: true` in `devices.yaml` (vedi `AGENTS.md`); sugli altri device native bastano le righe `systemctl`.
 
 `systemctl is-active` e `journalctl` **non** richiedono sudo. Valida con `sudo visudo -c`.
 

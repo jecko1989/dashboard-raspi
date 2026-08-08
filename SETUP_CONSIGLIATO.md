@@ -114,7 +114,7 @@ flowchart TB
 
     subgraph mesh["☁️ Tailnet Tailscale — mesh WireGuard (rete 100.x)"]
         nMia["🍓 casa-mia<br/>📊 Dashboard + subnet router<br/>+ myst"]
-        nSuocero["🍓 casa-suocero<br/>⭐ exit node + subnet router<br/>⚠️ myst da fermare se streammi"]
+        nSuocero["🍓 casa-suocero<br/>⭐ exit node + subnet router<br/>🐳 myst in Docker<br/>⚠️ da fermare se streammi"]
         nSorella["🍓 casa-sorella<br/>subnet router + CUPS + myst"]
         nMadre["🍓 casa-madre<br/>subnet router + myst"]
     end
@@ -164,6 +164,17 @@ flowchart TB
   seleziono, tutto il traffico esce dall'IP residenziale di casa suocero.
 - **`myst`** gira su tutti i nodi, ma su casa suocero (exit node) va **fermato
   mentre streammi**, per non compromettere IP reputation e upload (vedi §6i).
+- **Casa suocero fa eccezione**: lì `myst` gira **in Docker** (container `myst`),
+  non nativamente come sugli altri nodi. Motivo: essendo anche **exit node**
+  Tailscale, `tailscaled` monitora le interfacce di rete dell'host per rilevare
+  cambi di connettività — ma `myst` nativo crea/distrugge dinamicamente
+  interfacce virtuali `myst#` a ogni sessione P2P con un consumer, e ogni
+  comparsa/scomparsa veniva letta da `tailscaled` come "rete cambiata",
+  causando un rebind (riconnessione DERP/peer) e brevi interruzioni percepite
+  come "l'exit node si stacca ogni tanto". In Docker le interfacce `myst#`
+  restano confinate nel network namespace del container e non sono più
+  visibili all'host, eliminando il problema (dettagli e comandi di gestione
+  in §6i/§6j).
 - Casa mia, sorella e madre erano tutte su `192.168.1.0/24`: sorella e madre sono
   state **rinumerate** (`.20.` e `.30.`) per evitare conflitti — vedi §5c.
 
@@ -734,7 +745,7 @@ decentralizzata Mysterium.
 
 #### Installazione (pacchetto nativo, senza Docker)
 
-Sui nodi che **non** eseguono la dashboard (casa madre, sorella, suocero) installi
+Sui nodi che **non** eseguono la dashboard (casa madre, sorella) installi
 myst nativamente con lo script ufficiale:
 
 ```bash
@@ -759,6 +770,38 @@ configurare il nodo (identità, termini, payout):
 ```
 http://<ip-del-raspberry>:4449
 ```
+
+#### Eccezione: casa suocero (myst in Docker)
+
+Casa suocero **non** segue l'installazione nativa sopra: `myst` gira in un
+**container Docker** (`--name myst`), con bind-mount della stessa data-dir
+(`/var/lib/mysterium-node`) che avrebbe l'installazione nativa.
+
+**Perché.** Solo su questo nodo `myst` convive con Tailscale **exit node**.
+`tailscaled` monitora le interfacce di rete dell'host per capire quando la
+connettività cambia; l'installazione nativa di `myst` crea/distrugge
+un'interfaccia virtuale `myst#` a ogni sessione P2P con un consumer (più volte
+all'ora), e ogni comparsa/scomparsa veniva letta da `tailscaled` come "rete
+cambiata" → rebind (riconnessione DERP + rinegoziazione dei path diretti con
+i peer) → brevi interruzioni percepite come "l'exit node si stacca ogni 20
+minuti circa". Isolando `myst` in un container Docker, le sue interfacce
+`myst#` restano confinate nel network namespace del container: l'host non le
+vede più e `tailscaled` non fa più rebind spuri. Sugli altri nodi (madre,
+sorella), che non fanno da exit node, il problema non si presenta e
+l'installazione nativa resta più semplice da gestire.
+
+Comandi equivalenti (container invece di systemd):
+
+```bash
+sudo docker start myst
+sudo docker stop myst
+sudo docker restart myst
+```
+
+Il comando completo di creazione del container (immagine, porte pubblicate,
+range UDP coerente col port-forward sul router) è documentato in
+`AGENTS.md` del repository dashboard, non ripetuto qui per evitare
+disallineamenti tra i due documenti.
 
 #### Convivenza con Tailscale
 
@@ -790,7 +833,15 @@ Conseguenze possibili:
 **Raccomandazioni:**
 
 - **Non** far girare Myst sul nodo che usi come exit node (**casa suocero**), o
-  in alternativa **spegni Myst mentre streammi** da lì:
+  in alternativa **spegni Myst mentre streammi** da lì. Su casa suocero `myst`
+  è in Docker (vedi eccezione sopra), quindi i comandi sono:
+
+  ```bash
+  sudo docker stop myst      # ferma il nodo Mysterium (temporaneo)
+  sudo docker start myst     # riavvialo quando hai finito
+  ```
+
+  Sugli altri nodi (installazione nativa):
 
   ```bash
   sudo systemctl stop mysterium-node      # ferma il nodo Mysterium (temporaneo)
@@ -816,12 +867,17 @@ sul device, via SSH:
 - **Exit node** → `tailscale set --advertise-exit-node`
 - **Subnet routes** → `tailscale set --advertise-routes=<subnet-LAN-rilevata>`
 - **Exit node + routes** → entrambi in un unico comando
-- **Avvia / Ferma myst** → `systemctl start|stop mysterium-node`
+- **Avvia / Ferma myst** → `systemctl start|stop mysterium-node` (nodi nativi) o
+  `docker start|stop myst` (casa suocero); la dashboard sceglie da sola il
+  comando giusto per device, in base a un flag di configurazione
 - **Backup nodo** → `tar -czf -` della data-dir `/var/lib/mysterium-node`,
-  scaricato come **.zip** dal browser (contiene l'identità in `keystore/`)
-- **Ripristina backup** → carica lo .zip: `systemctl stop` → `tar -xzf -` nella
-  data-dir → `chown -R mysterium-node` → `systemctl restart` (poi ri-rivendica il
-  nodo su mystnodes.com)
+  scaricato come **.zip** dal browser (contiene l'identità in `keystore/`) —
+  identico nativo o Docker (stessa data-dir, in bind-mount se Docker)
+- **Ripristina backup** → carica lo .zip: ferma il nodo → `tar -xzf -` nella
+  data-dir → riavvia (poi ri-rivendica il nodo su mystnodes.com)
+- **Aggiorna nodo** (solo casa suocero, Docker) → scarica l'ultima immagine
+  `myst`, rimuove e ricrea il container con la stessa data-dir (identità e
+  guadagni preservati)
 
 La subnet per le route viene **rilevata automaticamente** sul device (interfaccia
 della route di default); dopo l'annuncio ricordati di **approvare la route/exit
@@ -859,16 +915,28 @@ nome_utente ALL=(root) NOPASSWD: /bin/systemctl restart cron
 # --- Tailscale (Exit node / Subnet routes) ---
 nome_utente ALL=(root) NOPASSWD: /usr/bin/tailscale set *
 
-# --- Nodo Mysterium (Avvia / Ferma myst) ---
+# --- Nodo Mysterium nativo (Avvia / Ferma myst) — nodi madre, sorella ---
 nome_utente ALL=(root) NOPASSWD: /bin/systemctl start mysterium-node
 nome_utente ALL=(root) NOPASSWD: /bin/systemctl stop mysterium-node
 nome_utente ALL=(root) NOPASSWD: /bin/systemctl restart mysterium-node
 
 # --- Backup/restore del nodo myst (data-dir /var/lib/mysterium-node) ---
+# Identico nativo o Docker: la data-dir e' la stessa (bind-mount se Docker).
 nome_utente ALL=(root) NOPASSWD: /usr/bin/tar -czf - -C /var/lib/mysterium-node .
 nome_utente ALL=(root) NOPASSWD: /usr/bin/tar -xzf - -C /var/lib/mysterium-node
 nome_utente ALL=(root) NOPASSWD: /usr/bin/chown -R mysterium-node /var/lib/mysterium-node
+
+# --- Nodo Mysterium in Docker (Avvia / Ferma / Aggiorna myst) — SOLO casa suocero ---
+nome_utente ALL=(root) NOPASSWD: /usr/bin/docker start myst
+nome_utente ALL=(root) NOPASSWD: /usr/bin/docker stop myst
+nome_utente ALL=(root) NOPASSWD: /usr/bin/docker restart myst
+nome_utente ALL=(root) NOPASSWD: /usr/bin/docker pull mysteriumnetwork/myst\:latest
+nome_utente ALL=(root) NOPASSWD: /usr/bin/docker rm -f myst
+nome_utente ALL=(root) NOPASSWD: /usr/bin/docker run -d --name myst *
 ```
+
+> **Solo casa suocero** ha bisogno delle righe Docker sopra (nodo con `myst`
+> containerizzato, vedi §6i). Sugli altri nodi bastano le righe systemd.
 
 > ⚠️ **I path devono combaciare ESATTAMENTE con quelli in
 > `backend/app/ssh/allowlist.py`**, perché `sudo` confronta la stringa letterale

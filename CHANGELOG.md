@@ -34,6 +34,7 @@
 
 ### Docs
 
+* aggiornati `SETUP_CONSIGLIATO.md` e `README.md` (sezione sudoers) con l'eccezione myst-in-Docker su casa suocero: motivazione (isolare le interfacce `myst#` da `tailscaled` per evitare rebind/disconnessioni sull'exit node), comandi Docker equivalenti e regole sudoers aggiuntive
 * aggiunta `SETUP_CONSIGLIATO.md` — guida per la scansione da client Windows (NAPS2) via Tailscale
 * **deploy:** documentata la nuova modalità di deploy da GitHub Actions (`docs/DEPLOYMENT.md` §16) — setup Tailscale (tag/ACL, OAuth client), chiave SSH dedicata alla CI, repository secret
 * README riorganizzato con indice, badge e sezione licenza; rimossa `MILESTONE_QUICKSTART.md` (orfano, duplicato di `docs/MILESTONE_WORKFLOW.md`); il template PR rimanda ora dinamicamente a `docs/ROADMAP.md` invece di elencare milestone fisse
