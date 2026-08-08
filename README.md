@@ -368,6 +368,13 @@ Prima installa l'helper per il controllo ventola (una sola volta):
 sudo install -m 0755 deploy/scripts/dashboard-fan-control.sh /usr/local/sbin/dashboard-fan-control
 ```
 
+L'helper rileva da solo l'interfaccia PWM disponibile (hwmon o, in fallback, `/sys/class/pwm`) — vedi `AGENTS.md` § Note operative per i dettagli e i limiti (modalita' automatica non disponibile in fallback). Su Raspberry Pi OS/Pi5 non serve altro; su **Ubuntu su Pi4** serve anche abilitare l'overlay corretto in `/boot/firmware/config.txt`, perche' il pacchetto firmware non include `dtoverlay=pwm-fan`:
+
+```bash
+echo 'dtoverlay=pwm' | sudo tee -a /boot/firmware/config.txt
+sudo reboot
+```
+
 ```sudoers
 # Alimentazione
 pi ALL=(root) NOPASSWD: /sbin/reboot

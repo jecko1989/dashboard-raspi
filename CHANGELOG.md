@@ -42,6 +42,7 @@
 
 ### Fix
 
+* **deploy:** `dashboard-fan-control.sh` non assume piu' che l'interfaccia hwmon PWM sia sempre disponibile — rileva quella presente sul device: hwmon se esiste (fan nativa Raspberry Pi 5, o Pi4 con Raspberry Pi OS e `dtoverlay=pwm-fan`), altrimenti fallback su `/sys/class/pwm` (Pi4 con Ubuntu, il cui pacchetto firmware non include l'overlay `pwm-fan` ma solo `pwm.dtbo`). La modalita' fissa funziona su entrambe le interfacce; la modalita' automatica resta disponibile solo dove c'e' hwmon nativo, altrimenti il comando risponde con un errore esplicito invece di un comportamento silenzioso
 * **nginx:** aumentati i timeout del proxy verso il backend (`proxy_read_timeout`/`proxy_send_timeout` a 600s, sia in config Docker sia native) — i comandi di aggiornamento pacchetti (`apt-get update`/`upgrade`) su device lenti (es. Raspberry Pi 4) possono superare abbondantemente il minuto pur restando sincroni lato backend, causando altrimenti un 504
 * **ai:** skill `crea-pr` rileva quando ci si trova sul branch `main` e crea automaticamente un branch dedicato (con aggiornamento da `origin/main`) prima di procedere con la PR; corretta numerazione duplicata dei passi
 * **deploy:** rimossa `VITE_API_BASE_URL` (deprecata); il frontend usa ora URL relativi (`/api`) e nginx fa da proxy verso il backend — lo stesso bundle funziona su qualsiasi indirizzo (LAN, Tailscale, localhost) senza rebuild

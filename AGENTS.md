@@ -106,6 +106,7 @@ Tutte lette da `app.core.config` (pydantic-settings). Fonte di verità: `backend
 - Config loader (`services/config_loader.py`): espande `${SSH_KEYS_DIR}` negli yaml, accetta "apartments" come alias legacy per "luoghi".
 - DB migrazioni (`db/init_db.py`): additive, senza Alembic; include rename `apartments`→`luoghi` e colonna `apartment_id`→`luogo_id` (v0.6.0).
 - Metriche: modello include `fan_rpm` e `fan_mode` (v0.7.0). Export CSV disponibile via `GET /devices/{id}/metrics/export.csv`.
+- Controllo ventola (`deploy/scripts/dashboard-fan-control.sh`): rileva a runtime l'interfaccia PWM disponibile sul device invece di assumerne una fissa. Preferisce hwmon (`/sys/class/hwmon/hwmon*/pwm*_enable`) se presente — caso Raspberry Pi 5 (fan nativa) o Pi4 con Raspberry Pi OS e `dtoverlay=pwm-fan` — dove supporta sia modalita' automatica (`pwm`, termostatata dal kernel) sia fissa. Se hwmon manca, fa fallback su `/sys/class/pwm/pwmchip0` (caso Pi4 con Ubuntu, il cui pacchetto `linux-firmware-raspi` non include l'overlay `pwm-fan` ma solo l'overlay generico `pwm.dtbo`, da abilitare con `dtoverlay=pwm` in `config.txt`): qui e' supportata solo la modalita' fissa (duty-cycle su periodo fisso 40000ns/25kHz), la modalita' automatica risponde con errore esplicito invece di un comportamento silenzioso, perche' manca il binding kernel verso la thermal zone.
 - Cancellazione eventi: `POST /events/delete` (admin-only, con filtri device_id/luogo_id).
 
 ## Checklist rapida prima di merge
