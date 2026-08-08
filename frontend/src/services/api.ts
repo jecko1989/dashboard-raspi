@@ -385,6 +385,23 @@ export async function generateSSHKey(
   return data;
 }
 
+export async function getMystNodeInfo(
+  deviceId: string,
+): Promise<{ device_id: string; docker: boolean }> {
+  const { data } = await api.get<{ device_id: string; docker: boolean }>(
+    `/devices/${deviceId}/myst/info`,
+  );
+  return data;
+}
+
+export async function updateMystDockerNode(deviceId: string): Promise<CommandResult> {
+  const { data } = await api.post<CommandResult>(
+    `/devices/${deviceId}/myst/update`,
+    { confirm: true },
+  );
+  return data;
+}
+
 // --- Backup / ripristino nodo Mysterium --------------------------------------
 
 // Scarica il backup .zip del nodo myst (usa il filename fornito dal server).

@@ -321,6 +321,33 @@ async def myst_restore(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
+@router.post(
+    "/devices/{device_id}/myst/update",
+    response_model=CommandResult,
+    dependencies=[Depends(rate_limit)],
+)
+def myst_update(
+    device_id: str,
+    body: CommandRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Aggiorna il nodo myst containerizzato (pull immagine + ricrea il container).
+
+    Solo admin, solo device con myst_docker=true in config (verificato nel service).
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail="Operazione riservata agli amministratori"
+        )
+    device = _require_device(db, device_id)
+    _require_confirm(body)
+    try:
+        return myst_service.update_docker_node(db, device, requested_by=current_user.username)
+    except MystError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
 @router.delete(
     "/events",
     response_model=EventDeleteResult,

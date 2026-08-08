@@ -58,6 +58,11 @@ class DeviceConfig(BaseModel):
     # variante dei comandi myst_start/myst_stop/myst_restart viene eseguita
     # (vedi command_service._resolve_myst_command_key). Default: nativo.
     myst_docker: bool = False
+    # Range porte UDP pubblicate dal container (-p) e passate a --udp.ports,
+    # usato solo se myst_docker=True per ricreare il container in fase di
+    # aggiornamento. Deve corrispondere al port-forward configurato sul router.
+    myst_docker_udp_start: int = 10000
+    myst_docker_udp_end: int = 60000
 
 
 class LuogoConfig(BaseModel):

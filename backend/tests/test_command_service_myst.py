@@ -43,6 +43,8 @@ luoghi:
           port: 22
           key_path: "${SSH_KEYS_DIR}/id_docker"
         myst_docker: true
+        myst_docker_udp_start: 56000
+        myst_docker_udp_end: 56100
         services: []
 """
 
@@ -95,3 +97,46 @@ def test_build_command_myst_native_vs_docker(config_file) -> None:
     docker = command_service._build_command("myst_start", _device("rpi-docker"), None)
     assert "systemctl start mysterium-node" in native
     assert "docker start myst" in docker
+
+
+def test_build_command_myst_docker_recreate_uses_udp_range(config_file) -> None:
+    cmd = command_service._build_command(
+        "myst_docker_recreate", _device("rpi-docker"), None,
+        udp_start=56000, udp_end=56100,
+    )
+    assert "-p 56000-56100:56000-56100/udp" in cmd
+    assert "--udp.ports=56000:56100" in cmd
+
+
+def test_build_command_myst_docker_recreate_rejects_invalid_range(config_file) -> None:
+    with pytest.raises(command_service.CommandError):
+        command_service._build_command(
+            "myst_docker_recreate", _device("rpi-docker"), None,
+            udp_start=56100, udp_end=56000,  # start > end
+        )
+    with pytest.raises(command_service.CommandError):
+        command_service._build_command(
+            "myst_docker_recreate", _device("rpi-docker"), None,
+            udp_start=None, udp_end=56100,
+        )
+    with pytest.raises(command_service.CommandError):
+        command_service._build_command(
+            "myst_docker_recreate", _device("rpi-docker"), None,
+            udp_start=0, udp_end=70000,  # fuori range 1..65535
+        )
+
+
+def test_myst_service_is_docker(config_file) -> None:
+    from app.services import myst_service
+
+    assert myst_service.is_docker("rpi-docker") is True
+    assert myst_service.is_docker("rpi-nativo") is False
+    assert myst_service.is_docker("rpi-sconosciuto") is False
+
+
+def test_myst_service_update_docker_node_rejects_native_device(config_file) -> None:
+    from app.services import myst_service
+    from app.services.myst_service import MystError
+
+    with pytest.raises(MystError):
+        myst_service.update_docker_node(db=None, device=_device("rpi-nativo"))

@@ -84,6 +84,8 @@ def _build_command(
     service: str | None,
     subnet: str | None = None,
     pwm: int | None = None,
+    udp_start: int | None = None,
+    udp_end: int | None = None,
 ) -> str:
     """Costruisce la stringa di comando dall'allowlist, validando gli argomenti."""
     command_key = _resolve_myst_command_key(command_key, device)
@@ -103,6 +105,16 @@ def _build_command(
         if pwm is None or not allowlist.is_valid_pwm_value(pwm):
             raise CommandError("Valore PWM non valido")
         return template.format(pwm=pwm)
+    if "{udp_start}" in template or "{udp_end}" in template:
+        if (
+            udp_start is None
+            or udp_end is None
+            or not allowlist.is_valid_port(udp_start)
+            or not allowlist.is_valid_port(udp_end)
+            or udp_start > udp_end
+        ):
+            raise CommandError("Range porte UDP non valido")
+        return template.format(udp_start=udp_start, udp_end=udp_end)
     return template
 
 
@@ -183,11 +195,20 @@ def run_command(
     service: str | None = None,
     subnet: str | None = None,
     pwm: int | None = None,
+    udp_start: int | None = None,
+    udp_end: int | None = None,
 ) -> CommandResult:
     """Esegue un comando privilegiato sul device, con audit completo."""
-    audit_target = service or subnet or (str(pwm) if pwm is not None else None)
+    audit_target = (
+        service
+        or subnet
+        or (str(pwm) if pwm is not None else None)
+        or (f"{udp_start}-{udp_end}" if udp_start is not None else None)
+    )
     try:
-        command_str = _build_command(command_key, device, service, subnet, pwm)
+        command_str = _build_command(
+            command_key, device, service, subnet, pwm, udp_start, udp_end
+        )
     except CommandError as exc:
         _audit(
             db, device, command_key, "denied", requested_by, target=audit_target, detail=str(exc)

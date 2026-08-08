@@ -152,3 +152,66 @@ def restore_backup(
         status=restart.status,
         detail=detail,
     )
+
+
+def is_docker(device_id: str) -> bool:
+    """Ritorna True se il nodo myst del device e' containerizzato (Docker)."""
+    from app.services.config_loader import get_device_config, load_devices_config
+
+    config = load_devices_config()
+    dev_cfg = get_device_config(config, device_id)
+    return bool(dev_cfg and dev_cfg.myst_docker)
+
+
+def update_docker_node(
+    db, device: Device, requested_by: str | None = None
+) -> CommandResult:
+    """Aggiorna il nodo myst containerizzato: pull immagine, ricrea il container.
+
+    Solo per device con `myst_docker: true` in config. Riusa la stessa data-dir
+    in bind-mount, quindi identita' e guadagni del nodo restano invariati.
+    """
+    from app.services.config_loader import get_device_config, load_devices_config
+
+    config = load_devices_config()
+    dev_cfg = get_device_config(config, device.id)
+    if not dev_cfg or not dev_cfg.myst_docker:
+        raise MystError(
+            "Il nodo myst su questo device non è containerizzato (Docker): "
+            "l'aggiornamento immagine non è applicabile."
+        )
+
+    # 1. Scarica la nuova immagine (non tocca il container in esecuzione: se
+    # fallisce, il nodo continua a funzionare con l'immagine attuale).
+    pull = command_service.run_command(db, device, "myst_docker_pull", requested_by=requested_by)
+    if pull.status != "success":
+        return CommandResult(
+            device_id=device.id,
+            command="myst_docker_update",
+            status="error",
+            detail=f"Pull immagine fallito, nodo non toccato: {pull.detail}",
+        )
+
+    # 2. Rimuove il container corrente (la data-dir è in bind-mount, non persa).
+    command_service.run_command(db, device, "myst_docker_stop_rm", requested_by=requested_by)
+
+    # 3. Ricrea il container dalla nuova immagine con gli stessi parametri.
+    recreate = command_service.run_command(
+        db,
+        device,
+        "myst_docker_recreate",
+        requested_by=requested_by,
+        udp_start=dev_cfg.myst_docker_udp_start,
+        udp_end=dev_cfg.myst_docker_udp_end,
+    )
+    detail = (
+        "Nodo aggiornato: immagine scaricata e container ricreato con la stessa identità."
+        if recreate.status == "success"
+        else f"Pull e rimozione ok, ma la ricreazione del container ha restituito: {recreate.detail}"
+    )
+    return CommandResult(
+        device_id=device.id,
+        command="myst_docker_update",
+        status=recreate.status,
+        detail=detail,
+    )

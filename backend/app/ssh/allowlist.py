@@ -74,6 +74,23 @@ PRIVILEGED_COMMANDS: dict[str, str] = {
     # Chown legacy dell'installazione nativa: nei device Docker il container gira
     # come root e non ne ha bisogno, ma resta innocuo se eseguito comunque.
     "myst_chown": "sudo /usr/bin/chown -R mysterium-node /var/lib/mysterium-node",
+    # Aggiornamento nodo myst containerizzato: pull nuova immagine, rimozione del
+    # container corrente e ricreazione con gli stessi parametri (stessa data-dir
+    # in bind-mount, quindi identita' e guadagni sono preservati). {udp_start}/
+    # {udp_end} sono interi validati (is_valid_port) dal range configurato per
+    # device (DeviceConfig.myst_docker_udp_start/end), non testo libero.
+    "myst_docker_pull": "sudo /usr/bin/docker pull mysteriumnetwork/myst:latest",
+    "myst_docker_stop_rm": "sudo /usr/bin/docker rm -f myst",
+    "myst_docker_recreate": (
+        "sudo /usr/bin/docker run -d --name myst --restart unless-stopped "
+        "--cap-add NET_ADMIN --device /dev/net/tun "
+        "-p 4449:4449/tcp -p {udp_start}-{udp_end}:{udp_start}-{udp_end}/udp "
+        "-v /var/lib/mysterium-node:/var/lib/mysterium-node "
+        "mysteriumnetwork/myst:latest "
+        "--udp.ports={udp_start}:{udp_end} --traversal=manual,holepunching "
+        "--ui.address=0.0.0.0 --ui.port=4449 "
+        "service --agreed-terms-and-conditions"
+    ),
     # Ventola CPU: helper dedicato installato sul Raspberry.
     "fan_mode_pwm": "sudo /usr/local/sbin/dashboard-fan-control pwm",
     "fan_mode_fixed": "sudo /usr/local/sbin/dashboard-fan-control fixed {pwm}",
@@ -107,3 +124,8 @@ def is_valid_cidr(value: str) -> bool:
 def is_valid_pwm_value(value: int) -> bool:
     """Valida il duty-cycle PWM (range sysfs standard 0..255)."""
     return 0 <= value <= 255
+
+
+def is_valid_port(value: int) -> bool:
+    """Valida una porta TCP/UDP singola (range valido 1..65535)."""
+    return 1 <= value <= 65535

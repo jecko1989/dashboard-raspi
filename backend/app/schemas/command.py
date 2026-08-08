@@ -34,6 +34,13 @@ class MystRequest(CommandRequest):
     action: Literal["start", "stop"] = "stop"
 
 
+class MystNodeInfo(BaseModel):
+    """Info sul tipo di installazione del nodo myst (nativa o Docker)."""
+
+    device_id: str
+    docker: bool
+
+
 class FanControlRequest(CommandRequest):
     """Impostazione ventola: PWM automatico o fixed con target rpm."""
 

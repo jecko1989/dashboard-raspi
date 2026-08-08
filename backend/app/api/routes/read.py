@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.metric import Metric
 from app.schemas.alert import AlertRead, EventCountRead, EventRead
-from app.schemas.command import CommandAuditRead, ServiceLogs, ServiceStatus
+from app.schemas.command import CommandAuditRead, MystNodeInfo, ServiceLogs, ServiceStatus
 from app.schemas.device import DeviceRead
 from app.schemas.luogo import LuogoRead
 from app.schemas.metric import MetricRead
@@ -176,6 +176,17 @@ def device_services(device_id: str, db: Session = Depends(get_db)) -> list[Servi
         except (SSHError, CommandError) as exc:
             result.append(ServiceStatus(name=name, active=False, status=f"errore: {exc}"))
     return result
+
+
+@router.get("/devices/{device_id}/myst/info", response_model=MystNodeInfo)
+def myst_node_info(device_id: str, db: Session = Depends(get_db)) -> MystNodeInfo:
+    """Ritorna se il nodo myst del device e' installato via Docker o nativo."""
+    from app.services import myst_service
+
+    device = device_service.get_device(db, device_id)
+    if device is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Device non trovato")
+    return MystNodeInfo(device_id=device_id, docker=myst_service.is_docker(device_id))
 
 
 @router.get("/devices/{device_id}/services/{service_name}/logs", response_model=ServiceLogs)

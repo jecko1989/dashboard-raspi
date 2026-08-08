@@ -5,6 +5,7 @@ import type { CommandResult } from '../types';
 import {
   commandFanControl,
   getAvailableServices,
+  getMystNodeInfo,
   commandReboot,
   commandShutdown,
   commandUpdate,
@@ -12,6 +13,7 @@ import {
   commandTailscale,
   downloadMystBackup,
   restoreMystBackup,
+  updateMystDockerNode,
 } from '../services/api';
 import { CommandModal } from './CommandModal';
 import { ShellModal } from './ShellModal';
@@ -26,6 +28,7 @@ type Pending =
   | { kind: 'tailscale'; exitNode: boolean; routes: boolean }
   | { kind: 'fan'; mode: 'pwm' | 'fixed'; rpm?: number }
   | { kind: 'myst-restore'; file: File }
+  | { kind: 'myst-update' }
   | null;
 
 interface DeviceCommandsProps {
@@ -46,6 +49,7 @@ const RUNNING_LABELS: Record<NonNullable<Pending>['kind'], string> = {
   tailscale: 'Configurazione Tailscale in corso',
   fan: 'Configurazione ventola in corso',
   'myst-restore': 'Ripristino backup myst in corso',
+  'myst-update': 'Aggiornamento nodo myst in corso',
 };
 
 const TOAST_DURATION_MS = 3200;
@@ -67,6 +71,7 @@ const KIND_TO_SECTION: Record<NonNullable<Pending>['kind'], ResultSection | null
   tailscale: 'tailscale',
   fan: 'fan',
   'myst-restore': 'myst',
+  'myst-update': 'myst',
 };
 
 const COMMAND_LABEL_BY_KIND: Record<NonNullable<Pending>['kind'], string> = {
@@ -77,6 +82,7 @@ const COMMAND_LABEL_BY_KIND: Record<NonNullable<Pending>['kind'], string> = {
   tailscale: 'tailscale',
   fan: 'fan_control',
   'myst-restore': 'myst_restore',
+  'myst-update': 'myst_docker_update',
 };
 
 // Piccolo spinner animato riutilizzabile.
@@ -117,6 +123,7 @@ export function DeviceCommands({
     routes: boolean;
   } | null>(null);
   const [installedServices, setInstalledServices] = useState<Set<string>>(new Set());
+  const [mystDocker, setMystDocker] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement>(null);
   const lanAddressForLinks = (deviceLanAddress || '').trim() || 'ip_raspberry';
 
@@ -143,7 +150,16 @@ export function DeviceCommands({
         if (mounted) setInstalledServices(new Set());
       }
     };
+    const loadMystInfo = async () => {
+      try {
+        const info = await getMystNodeInfo(deviceId);
+        if (mounted) setMystDocker(info.docker);
+      } catch {
+        if (mounted) setMystDocker(false);
+      }
+    };
     void loadInstalledServices();
+    void loadMystInfo();
     return () => {
       mounted = false;
     };
@@ -218,6 +234,9 @@ export function DeviceCommands({
           break;
         case 'myst-restore':
           res = await restoreMystBackup(deviceId, current.file);
+          break;
+        case 'myst-update':
+          res = await updateMystDockerNode(deviceId);
           break;
       }
       if (shouldShowToastForKind(current.kind)) {
@@ -391,6 +410,22 @@ export function DeviceCommands({
           ),
           destructive: true,
           confirmLabel: 'Ripristina',
+        };
+      case 'myst-update':
+        return {
+          title: 'Aggiornare il nodo myst?',
+          description: (
+            <div className="space-y-2">
+              <p>
+                Verrà scaricata l'ultima immagine del nodo e il container verrà
+                ricreato con gli stessi parametri (stessa identità e guadagni,
+                nessuna perdita di dati). Il nodo sarà brevemente irraggiungibile
+                durante il riavvio.
+              </p>
+            </div>
+          ),
+          destructive: true,
+          confirmLabel: 'Aggiorna',
         };
     }
   };
@@ -655,6 +690,15 @@ export function DeviceCommands({
               >
                 ⬆️ Ripristina backup
               </button>
+              {mystDocker && (
+                <button
+                  onClick={() => setPending({ kind: 'myst-update' })}
+                  disabled={running}
+                  className="rounded-md border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-cyan-400 dark:hover:bg-cyan-900/20"
+                >
+                  {runningKind === 'myst-update' ? <Spinner /> : '🔄'} Aggiorna nodo
+                </button>
+              )}
             </>
           )}
           <input
