@@ -8,14 +8,61 @@ PWM_CHIP_PATH="/sys/class/pwm/pwmchip0"
 PWM_CHANNEL="0"
 PWM_PERIOD_NS="40000"
 
+# Override opzionale per schede madri con piu' ventole (es. desktop con Super
+# I/O multi-canale), dove l'auto-detect non puo' sapere quale header e'
+# collegato alla ventola CPU. Impostare in /etc/default/dashboard-fan-control:
+#   PWM_CHIP_NAME=nct6797     # nome hwmon (cat /sys/class/hwmon/hwmon*/name)
+#   PWM_CHANNEL_INDEX=2       # indice N di pwmN_enable/fanN_input
+#   PWM_TEMP_SEL=2            # (opzionale) indice tempN da usare come sonda
+#                             #   per la modalita' automatica (pwmN_temp_sel)
+# Il nome chip e' usato invece del path hwmonN perche' l'indice hwmonN non e'
+# stabile tra un boot e l'altro (dipende dall'ordine di caricamento driver).
+[ -r /etc/default/dashboard-fan-control ] && . /etc/default/dashboard-fan-control
+
 find_pwm_enable() {
+  if [ -n "${PWM_CHIP_NAME:-}" ] && [ -n "${PWM_CHANNEL_INDEX:-}" ]; then
+    for name_file in /sys/class/hwmon/hwmon*/name; do
+      [ -r "$name_file" ] || continue
+      [ "$(cat "$name_file")" = "$PWM_CHIP_NAME" ] || continue
+      dir="${name_file%/name}"
+      f="$dir/pwm${PWM_CHANNEL_INDEX}_enable"
+      base="${f%_enable}"
+      if [ -w "$f" ] && [ -w "$base" ]; then
+        echo "$f"
+        return 0
+      fi
+    done
+    echo "PWM_CHIP_NAME=$PWM_CHIP_NAME canale $PWM_CHANNEL_INDEX non trovato o non scrivibile" >&2
+    return 1
+  fi
+
+  # Auto-detect (nessun override configurato): preferisce un canale con una
+  # ventola realmente collegata (RPM > 0 misurato ora, tipico dei desktop con
+  # piu' header ma una sola ventola cablata), altrimenti il primo canale
+  # scrivibile trovato (comportamento storico, corretto quando ne esiste uno
+  # solo, come sui Raspberry).
+  fallback=""
   for f in /sys/class/hwmon/hwmon*/pwm*_enable; do
     [ -w "$f" ] || continue
     base="${f%_enable}"
     [ -w "$base" ] || continue
-    echo "$f"
-    return 0
+    [ -z "$fallback" ] && fallback="$f"
+    dir="${f%/*}"
+    idx="${f##*/pwm}"
+    idx="${idx%_enable}"
+    fan_input="$dir/fan${idx}_input"
+    if [ -r "$fan_input" ]; then
+      rpm="$(cat "$fan_input" 2>/dev/null || echo 0)"
+      if [ "${rpm:-0}" -gt 0 ] 2>/dev/null; then
+        echo "$f"
+        return 0
+      fi
+    fi
   done
+  if [ -n "$fallback" ]; then
+    echo "$fallback"
+    return 0
+  fi
   return 1
 }
 
@@ -39,6 +86,13 @@ run_hwmon() {
   pwm_base="${pwm_enable%_enable}"
   case "$MODE" in
     pwm)
+      # Se configurato, punta la curva automatica a una sonda di temperatura
+      # sensata (es. CPUTIN) invece di quella di default del chip, spesso non
+      # collegata a nulla di significativo sulle schede desktop multi-canale.
+      if [ -n "${PWM_TEMP_SEL:-}" ]; then
+        temp_sel_file="${pwm_base}_temp_sel"
+        [ -w "$temp_sel_file" ] && echo "$PWM_TEMP_SEL" > "$temp_sel_file"
+      fi
       echo 2 > "$pwm_enable"
       ;;
     fixed)

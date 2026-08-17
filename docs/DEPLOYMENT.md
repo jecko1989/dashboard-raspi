@@ -235,6 +235,36 @@ e aggiungi in sudoers:
 <utente-ssh-dashboard> ALL=(root) NOPASSWD: /usr/local/sbin/dashboard-fan-control fixed *
 ```
 
+Su device con **piu' canali ventola** (tipico dei PC desktop, a differenza dei
+Raspberry che ne hanno uno solo), lo script sceglie in automatico quello con
+una ventola realmente collegata (RPM > 0), ma se serve puntare esplicitamente
+a un canale specifico (es. la ventola CPU quando ce ne sono piu' d'una
+cablate) crea `/etc/default/dashboard-fan-control`:
+
+```bash
+PWM_CHIP_NAME=nct6797       # nome hwmon: cat /sys/class/hwmon/hwmon*/name
+PWM_CHANNEL_INDEX=2         # indice N di pwmN_enable/fanN_input
+PWM_TEMP_SEL=2              # (opzionale) sonda per la modalita' automatica,
+                             # indice tempN: cat /sys/class/hwmon/hwmonX/tempN_label
+```
+
+**Nota sulla modalita' "Auto" (pwm_enable=2) sui chip Super I/O desktop
+(nct6775 e famiglia):** non e' una semplice curva pwm/temperatura letta dal
+BIOS, ma la modalita' **thermal cruise** del driver kernel: la ventola resta
+al minimo (`pwmN_floor`) finche' la temperatura non si avvicina al target
+(`pwmN_target_temp`, +/- `pwmN_temp_tolerance`), poi accelera per mantenerlo.
+Target e tolleranza sono valori di default del driver (o dell'ultima
+configurazione scritta), **non** derivano dalla tabella SmartFan del BIOS —
+quella si applica solo quando `pwm_enable` e' nel suo valore originale
+(tipicamente `5`, ripristinabile scrivendolo manualmente in sysfs se serve
+tornare al comportamento di fabbrica). Per un comportamento piu' prevedibile,
+preferire la modalita' "Fissa" dalla dashboard, oppure regolare
+`pwmN_target_temp`/`pwmN_floor` a mano prima di usare "Auto".
+
+Esempio verificato su un desktop con chip NCT6797D (canale 2, ventola CPU):
+`pwm2_target_temp=50000` (50°C), `pwm2_floor=1` — sotto i 50°C la ventola
+resta quasi ferma, poi accelera per restare intorno al target.
+
 Per lanciare questo stesso deploy da GitHub Actions invece che dal tuo PC, vedi §16.
 
 ---

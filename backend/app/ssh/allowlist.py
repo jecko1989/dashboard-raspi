@@ -12,19 +12,65 @@ READONLY_COMMANDS: dict[str, str] = {
     "cpu": "top -bn1 | grep 'Cpu(s)'",
     "memory": "free -b",
     "disk": "df -B1 /",
-    "temperature": "cat /sys/class/thermal/thermal_zone0/temp",
+    # thermal_zone0 copre Raspberry Pi/SoC ARM; sui PC desktop x86 spesso non
+    # esiste (nessuna ACPI thermal zone esposta), quindi si ripiega sul chip
+    # hwmon della CPU (k10temp=AMD, coretemp=Intel, cpu_thermal=alcuni ARM),
+    # e infine sul primo sensore di temperatura hwmon trovato.
+    "temperature": (
+        "sh -lc '"
+        "if [ -r /sys/class/thermal/thermal_zone0/temp ]; then "
+        "cat /sys/class/thermal/thermal_zone0/temp; exit 0; fi; "
+        "for chip in k10temp coretemp cpu_thermal zenpower; do "
+        "for n in /sys/class/hwmon/hwmon*/name; do "
+        "[ -r \"$n\" ] || continue; "
+        "[ \"$(cat \"$n\")\" = \"$chip\" ] || continue; "
+        "d=\"${n%/name}\"; "
+        "for f in \"$d\"/temp1_input \"$d\"/temp2_input; do "
+        "[ -r \"$f\" ] && { cat \"$f\"; exit 0; }; "
+        "done; "
+        "done; "
+        "done; "
+        "for f in /sys/class/hwmon/hwmon*/temp1_input; do "
+        "[ -r \"$f\" ] && { cat \"$f\"; exit 0; }; "
+        "done'"
+    ),
     "uptime": "cat /proc/uptime",
     "loadavg": "cat /proc/loadavg",
     "os_version": "cat /etc/os-release",
     "kernel": "uname -r",
     # Ventola CPU (se presente). Sui sistemi passivi i path possono non esistere.
+    # Su device con piu' canali ventola (desktop multi-fan), preferisce quello
+    # con una ventola realmente collegata (RPM > 0 misurato ora) invece del
+    # primo trovato, altrimenti si rischia di leggere sempre uno 0 da un
+    # header vuoto. fan_mode individua lo stesso canale di fan_rpm (stesso
+    # criterio di selezione) cosi' i due valori restano coerenti tra loro.
+    # Nota: se nessun file fan*_input esiste (device senza sensore hwmon per la
+    # ventola, es. Pi4 con overlay pwm generico su pwmchip0), non va stampato
+    # nulla (stdout vuoto -> None lato parser), non uno "0" fittizio.
     "fan_rpm": (
-        "sh -lc 'for f in /sys/class/hwmon/hwmon*/fan*_input; "
-        "do [ -r $f ] && { cat $f; break; }; done'"
+        "sh -lc '"
+        "found=0; winner=; fallback=; "
+        "for f in /sys/class/hwmon/hwmon*/fan*_input; do "
+        "[ -r \"$f\" ] || continue; found=1; "
+        "v=$(cat \"$f\" 2>/dev/null); "
+        "[ -z \"$fallback\" ] && fallback=\"$v\"; "
+        "if [ \"${v:-0}\" -gt 0 ] 2>/dev/null; then winner=\"$v\"; break; fi; "
+        "done; "
+        "[ \"$found\" = 1 ] && echo \"${winner:-$fallback}\"'"
     ),
     "fan_mode": (
-        "sh -lc 'for f in /sys/class/hwmon/hwmon*/pwm*_enable; "
-        "do [ -r $f ] && { cat $f; break; }; done'"
+        "sh -lc '"
+        "found=0; winner=; fallback=; "
+        "for f in /sys/class/hwmon/hwmon*/fan*_input; do "
+        "[ -r \"$f\" ] || continue; found=1; "
+        "v=$(cat \"$f\" 2>/dev/null); "
+        "[ -z \"$fallback\" ] && fallback=\"$f\"; "
+        "if [ \"${v:-0}\" -gt 0 ] 2>/dev/null; then winner=\"$f\"; break; fi; "
+        "done; "
+        "[ \"$found\" = 1 ] || exit 0; "
+        "target=${winner:-$fallback}; "
+        "pwmf=$(echo \"$target\" | sed \"s/fan/pwm/;s/_input/_enable/\"); "
+        "[ -r \"$pwmf\" ] && cat \"$pwmf\"'"
     ),
     # Rilevamento rete per l'annuncio delle subnet route Tailscale.
     "default_iface": "ip -o -4 route show default",
