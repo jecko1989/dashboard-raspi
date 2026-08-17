@@ -141,18 +141,37 @@ export function Overview() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        {luoghi.map((lg) => {
-          const lgDevices = devices.filter((d) => d.luogo_id === lg.id);
-          return (
-            <div key={lg.id} style={{ flex: Math.max(lgDevices.length, 1) }} className="min-w-0 w-full sm:w-auto">
-              <LuogoSection
-                luogo={lg}
-                devices={lgDevices}
-              />
-            </div>
-          );
-        })}
+      {/*
+        Un'unica griglia per tutta la pagina: l'intestazione di ogni luogo
+        occupa l'intera riga (vedi LuogoSection, renderMode 'inline'), quindi
+        le sue card iniziano sempre su una riga fresca. 6 unita' per riga (2
+        per card, max 3 card per riga): se l'ultima riga di un luogo resta
+        incompleta, le sue card si allargano per riempirla invece di lasciare
+        spazio vuoto (classi .grid-span-N sotto, usate da LuogoSection).
+        Sotto i 640px: 1 colonna piena larghezza, tutte le card della stessa
+        dimensione (gli span sono attivi solo dai 640px in su: uno style
+        inline non potrebbe essere reso responsive, da qui il tag <style>).
+      */}
+      <style>{`
+        .overview-grid { grid-template-columns: 1fr; }
+        @media (min-width: 640px) {
+          .overview-grid {
+            grid-template-columns: repeat(auto-fit, minmax(max(130px, calc((100% - 5rem) / 6)), 1fr));
+          }
+          .grid-span-2 { grid-column: span 2; }
+          .grid-span-3 { grid-column: span 3; }
+          .grid-span-6 { grid-column: span 6; }
+        }
+      `}</style>
+      <div className="overview-grid grid w-full gap-4">
+        {luoghi.map((lg) => (
+          <LuogoSection
+            key={lg.id}
+            luogo={lg}
+            devices={devices.filter((d) => d.luogo_id === lg.id)}
+            renderMode="inline"
+          />
+        ))}
       </div>
 
       <DeviceCreateModal open={creatingDevice} onClose={() => setCreatingDevice(false)} />
