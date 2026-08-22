@@ -385,6 +385,13 @@ pi ALL=(root) NOPASSWD: /usr/bin/apt-get update
 pi ALL=(root) NOPASSWD: /usr/bin/apt-get -y upgrade
 pi ALL=(root) NOPASSWD: /usr/bin/apt-get -s upgrade
 
+# Consente il passaggio di DEBIAN_FRONTEND al solo comando di upgrade: senza,
+# domande debconf (es. charset console-setup, layout tastiera) restano in attesa
+# di un input che non arriva mai su una sessione SSH non interattiva, bloccando
+# il lock dpkg a tempo indeterminato.
+Cmnd_Alias DASHBOARD_APT_UPGRADE = /usr/bin/apt-get -y upgrade
+Defaults!DASHBOARD_APT_UPGRADE env_keep += "DEBIAN_FRONTEND"
+
 # Restart servizi (solo quelli che intendi gestire)
 pi ALL=(root) NOPASSWD: /bin/systemctl start ssh
 pi ALL=(root) NOPASSWD: /bin/systemctl stop ssh

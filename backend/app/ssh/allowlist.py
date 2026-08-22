@@ -84,7 +84,11 @@ PRIVILEGED_COMMANDS: dict[str, str] = {
     "reboot": "sudo /sbin/reboot",
     "shutdown": "sudo /sbin/shutdown -h now",
     "update_check": "sudo /usr/bin/apt-get update",
-    "update_upgrade": "sudo /usr/bin/apt-get -y upgrade",
+    # DEBIAN_FRONTEND=noninteractive evita che domande debconf (es. charset
+    # console-setup) blocchino indefinitamente il processo quando lanciato via
+    # SSH non interattivo: richiede la regola sudoers env_keep dedicata
+    # (vedi README.md "Configurazione sudoers richiesta sui Raspberry").
+    "update_upgrade": "sudo DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get -y upgrade",
     # Simulazione (dry-run): non installa nulla, mostra cosa verrebbe aggiornato.
     "update_dry_run": "sudo /usr/bin/apt-get -s upgrade",
     "service_start": "sudo /bin/systemctl start {service}",
