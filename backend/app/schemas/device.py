@@ -73,7 +73,6 @@ class DeviceRead(DeviceBase):
     last_latency_ms: float | None = None
     last_checked_at: datetime | None = None
     last_metric_at: datetime | None = None
-    offline_since: datetime | None = None
     tags: list[str] = []
     display_order: int = 0
     # Comando SSH pronto da copiare (path chiave incluso, ma nessun segreto).

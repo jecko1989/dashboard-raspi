@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { Device, Metric } from '../types';
 import { StatusBadge } from './StatusBadge';
 import { KebabMenu } from './KebabMenu';
-import { formatDateTime, formatDurationSince, formatLatency, formatPercent, formatTemp, formatUptime } from '../utils/format';
+import { formatDateTime, formatLatency, formatPercent, formatTemp, formatUptime } from '../utils/format';
 import { commandReboot, commandShutdown, commandUpdate, getLatestMetric } from '../services/api';
 
 // Card che rappresenta un singolo Raspberry.
@@ -195,13 +195,13 @@ export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
             <MetricCell label="Disco" value={metric ? formatPercent(metric.disk_percent) : '–'} pct={metric?.disk_percent} />
             <MetricCell label="Temp"  value={metric ? formatTemp(metric.temperature_celsius) : '–'} colorClass={tempColor(metric?.temperature_celsius)} />
           </div>
-          {/* Uptime (online) / tempo offline (non raggiungibile), centrato */}
+          {/* Uptime (online) / ultima volta online (non raggiungibile), centrato */}
           <div className="text-center text-xs">
             {!device.is_online ? (
               <>
-                <span className="text-gray-400 dark:text-gray-500">Offline da </span>
+                <span className="text-gray-400 dark:text-gray-500">Ultima volta online </span>
                 <span className="font-medium tabular-nums text-red-500 dark:text-red-400">
-                  {formatDurationSince(device.offline_since)}
+                  {formatDateTime(device.last_metric_at)}
                 </span>
               </>
             ) : metric?.uptime_seconds != null ? (

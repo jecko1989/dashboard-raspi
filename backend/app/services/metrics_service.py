@@ -119,11 +119,10 @@ def check_and_collect(db: Session, device: Device, config: DevicesConfig) -> Non
         if device.consecutive_failures >= thresholds.offline_after_failures:
             device.is_online = False
 
-    # Registra il cambio di stato come evento e traccia l'inizio/fine offline.
+    # Registra il cambio di stato come evento.
     if device.is_online != previous_online:
         state = "online" if device.is_online else "offline"
         db.add(Event(device_id=device.id, type="status_change", message=f"Device {state}"))
-        device.offline_since = None if device.is_online else now
 
     # Alert offline/online.
     alerts_service.evaluate_offline_alert(db, device)
