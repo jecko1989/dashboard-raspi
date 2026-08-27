@@ -21,6 +21,7 @@ export interface Device {
   last_latency_ms: number | null;
   last_checked_at: string | null;
   last_metric_at: string | null;
+  offline_since: string | null;
   tags: string[];
   display_order?: number;
   ssh_command: string | null;

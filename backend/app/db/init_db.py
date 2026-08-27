@@ -71,4 +71,6 @@ def init_db() -> None:
     # v0.7.0: metriche ventola CPU (sistemi passivi supportati con valori null).
     _ensure_column("metrics", "fan_rpm", "REAL")
     _ensure_column("metrics", "fan_mode", "VARCHAR(32)")
+    # v0.8.0: timestamp inizio permanenza offline (per mostrare "offline da").
+    _ensure_column("devices", "offline_since", "TIMESTAMP")
     logger.info("Schema database pronto.")

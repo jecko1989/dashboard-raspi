@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Device, Metric } from '../types';
 import { StatusBadge } from './StatusBadge';
-import { formatDateTime, formatLatency, formatUptime } from '../utils/format';
+import { formatDateTime, formatDurationSince, formatLatency, formatUptime } from '../utils/format';
 
 // Pannello con i dettagli di un device e il comando SSH pronto da copiare.
 interface DeviceDetailsProps {
@@ -62,8 +62,12 @@ export function DeviceDetails({ device, metric }: DeviceDetailsProps) {
           <dd>{formatDateTime(device.last_checked_at)}</dd>
         </div>
         <div>
-          <dt className="text-gray-500">Uptime</dt>
-          <dd>{formatUptime(metric?.uptime_seconds)}</dd>
+          <dt className="text-gray-500">{device.is_online ? 'Uptime' : 'Offline da'}</dt>
+          <dd>
+            {device.is_online
+              ? formatUptime(metric?.uptime_seconds)
+              : formatDurationSince(device.offline_since)}
+          </dd>
         </div>
       </dl>
 

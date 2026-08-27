@@ -47,6 +47,11 @@ class Device(Base):
     last_metric_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Timestamp da cui il device e' offline (None se online). Usato in UI per
+    # mostrare il tempo di permanenza offline al posto dell'uptime.
+    offline_since: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     luogo: Mapped["Luogo"] = relationship(  # noqa: F821
         back_populates="devices"

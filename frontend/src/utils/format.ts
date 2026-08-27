@@ -60,6 +60,15 @@ function toUtcIso(iso: string): string {
   return /Z|[+-]\d{2}:\d{2}$/.test(iso) ? iso : iso + 'Z';
 }
 
+/** Tempo trascorso da un timestamp ISO ad ora, con lo stesso formato di formatUptime. */
+export function formatDurationSince(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const start = new Date(toUtcIso(iso)).getTime();
+  if (Number.isNaN(start)) return '—';
+  const seconds = Math.max(0, Math.floor((Date.now() - start) / 1000));
+  return formatUptime(seconds);
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(toUtcIso(iso));
