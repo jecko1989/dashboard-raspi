@@ -117,7 +117,15 @@ export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
     `${btnBase} text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200`;
 
   return (
-    <div className="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+    <div className="relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+      {!device.is_online && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 bg-white/70 px-4 text-center backdrop-blur-sm dark:bg-gray-800/70">
+          <span className="text-base font-bold text-red-500 dark:text-red-400">Device Offline</span>
+          <span className="text-base text-gray-600 dark:text-gray-300">
+            Ultima volta online <span className="font-bold">{formatDateTime(device.last_metric_at)}</span>
+          </span>
+        </div>
+      )}
 
       {/* ── Riga header: nome + badge + kebab ── */}
       <Link to={`/devices/${device.id}`} className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
@@ -200,7 +208,7 @@ export function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
             {!device.is_online ? (
               <>
                 <span className="text-gray-400 dark:text-gray-500">Ultima volta online </span>
-                <span className="font-medium tabular-nums text-red-500 dark:text-red-400">
+                <span className="font-bold tabular-nums text-gray-400 dark:text-gray-500">
                   {formatDateTime(device.last_metric_at)}
                 </span>
               </>
