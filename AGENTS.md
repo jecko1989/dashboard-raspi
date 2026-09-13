@@ -22,17 +22,8 @@ Dashboard per monitorare e gestire piu Raspberry Pi (organizzati in "luoghi", es
 
 ## Convenzioni del progetto
 - **Lingua**: commenti, docstring, errori e stringhe UI in italiano.
-- **Config**: usare sempre `get_settings` da `app.core.config`; evitare accesso diretto a `os.environ` nei moduli applicativi.
-- **Route sottili**: logica SSH, DB e business nei services, non nelle route.
-- **Pydantic v2**: conversione ORM verso schema con `model_validate`.
-- **Import lazy nelle route**: usarli quando opportuno per ridurre accoppiamento e side effect.
-- **Frontend API**: tutte le chiamate HTTP passano da `frontend/src/services/api.ts`.
-- **Frontend auth**: interceptor aggiunge Bearer token da localStorage; su 401 emette evento `auth:logout`. Il ruolo admin è esposto da `AuthContext` come `isAdmin` (da `getMe()`), usato per mostrare le azioni riservate (es. shell web).
-- **Frontend WebSocket**: la shell usa WebSocket nativo con token in query string; l'URL si costruisce con `frontend/src/services/shell.ts` (deriva `ws`/`wss` dall'host corrente della pagina, override con `VITE_API_WS_URL`).
-- **No fetch diretto**: aggiungere funzioni tipizzate in `services/api.ts` e tipi in `src/types`.
-- **URL relativi**: il frontend usa sempre `/api/...` senza prefisso di host; non usare `VITE_API_BASE_URL` (deprecata e rimossa). Usare `VITE_API_WS_URL` solo per override WebSocket.
-- **Hooks**: logica di fetch/stato incapsulata in hook dedicati (`useDevices`, `useLuoghi`, `useScopedEvents`, `useNavBadges`); evitare chiamate API dirette nei componenti.
-- **Utils**: formattazione valori in `frontend/src/utils/format.ts`; non duplicare la logica nei componenti.
+
+Convenzioni specifiche di backend/frontend sono in `backend/CLAUDE.md` e `frontend/CLAUDE.md` (si caricano solo quando si lavora in quelle directory).
 
 ## Workflow sviluppo
 - **Locale Windows (senza Docker)**: usare `run-local.ps1` (setup venv Python 3.12, install dipendenze, avvio backend e frontend). Supporta `-SkipInstall`.
@@ -46,53 +37,11 @@ Dashboard per monitorare e gestire piu Raspberry Pi (organizzati in "luoghi", es
 - **Deploy manuale** (`scripts/deploy.sh --mode docker|native`): ogni chiamata SSH/SCP/rsync è limitata da timeout differenziati (`REMOTE_PROBE_TIMEOUT`, `REMOTE_CMD_TIMEOUT`, `REMOTE_TRANSFER_TIMEOUT`, `REMOTE_BUILD_TIMEOUT`, `LOCAL_CMD_TIMEOUT`) e da retry automatico sui soli fallimenti di trasporto (`SSH_RETRY_COUNT`/`SSH_RETRY_DELAY`, exit 255/124) — dettagli in `deploy/deploy.env.example` e `docs/DEPLOYMENT.md`.
 - **Deploy da GitHub Actions** (`.github/workflows/deploy.yml`): stesso `deploy.sh`, eseguito da un runner Linux che si unisce alla tailnet privata via `tailscale/github-action` (OAuth client con scope `Devices: Core Write` + `Keys: Auth Keys Write`, tag `tag:ci-deploy` ristretto via ACL alla sola porta 22 del Pi). Trigger solo `workflow_dispatch` (mai `push`/`pull_request`: il repo è pubblico), con `dry_run` di default. Setup completo in `docs/DEPLOYMENT.md` §16.
 
-## Frontend struttura
-- **Pagine** (`src/pages/`): `Login`, `Overview`, `LuogoPage`, `DeviceDetailPage`, `AlertsPage`, `Settings`.
-- **Hooks** (`src/hooks/`): `useDevices` (fetch e stato device), `useLuoghi` (fetch e stato luoghi), `useScopedEvents` (eventi filtrati per device/luogo), `useNavBadges` (contatori alert/eventi contestuali alla rotta corrente, refresh automatico ogni 60s).
-- **Context** (`src/context/`): `AuthContext` — espone `user`, `isAdmin`, `login`, `logout`.
-- **Services** (`src/services/`): `api.ts` (tutte le chiamate HTTP), `shell.ts` (costruzione URL WebSocket).
-- **Types** (`src/types/index.ts`): tutti i tipi TypeScript dell'applicazione.
-- **Utils** (`src/utils/format.ts`): funzioni di formattazione valori (CPU, RAM, temperatura, ecc.).
-- **Componenti notevoli**: `ShellModal` (shell web admin), `ChangePasswordModal`, `DeviceCommands`, `DeviceSSHKey`, `EventsPanel`/`EventTimeline`, `LuogoFormModal`, `DeviceFormModal`/`DeviceCreateModal`.
-
 ## Variabili d'ambiente
-Tutte lette da `app.core.config` (pydantic-settings). Fonte di verità: `backend/app/core/config.py`.
+Vedi `backend/app/core/config.py` per l'elenco completo delle variabili d'ambiente, i default e le note (file autodocumentato con commenti inline).
 
-| Variabile | Default | Note |
-|---|---|---|
-| `DATABASE_URL` | `sqlite:////data/raspberry_dashboard.db` | Compatibile Postgres |
-| `SSH_KEYS_DIR` | `/secrets/ssh` | Path chiavi SSH device |
-| `DEVICES_CONFIG_PATH` | `/config/devices.yaml` | Source of truth device |
-| `SSH_CONNECT_TIMEOUT` | `8.0` | Timeout TCP/SSH (sec) |
-| `SSH_KNOWN_HOSTS_PATH` | `""` | Opzionale; se vuoto usa TOFU |
-| `SSH_AUTO_ADD_HOST_KEYS` | `true` | TOFU — disabilitare in prod |
-| `JWT_SECRET_KEY` | `CHANGE_ME` | ⚠️ Obbligatorio cambiare |
-| `JWT_EXPIRE_MINUTES` | `60` | Durata token JWT |
-| `ADMIN_USERNAME` | `admin` | Bootstrap account |
-| `ADMIN_PASSWORD` | `CHANGE_ME` | ⚠️ Obbligatorio cambiare |
-| `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated |
-| `METRICS_INTERVAL_SECONDS` | `60` | Intervallo scheduler |
-| `COMMAND_RATE_LIMIT_PER_MINUTE` | `10` | Rate limit comandi per IP |
-| `SHELL_ENABLED` | `true` | Disattivare per disabilitare shell web |
-| `SHELL_SESSION_TIMEOUT_SECONDS` | `1800` | Durata max sessione shell |
-| `SHELL_IDLE_TIMEOUT_SECONDS` | `300` | Timeout inattività shell |
-| `SHELL_MAX_SESSIONS` | `3` | Sessioni concorrenti globali |
-| `SHELL_RATE_LIMIT_PER_MINUTE` | `5` | Aperture shell per utente/min |
-
-## Pattern: aggiungere un nuovo comando remoto
-1. Definire il comando in `ssh/allowlist.py` dentro `PRIVILEGED_COMMANDS`.
-2. Se ci sono argomenti dinamici, usare solo placeholder consentiti e validazione esplicita.
-3. Esporre endpoint in `api/routes/commands.py` con conferma obbligatoria, rate limit e invocazione di `command_service.run_command` (o helper dedicato).
-4. Aggiornare `schemas/command.py` se servono nuovi campi request/response.
-5. Aggiungere funzione tipizzata in `frontend/src/services/api.ts`.
-6. Collegare UI con conferma esplicita per azioni distruttive.
-7. Documentare la riga sudoers NOPASSWD necessaria in README.
-
-## Pattern: aggiungere endpoint operativo sensibile
-1. Applicare autenticazione JWT e verifica ruolo admin se richiesto.
-2. Validare input in schema Pydantic e in service.
-3. Tracciare audit/eventi quando l'azione ha impatto operativo.
-4. Mantenere nel README i dettagli di setup host richiesti (sudoers, permessi, ecc.).
+## Pattern: aggiungere un comando remoto o un endpoint sensibile
+Vedi la skill `.claude/skills/aggiungere-comando-o-endpoint/SKILL.md` per la checklist passo-passo.
 
 ## Note operative
 - Lo scheduler e il monitoraggio sono attivi nel codice applicativo.
